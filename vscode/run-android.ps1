@@ -33,7 +33,7 @@ if (-not ($devices | Select-String "\sdevice$")) {
 }
 
 # Compiler et installer
-Write-Host "Compilation et installation de Hors Cadre..."
+Write-Host "Compilation et installation de In Illusio..."
 
 & $gradle :app:installDebug --offline
 
@@ -42,12 +42,12 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Lancer l'application
-Write-Host "Lancement de Hors Cadre..."
+Write-Host "Lancement de In Illusio..."
 
-& $adb shell am start -n fr.horscadre/.MainActivity
+& $adb shell am start -n fr.inillusio/.MainActivity
 
 if ($LASTEXITCODE -ne 0) {
-    throw "Impossible de lancer Hors Cadre."
+    throw "Impossible de lancer In Illusio."
 }
 
-Write-Host "Hors Cadre est prêt !"
+Write-Host "In Illusio est prêt !"

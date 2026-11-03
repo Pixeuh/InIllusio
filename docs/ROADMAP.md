@@ -6,11 +6,15 @@
 - Schéma Room relationnel version 2 avec migration non destructive, import transactionnel/idempotent du catalogue, fusion des auteurs en doublon et archivage des anecdotes retirées ; l’état d’erreur d’import est présenté avec une action de nouvelle tentative.
 - DataStore pour thème, consentement, préférence de renouvellement et carte du jour.
 - Premier accueil, explication, collection, carte consultée et paramètres.
+- Collection en grille à deux colonnes, avec ouverture de la carte touchée dans une galerie agrandie à navigation horizontale bornée ; position de grille conservée au retour.
+- Retournement 3D partagé de la carte quotidienne et de la galerie agrandie, avec extrait d’explication et accès à la lecture complète.
+- Ajout automatique et idempotent à la collection, dans la même transaction que l’enregistrement d’une diffusion `FLAG_LOCK` réussie ; aucune collection sur erreur ou aperçu.
 - Règle de collection conditionnée à l’historique d’une diffusion réussie.
-- Renderer d’affiche plein écran adaptatif aux dimensions et au thème ; illustration dominante dans la moitié supérieure, textes mesurés pour les accroches et références longues, sans zone réservée à l’horloge système ; aperçu et application réutilisent le même bitmap avec recadrage plein cadre et `FLAG_LOCK` exclusivement.
+- Renderer d’affiche plein écran adaptatif aux dimensions et au thème ; illustration à l’échelle native, ajustée à la largeur et au ratio de l’écran sans découpage, textes mesurés pour les accroches et références longues, sans zone réservée à l’horloge système ; aperçu et application réutilisent le même bitmap avec recadrage plein cadre et `FLAG_LOCK` exclusivement.
 - Huit illustrations vectorielles originales, une par catégorie, partagées entre accueil, collection, carte agrandie et fond verrouillé.
+- Palettes principale/secondaire centralisées par discipline et partagées entre l’application, le renderer du fond verrouillé et l’éditeur graphique.
 - Suppression de tous les numéros individuels visibles, avec conservation des identifiants techniques.
-- Menu développeur uniquement en debug (7 appuis rapides sur le titre de collection), déblocage idempotent des 16 anecdotes avec sauvegarde persistante, restauration exacte, prévisualisation sans mutation et régénération/application de l’affiche sur le verrouillage uniquement ; build release sans interface ni code de mutation développeur.
+- Menu développeur uniquement en debug (7 appuis rapides sur le titre de collection), déblocage idempotent des 24 anecdotes avec sauvegarde persistante, restauration exacte, prévisualisation sans mutation et régénération/application de l’affiche sur le verrouillage uniquement ; build release sans interface ni code de mutation développeur.
 - 8 tests unitaires et 8 tests Android ciblés exécutés : sélection/consentement/collection, idempotence des imports, archivage, JSON invalide, proportions d’illustration, décalage et textes courts/longs dans les deux thèmes à 1080 × 2400.
 - Documentation produit, architecture, données et consignes agent.
 
@@ -36,3 +40,4 @@
 
 - Comptes, backend, publicité, analyse comportementale et achats intégrés : hors périmètre.
 - Historique de cartes manquées accessible à l’utilisateur : exclu par la spécification.
+- Statut éditorial individuel `a_valider` / `validee` dans le catalogue et l’éditeur local ; seuls les faits validés sont diffusés. Les statuts absents sont importés en attente et les cartes collectionnées restent accessibles.

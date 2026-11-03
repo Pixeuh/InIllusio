@@ -2,7 +2,6 @@
   "version": "0.4.0-proposition",
   "langue": "fr-FR",
   "date_creation": "2026-11-02",
-  "statut": "revision_editoriale_proposee_a_valider_avant_publication",
   "categories": [
     {
       "id": "sociologie",
@@ -53,28 +52,28 @@
       "accroche": "En France, près de 4 couples vivant ensemble sur 10 réunissent deux personnes du même groupe social. L’amour ne se fait pas tout à fait au hasard.",
       "explication": "En 2021-2022, l’Insee constate que 38,5 % des personnes vivant en couple cohabitant partagent la même classe d’emploi que leur conjoint (selon une classification agrégée en cinq groupes). Cette tendance à former des couples socialement semblables est appelée homogamie sociale. Elle varie selon les milieux et la manière de définir les groupes sociaux : ce chiffre ne signifie pas que les autres couples sont tous issus de milieux très éloignés.",
       "source": {
-        "type": "lien",
+        "type": "rapport",
         "auteurs": "Erwan Pouliquen (Insee)",
         "titre": "Dans quatre couples sur dix, les deux conjoints appartiennent au même groupe social",
-        "url": "https://www.insee.fr/fr/statistiques/7666901",
         "annee": 2023
       },
-      "note_editoriale": "Chiffre concernant uniquement les couples cohabitants, à partir des classes d’emploi agrégées. Éviter de généraliser à tous les couples."
+      "note_editoriale": "Chiffre concernant uniquement les couples cohabitants, à partir des classes d’emploi agrégées. Éviter de généraliser à tous les couples.",
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-02",
       "categorie": "sociologie",
       "titre": "Le goût n’est pas qu’une affaire de goût",
-      "accroche": "Tes goûts culturels peuvent aussi raconter ton milieu social.",
-      "explication": "Pierre Bourdieu montre que les préférences artistiques et alimentaires participent aux distinctions entre groupes sociaux.",
+      "accroche": "Tes goûts culturels racontent ton milieu social.",
+      "explication": "Pierre Bourdieu montre que nos goûts ne relèvent pas uniquement de préférences personnelles : ils sont aussi influencés par notre milieu social et notre éducation. Nos habitudes alimentaires, nos préférences musicales ou notre rapport à l'art sont notamment façonnés par le capital culturel transmis au cours de notre socialisation.  \n\nCes goûts peuvent alors devenir des marqueurs d'appartenance sociale. Certaines pratiques sont considérées comme prestigieuses, tandis que d'autres sont dévalorisées. \n\nAinsi, nos préférences participent à la distinction entre les groupes sociaux et peuvent contribuer à reproduire les hiérarchies sociales. \n",
       "source": {
-        "type": "lien",
-        "auteurs": "Pierre Bourdieu et Monique de Saint Martin",
-        "titre": "Anatomie du goût — Actes de la recherche en sciences sociales",
-        "url": "https://www.persee.fr/doc/arss_0335-5322_1976_num_2_5_3471",
-        "annee": 1976
+        "type": "livre",
+        "auteurs": "Pierre Bourdieu",
+        "titre": "La Distinction",
+        "annee": 1979
       },
-      "note_editoriale": "Source liée : article de recherche de Bourdieu et Monique de Saint Martin (1976), précurseur de La Distinction (Bourdieu, 1979). Une relation statistique, pas une règle valable pour chaque individu."
+      "note_editoriale": "Source liée : article de recherche de Bourdieu et Monique de Saint Martin (1976), précurseur de La Distinction (Bourdieu, 1979). Une relation statistique, pas une règle valable pour chaque individu.",
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-03",
@@ -83,42 +82,42 @@
       "accroche": "Nos amitiés sont fortement influencées par notre âge, notre milieu social et notre niveau d’études.",
       "explication": "En sociologie, ce phénomène s’appelle l’homophilie : les relations se forment plus fréquemment entre personnes qui partagent certaines caractéristiques.\n\nCe n’est pas nécessairement un choix conscient. L’école, le travail, le quartier et les activités fréquentées nous mettent surtout en contact avec des personnes qui nous ressemblent.\n\nNos relations sont donc en partie façonnées par notre environnement social.",
       "source": {
-        "type": "lien",
+        "type": "article",
         "auteurs": "Michel Forsé",
         "titre": "Définir et analyser les réseaux sociaux : les enjeux de l’analyse structurale — Informations sociales, n° 147, p. 10-19",
-        "url": "https://shs.cairn.info/article/INSO_147_0010/pdf?lang=fr",
         "annee": 2008
       },
-      "note_editoriale": "La source liée est l’article de Michel Forsé (2008), qui présente les réseaux sociaux et leurs mécanismes. Référence fondatrice complémentaire : McPherson, Smith-Lovin et Cook, « Birds of a Feather: Homophily in Social Networks », Annual Review of Sociology, 2001, DOI 10.1146/annurev.soc.27.1.415."
+      "note_editoriale": "La source liée est l’article de Michel Forsé (2008), qui présente les réseaux sociaux et leurs mécanismes. Référence fondatrice complémentaire : McPherson, Smith-Lovin et Cook, « Birds of a Feather: Homophily in Social Networks », Annual Review of Sociology, 2001, DOI 10.1146/annurev.soc.27.1.415.",
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-04",
       "categorie": "sociologie",
       "titre": "Le crime comme phénomène normal",
       "accroche": "Pour Émile Durkheim, le crime est un phénomène normal, présent dans toute société, et son existence peut même contribuer à son évolution.",
-      "explication": "En 1895, Durkheim explique qu’aucune société ne peut éliminer totalement la criminalité. Les comportements considérés comme criminels dépendent des normes collectives.\n\nLe crime peut aussi contribuer à faire évoluer ces normes : certains actes autrefois condamnés peuvent finir par être acceptés.\n\nAttention : « normal » signifie ici que le phénomène fait partie du fonctionnement habituel des sociétés, pas qu’il est moralement souhaitable.",
+      "explication": "Durkheim explique qu’aucune société ne peut éliminer totalement la criminalité. Les comportements considérés comme criminels dépendent des normes collectives.\n\nLe crime peut aussi contribuer à faire évoluer ces normes : certains actes autrefois condamnés peuvent finir par être acceptés.\n\nAttention : « normal » signifie ici que le phénomène fait partie du fonctionnement habituel des sociétés, pas qu’il est moralement souhaitable.\n\nPar exemple, en 399 av. J.-C., le philosophe Socrate est condamné à mort à Athènes pour impiété et corruption de la jeunesse.\n\nEn remettant en question les croyances et les traditions de sa cité, il transgressait certaines normes de son époque.\n\nPourtant, sa manière de penser est aujourd'hui reconnue comme une contribution majeure à la philosophie.\n\nCet exemple illustre l'idée de Durkheim : un comportement considéré comme criminel à une époque peut contribuer à faire évoluer les valeurs d'une société.",
       "source": {
-        "type": "lien",
+        "type": "livre",
         "auteurs": "Émile Durkheim",
         "titre": "Le crime, phénomène normal — extrait des Règles de la méthode sociologique",
-        "url": "https://classiques.uqam.ca/classiques/Durkheim_emile/crime_phenomene_normal/crime_phenomene_normal_texte.html",
         "annee": 1895
       },
-      "note_editoriale": "Extrait du chapitre de l’ouvrage publié en 1895. Le texte de la page UQAM traite directement du caractère normal du crime et de son rôle possible dans l’évolution des normes."
+      "note_editoriale": "Extrait du chapitre de l’ouvrage publié en 1895. Le texte de la page UQAM traite directement du caractère normal du crime et de son rôle possible dans l’évolution des normes.",
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-05",
       "categorie": "sociologie",
       "titre": "La construction sociale de la déviance",
       "accroche": "Un comportement ne devient pas déviant uniquement parce qu’il transgresse une règle, mais aussi parce que les autres le désignent comme tel.",
-      "explication": "Howard Becker montre que la déviance n’est pas une propriété intrinsèque d’un comportement.\n\nElle dépend des règles établies par les groupes sociaux et de leur application à certaines personnes.\n\nUn même comportement peut donc être accepté dans un groupe et sanctionné dans un autre.\n\nC’est l’un des fondements de la théorie de l’étiquetage.",
+      "explication": "Howard Becker montre que la déviance n’est pas une propriété intrinsèque d’un comportement.\n\nCe sont les groupes sociaux qui établissent des règles et désignent ceux qui les transgressent comme « déviants ».\n\nC'est ce qu'explique la théorie de l'étiquetage : lorsqu'une personne reçoit une étiquette, comme « délinquant » ou « perturbateur », les autres peuvent commencer à la considérer et à la traiter en fonction de cette étiquette.\n\nCela peut influencer la façon dont elle est perçue, mais aussi la manière dont elle se comporte et se considère elle-même.\n\nAinsi, un même comportement peut être accepté dans un groupe et sanctionné dans un autre.\n",
       "source": {
-        "type": "lien",
+        "type": "livre",
         "auteurs": "Howard S. Becker",
         "titre": "Outsiders. Études de sociologie de la déviance (traduction française, éd. orig. 1963)",
-        "url": "https://shs.cairn.info/outsiders--9782864249184?lang=fr",
         "annee": 1985
-      }
+      },
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-06",
@@ -127,13 +126,13 @@
       "accroche": "L’école peut présenter comme des talents individuels des compétences qui ont été acquises grâce au milieu familial.",
       "explication": "Pierre Bourdieu et Jean-Claude Passeron montrent que certains élèves arrivent à l’école en maîtrisant déjà les codes culturels et linguistiques valorisés par l’institution.\n\nCes compétences, acquises notamment dans la famille, peuvent être interprétées comme des signes d’intelligence ou de mérite personnel.\n\nL’école risque alors de légitimer des inégalités sociales tout en donnant l’impression de récompenser uniquement les capacités individuelles.",
       "source": {
-        "type": "lien",
-        "auteurs": "Philippe Masson",
-        "titre": "Les Héritiers de Pierre Bourdieu et Jean-Claude Passeron, 1964 — Les enquêtes sociologiques en France depuis 1945",
-        "url": "https://shs.cairn.info/les-enquetes-sociologiques-en-france-depuis-1945--9782707196972-page-85?lang=fr",
-        "annee": 2017
+        "type": "livre",
+        "auteurs": "Pierre Bourdieu et Jean-Claude Passeron",
+        "titre": "Pierre Bourdieu et Jean-Claude Passeron, Les Héritiers. Les étudiants et la culture",
+        "annee": 1964
       },
-      "note_editoriale": "La source liée est une analyse académique de Philippe Masson (2017). Source originale : Pierre Bourdieu et Jean-Claude Passeron, Les Héritiers. Les étudiants et la culture (1964)."
+      "note_editoriale": "La source liée est une analyse académique de Philippe Masson (2017). Source originale : Pierre Bourdieu et Jean-Claude Passeron, Les Héritiers. Les étudiants et la culture (1964).",
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-07",
@@ -142,13 +141,13 @@
       "accroche": "Cracher en public n’a pas toujours été considéré comme impoli.",
       "explication": "Dans La Civilisation des mœurs, Norbert Elias étudie l’évolution des règles de politesse en Europe.\n\nAu fil des siècles, des comportements corporels autrefois tolérés en public sont progressivement devenus gênants, puis socialement condamnés.\n\nCes transformations montrent que le sentiment de dégoût ou de honte est aussi façonné par l’histoire et la socialisation.",
       "source": {
-        "type": "lien",
-        "auteurs": "Johan Goudsblom",
-        "titre": "Les grandes épidémies et la civilisation des mœurs — Actes de la recherche en sciences sociales",
-        "url": "https://www.persee.fr/doc/arss_0335-5322_1987_num_68_1_2370",
-        "annee": 1987
+        "type": "livre",
+        "auteurs": "Norbert Elias",
+        "titre": "La civilisation des mœurs",
+        "annee": 1939
       },
-      "note_editoriale": "La source liée est une recherche de Johan Goudsblom (1987) qui examine notamment les changements historiques concernant le fait de cracher, dans le prolongement de Norbert Elias, La Civilisation des mœurs (1939)."
+      "note_editoriale": "La source liée est une recherche de Johan Goudsblom (1987) qui examine notamment les changements historiques concernant le fait de cracher, dans le prolongement de Norbert Elias, La Civilisation des mœurs (1939).",
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-08",
@@ -157,13 +156,13 @@
       "accroche": "Pour Erving Goffman, nos interactions quotidiennes ressemblent à des représentations théâtrales, avec une scène et des coulisses.",
       "explication": "Dans La Mise en scène de la vie quotidienne, Goffman analyse la manière dont nous adaptons notre comportement au public devant lequel nous nous trouvons.\n\nUn serveur peut être particulièrement courtois en salle, puis adopter une attitude très différente en cuisine.\n\nCela ne signifie pas nécessairement qu’il ment : les différentes situations imposent des attentes et des rôles sociaux différents.",
       "source": {
-        "type": "lien",
-        "auteurs": "Atmane Aggoun",
-        "titre": "La représentation de soi dans le logement chez les familles immigrées d’origine maghrébine — VEI enjeux",
-        "url": "https://www.persee.fr/doc/diver_1299-085x_2003_num_133_1_1420",
-        "annee": 2003
+        "type": "livre",
+        "auteurs": "Erving Goffman",
+        "titre": "The Presentation of Self in Everyday Life",
+        "annee": 1959
       },
-      "note_editoriale": "La source liée est une étude sociologique de Atmane Aggoun (2003) mobilisant les concepts de scène et coulisses. Source originale : Erving Goffman, The Presentation of Self in Everyday Life (1959)."
+      "note_editoriale": "",
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-09",
@@ -172,42 +171,42 @@
       "accroche": "Même les œuvres attribuées à un artiste solitaire reposent généralement sur le travail d’un réseau de personnes.",
       "explication": "Howard Becker montre que la création artistique est une activité collective.\n\nUn musicien dépend notamment des fabricants d’instruments, des ingénieurs du son, des organisateurs de concerts et des distributeurs.\n\nCes coopérations participent à rendre l’œuvre possible et influencent parfois sa forme.\n\nCette approche remet en question l’image de l’artiste comme génie totalement indépendant.",
       "source": {
-        "type": "lien",
+        "type": "article",
         "auteurs": "Howard S. Becker",
         "titre": "Mondes de l’art et types sociaux — Sociologie du travail, vol. 25, n° 4",
-        "url": "https://www.persee.fr/doc/sotra_0038-0296_1983_num_25_4_1945",
         "annee": 1983
       },
-      "note_editoriale": "Le concept est également développé dans Art Worlds (1982), paru en français sous le titre Les Mondes de l’art."
+      "note_editoriale": "Le concept est également développé dans Art Worlds (1982), paru en français sous le titre Les Mondes de l’art.",
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-10",
       "categorie": "sociologie",
       "titre": "Le suicide comme fait social",
-      "accroche": "Sans savoir qui se suicidera, on peut estimer statistiquement combien de personnes se suicideront dans une société. Pour Durkheim, le suicide est aussi un fait social.",
-      "explication": "En 1897, Émile Durkheim observe que les taux de suicide restent relativement stables au sein d’une société, mais diffèrent d’une société à l’autre. Il en conclut que le suicide ne dépend pas uniquement de facteurs individuels.\n\nIl identifie deux grandes dimensions sociales :\n\nL’intégration : la force des liens entre l’individu et les groupes auxquels il appartient. Trop faible, elle favorise le suicide égoïste ; excessive, elle peut conduire au suicide altruiste, lorsque l’individu s’efface devant le groupe.\n\nLa régulation : la manière dont la société encadre les comportements et les aspirations. Trop faible, elle favorise le suicide anomique, lié à la perte de repères ; excessive, elle peut favoriser le suicide fataliste, lorsque l’avenir semble entièrement contraint.\n\nPour Durkheim, ces déséquilibres permettent de comprendre pourquoi certaines sociétés présentent des taux de suicide plus élevés que d’autres.",
+      "accroche": "Sans savoir qui se suicidera, on peut estimer statistiquement combien de personnes se suicideront dans une société.",
+      "explication": "Émile Durkheim observe que les taux de suicide restent relativement stables au sein d’une société, mais diffèrent d’une société à l’autre. Il en conclut que le suicide ne dépend pas uniquement de facteurs individuels, le suicide est un fait social.\n\nIl identifie deux grandes dimensions sociales :\n\nL’intégration : la force des liens entre l’individu et les groupes auxquels il appartient. Trop faible, elle favorise le suicide égoïste ; excessive, elle peut conduire au suicide altruiste, lorsque l’individu s’efface devant le groupe.\n\nLa régulation : la manière dont la société encadre les comportements et les aspirations. Trop faible, elle favorise le suicide anomique, lié à la perte de repères ; excessive, elle peut favoriser le suicide fataliste, lorsque l’avenir semble entièrement contraint.\n\nPour Durkheim, ces déséquilibres permettent de comprendre pourquoi certaines sociétés présentent des taux de suicide plus élevés que d’autres.",
       "source": {
-        "type": "lien",
+        "type": "livre",
         "auteurs": "Émile Durkheim",
-        "titre": "Le Suicide. Étude de sociologie (texte original)",
-        "url": "https://classiques.uqam.ca/classiques/Durkheim_emile/suicide/suicide_tdm.html",
+        "titre": "Le Suicide. Étude de sociologie",
         "annee": 1897
-      }
+      },
+      "statut_editorial": "validee"
     },
     {
       "id": "anthropologie-01",
       "categorie": "anthropologie",
       "titre": "Un cadeau peut créer une obligation",
       "accroche": "Dans certaines sociétés, recevoir un cadeau implique aussi l’obligation d’en rendre un.",
-      "explication": "Dans son Essai sur le don, Marcel Mauss montre que les échanges de cadeaux peuvent répondre à trois obligations sociales : donner, recevoir et rendre. Ces dons servent notamment à créer et maintenir des relations entre personnes ou groupes. Cela ne signifie pas que chaque cadeau exige un remboursement.",
+      "explication": "Dans son Essai sur le don, Marcel Mauss montre que les échanges de cadeaux peuvent répondre à trois obligations sociales : donner, recevoir et rendre. Ces dons servent notamment à créer et maintenir des relations entre personnes ou groupes.",
       "source": {
-        "type": "lien",
+        "type": "livre",
         "auteurs": "Marcel Mauss",
-        "titre": "Essai sur le don. Forme et raison de l’échange dans les sociétés archaïques (texte original)",
-        "url": "https://www.classiques.uqam.ca/classiques/mauss_marcel/socio_et_anthropo/2_essai_sur_le_don/essai_sur_le_don_tdm.html",
+        "titre": "Essai sur le don. Forme et raison de l’échange dans les sociétés archaïques ",
         "annee": 1925
       },
-      "note_editoriale": "L’article paraît dans le volume de L’Année sociologique daté 1923-1924, couramment référencé sous l’année de publication 1925. Ne pas généraliser l’obligation de rendre à toutes les situations ou sociétés."
+      "note_editoriale": "L’article paraît dans le volume de L’Année sociologique daté 1923-1924, couramment référencé sous l’année de publication 1925. Ne pas généraliser l’obligation de rendre à toutes les situations ou sociétés.",
+      "statut_editorial": "validee"
     },
     {
       "id": "anthropologie-02",
@@ -216,58 +215,58 @@
       "accroche": "Au XIXe siècle, certaines familles faisaient photographier leurs proches après leur mort. Ces portraits devenaient des souvenirs précieux.",
       "explication": "Au XIXe siècle, notamment en Europe et en Amérique du Nord, des familles commandaient des portraits photographiques de personnes décédées. Ils servaient à garder une image du défunt et à faire son deuil. La pratique concernait particulièrement les enfants, parfois morts avant qu’aucune photographie de leur vivant ait été prise. Il s’agit d’un usage historiquement situé, pas d’une coutume universelle ni d’une pratique unanimement acceptée.",
       "source": {
-        "type": "lien",
-        "auteurs": "Émilie Jaworski",
-        "titre": "Usages et fonctions de la photographie post mortem dans la communauté polonaise du Nord-Pas-de-Calais et en Pologne — Actes du CTHS",
-        "url": "https://www.persee.fr/doc/acths_1764-7355_2012_act_132_10_2129",
-        "annee": 2012
+        "type": "livre",
+        "auteurs": "Joëlle Bolloch",
+        "titre": "Souriez, vous êtes morts. Photographies post mortem",
+        "annee": 2024
       },
-      "note_editoriale": "Il s’agit de photographies post-mortem (et non post-partum). Éviter les images explicites de corps sans avertissement ; préférer une illustration stylisée."
+      "note_editoriale": "",
+      "statut_editorial": "validee"
     },
     {
       "id": "psychologie_sociale-01",
       "categorie": "psychologie_sociale",
       "titre": "Une ligne évidente… jusqu’à ce que tout le monde dise le contraire",
       "accroche": "Des volontaires ont parfois donné une réponse visiblement fausse pour suivre le groupe.",
-      "explication": "Dans les expériences de Solomon Asch, des complices donnaient unanimement une mauvaise réponse à une comparaison de lignes, créant une pression à se conformer.",
+      "explication": "Dans les années 1950, le psychologue Solomon Asch réalise une expérience sur le conformisme.\n\nUn participant doit comparer la longueur de plusieurs lignes et désigner celle qui correspond à une ligne de référence. La réponse est pourtant évidente.\n\nMais il ignore que les autres personnes présentes sont des complices de l'expérimentateur. Lors de certains essais, tous donnent volontairement la même mauvaise réponse.\n\nLe participant se retrouve alors face à un dilemme : faire confiance à ce qu'il voit ou suivre l'avis unanime du groupe.\n\nLes résultats montrent que de nombreux participants finissent par se conformer au groupe au moins une fois, même lorsque celui-ci se trompe manifestement.\n\nL'expérience illustre ainsi la puissance de la pression sociale sur nos jugements.\n",
       "source": {
-        "type": "lien",
+        "type": "article",
         "auteurs": "Solomon E. Asch",
         "titre": "Studies of Independence and Conformity: I. A Minority of One Against a Unanimous Majority — Psychological Monographs, 70(9), 1-70",
-        "url": "https://doi.org/10.1037/h0093718",
         "annee": 1956
       },
-      "note_editoriale": "Étude primaire de Solomon Asch sur le jugement de lignes et la conformité, publiée en 1956. Résultat lié au protocole expérimental décrit, pas un taux universel de conformisme."
+      "note_editoriale": "Étude primaire de Solomon Asch sur le jugement de lignes et la conformité, publiée en 1956. Résultat lié au protocole expérimental décrit, pas un taux universel de conformisme.",
+      "statut_editorial": "validee"
     },
     {
       "id": "psychologie_sociale-02",
       "categorie": "psychologie_sociale",
       "titre": "L’autorité peut peser très lourd",
       "accroche": "Dans une expérience célèbre, 26 participants sur 40 sont allés jusqu’au niveau maximal indiqué.",
-      "explication": "Dans la condition décrite par Stanley Milgram en 1963, des volontaires croyaient administrer des chocs électriques. Aucun véritable choc n’était infligé.",
+      "explication": "En 1963, le psychologue Stanley Milgram publie une expérience sur l'obéissance à l'autorité.\n\nDes volontaires pensent participer à une étude sur la mémoire. Ils doivent poser des questions à une autre personne et lui administrer un choc électrique de plus en plus puissant à chaque mauvaise réponse.\n\nEn réalité, cette personne est un complice qui ne reçoit aucune décharge électrique. Mais les volontaires l'ignorent.\n\nAu fil de l'expérience, le complice crie, se plaint de douleurs et demande à arrêter. Pourtant, lorsqu'un volontaire hésite, l'expérimentateur l'incite à continuer.\n\nRésultat : 65 % des participants vont jusqu'au choc maximal supposé de 450 volts, malgré les protestations de la victime.\n\nCette expérience montre à quel point l'autorité peut influencer nos comportements, même lorsque les ordres entrent en conflit avec nos convictions morales.\n",
       "source": {
-        "type": "lien",
+        "type": "article",
         "auteurs": "Stanley Milgram",
         "titre": "Behavioral Study of Obedience",
-        "url": "https://doi.org/10.1037/h0040525",
         "annee": 1963
       },
-      "note_editoriale": "Dispositif historiquement controversé sur le plan éthique ; ne pas généraliser le résultat."
+      "note_editoriale": "Dispositif historiquement controversé sur le plan éthique ; ne pas généraliser le résultat.",
+      "statut_editorial": "validee"
     },
     {
       "id": "histoire-01",
       "categorie": "histoire",
       "titre": "Les mammouths ont connu l’époque des pyramides",
       "accroche": "Quand les grandes pyramides d’Égypte existaient déjà, des mammouths laineux vivaient encore sur une île de l’Arctique.",
-      "explication": "Les pyramides de Gizeh ont été construites au IIIe millénaire avant notre ère, notamment la grande pyramide de Khéops vers 2560 av. J.-C. Les derniers mammouths laineux connus ont survécu sur l’île Wrangel, au nord de la Sibérie, jusque vers 2000 av. J.-C. Des mammouths et les pyramides d’Égypte ont donc coexisté pendant plusieurs siècles, à des milliers de kilomètres de distance.",
+      "explication": "Les pyramides de Gizeh ont été construites au IIIe millénaire avant notre ère, notamment la grande pyramide de Khéops vers 2560 av. J.-C. Les derniers mammouths laineux connus ont survécu sur l’île Wrangel, au nord de la Sibérie, jusque vers 2000 av. J.-C. \n\nDes mammouths et les pyramides d’Égypte ont donc coexisté pendant plusieurs siècles, à des milliers de kilomètres de distance.",
       "source": {
-        "type": "lien",
+        "type": "article",
         "auteurs": "Marianne Dehasque et al.",
         "titre": "Temporal dynamics of woolly mammoth genome erosion prior to extinction — Cell",
-        "url": "https://doi.org/10.1016/j.cell.2024.05.033",
         "annee": 2024
       },
-      "note_editoriale": "L’étude génomique établit la survie des mammouths de Wrangel jusque vers 4 000 ans avant le présent ; elle ne date pas les pyramides. La chronologie de Gizeh est distincte et s’appuie sur l’archéologie égyptienne (Khéops vers 2560 av. J.-C.). Ne pas laisser entendre que les mammouths vivaient en Égypte."
+      "note_editoriale": "L’étude génomique établit la survie des mammouths de Wrangel jusque vers 4 000 ans avant le présent ; elle ne date pas les pyramides. La chronologie de Gizeh est distincte et s’appuie sur l’archéologie égyptienne (Khéops vers 2560 av. J.-C.). Ne pas laisser entendre que les mammouths vivaient en Égypte.",
+      "statut_editorial": "validee"
     },
     {
       "id": "histoire-02",
@@ -276,13 +275,13 @@
       "accroche": "À Pompéi, on trouvait des comptoirs vendant des plats prêts à manger.",
       "explication": "Les thermopolia proposaient boissons et nourriture, avec de grandes jarres intégrées aux comptoirs.",
       "source": {
-        "type": "lien",
-        "auteurs": "Parc archéologique de Pompéi",
-        "titre": "Le thermopolium se livre — présentation des résultats des fouilles",
-        "url": "https://pompeiisites.org/wp-content/uploads/arch%C3%A9ologia_thermopolium_fr.pdf",
-        "annee": 2020
+        "type": "livre",
+        "auteurs": "Steven J. R. Ellis",
+        "titre": "The Roman Retail Revolution: The Socio-Economic World of the Taberna",
+        "annee": 2018
       },
-      "note_editoriale": "Source française officielle du Parc archéologique de Pompéi présentant des résultats de fouilles ; ne pas confondre publication institutionnelle de recherche et article évalué par les pairs."
+      "note_editoriale": "Source française officielle du Parc archéologique de Pompéi présentant des résultats de fouilles ; ne pas confondre publication institutionnelle de recherche et article évalué par les pairs.",
+      "statut_editorial": "validee"
     },
     {
       "id": "linguistique-01",
@@ -291,42 +290,42 @@
       "accroche": "Le mot « alphabet » vient simplement des deux premières lettres grecques : alpha et bêta.",
       "explication": "Le mot français « alphabet » est issu du latin tardif alphabetum, formé sur les noms des deux premières lettres de l’alphabet grec : alpha et bêta. C’est un exemple de la façon dont l’histoire des langues reste présente dans les mots les plus ordinaires.",
       "source": {
-        "type": "lien",
+        "type": "autre",
         "auteurs": "Académie française",
         "titre": "Dictionnaire de l’Académie française, 9e édition — « alphabet »",
-        "url": "https://www.dictionnaire-academie.fr/article/A9A1295",
         "annee": 2024
-      }
+      },
+      "statut_editorial": "validee"
     },
     {
       "id": "linguistique-02",
       "categorie": "linguistique",
       "titre": "Un seul pronom pour « il » et « elle »",
       "accroche": "En turc, « il », « elle » et « ça » peuvent se traduire par un seul pronom : « o ».",
-      "explication": "Le turc n’a pas de genre grammatical. Son pronom de troisième personne du singulier, « o », peut donc correspondre à « il », « elle » ou « cela » selon le contexte. Ce n’est pas parce qu’on ne peut pas préciser le sexe d’une personne : on peut le faire autrement, si nécessaire.",
+      "explication": "Contrairement au français, le turc ne possède pas de genre grammatical : ses noms ne sont ni masculins ni féminins.\n\nCette particularité concerne également les pronoms. En turc, le pronom « o » peut signifier « il », « elle » ou « cela », selon le contexte.\n\nPar exemple, la phrase « O doktor » signifie aussi bien « Il est médecin » que « Elle est médecin ». Rien dans la phrase ne permet de distinguer les deux.\n\nCela ne signifie pas que les locuteurs turcs sont incapables de préciser le sexe d'une personne. Ils peuvent utiliser des mots comme « kadın » (femme) ou « erkek » (homme) lorsque cette information est nécessaire.\n\nLe turc montre ainsi qu'une langue peut parfaitement fonctionner sans distinguer systématiquement le masculin et le féminin.\n",
       "source": {
-        "type": "lien",
+        "type": "livre",
         "auteurs": "Geoffrey Lewis",
         "titre": "II. The Noun — Turkish Grammar",
-        "url": "https://doi.org/10.1093/oso/9780198700364.003.0002",
         "annee": 2000
       },
-      "note_editoriale": "Référence grammaticale de Geoffrey Lewis, en anglais ; elle indique explicitement l’absence de genre grammatical et l’usage de « o » pour he, she et it. La traduction reste déterminée par le contexte ; « o » peut aussi servir de démonstratif."
+      "note_editoriale": "Référence grammaticale de Geoffrey Lewis, en anglais ; elle indique explicitement l’absence de genre grammatical et l’usage de « o » pour he, she et it. La traduction reste déterminée par le contexte ; « o » peut aussi servir de démonstratif.",
+      "statut_editorial": "validee"
     },
     {
       "id": "economie-01",
       "categorie": "economie",
       "titre": "Qui décide vraiment du prix ?",
-      "accroche": "Dans le modèle de concurrence pure et parfaite, une entreprise ne fixe pas seule son prix : elle accepte celui du marché.",
-      "explication": "Une entreprise dite « preneuse de prix » n’a pas de pouvoir individuel sur le prix du marché. Cette conclusion découle du modèle de concurrence parfaite, qui suppose notamment de nombreux vendeurs, des produits identiques, une information suffisante et une entrée libre sur le marché. Le modèle est une référence théorique, pas une description automatique de tous les marchés réels.",
+      "accroche": "Sur certains marchés, les entreprises n'ont pas le pouvoir de choisir le prix auquel elles vendent leurs produits.",
+      "explication": "En économie, on appelle « preneuse de prix » une entreprise qui ne peut pas décider seule du prix auquel elle vend ses produits.\n\nSur un marché où de très nombreux producteurs proposent des produits identiques, aucun vendeur ne peut imposer un prix supérieur à celui du marché. Les acheteurs peuvent simplement se tourner vers un concurrent proposant le même produit moins cher.\n\nLe prix résulte donc de la rencontre entre l'offre des vendeurs et la demande des acheteurs. Chaque entreprise doit s'y adapter.\n\nC'est le principe du modèle de concurrence pure et parfaite, qui suppose notamment un grand nombre de vendeurs et d'acheteurs, des produits identiques, une bonne circulation de l'information et la possibilité pour de nouvelles entreprises d'entrer sur le marché.\n\nCe modèle permet de comprendre certains mécanismes économiques, mais reste théorique : dans la réalité, les entreprises disposent souvent d'une certaine liberté pour fixer leurs prix.\n",
       "source": {
-        "type": "lien",
+        "type": "livre",
         "auteurs": "Emmanuelle Bénicourt et Bernard Guerrien",
         "titre": "La théorie économique néoclassique — « L’équilibre en concurrence parfaite »",
-        "url": "https://shs.cairn.info/la-theorie-economique-neoclassique--9782707154224-page-69?lang=fr",
         "annee": 2008
       },
-      "note_editoriale": "Ne pas affirmer que seuls les marchés en CPP comportent des agents preneurs de prix."
+      "note_editoriale": "Ne pas affirmer que seuls les marchés en CPP comportent des agents preneurs de prix.",
+      "statut_editorial": "validee"
     },
     {
       "id": "economie-02",
@@ -335,13 +334,13 @@
       "accroche": "Quand une banque accorde un prêt, elle crée de la monnaie en créditant le compte de son client. Elle ne prête pas simplement des billets déjà déposés.",
       "explication": "Lorsqu’une banque commerciale accorde un crédit, elle inscrit la somme correspondante au compte de l’emprunteur : ce dépôt constitue une création de monnaie scripturale. Lors du remboursement du principal, cette monnaie est détruite. Les banques ne peuvent toutefois pas créer de monnaie sans limites : elles sont contraintes par la réglementation, leurs fonds propres, leurs besoins de liquidité et la politique monétaire.",
       "source": {
-        "type": "lien",
+        "type": "rapport",
         "auteurs": "Banque de France",
         "titre": "Comment est créée la monnaie ?",
-        "url": "https://www.banque-france.fr/fr/publications-et-statistiques/publications/comment-est-creee-la-monnaie",
         "annee": 2024
       },
-      "note_editoriale": "Préciser que cela concerne la monnaie scripturale des banques commerciales et que le remboursement du capital détruit cette monnaie ; ne pas suggérer une création monétaire illimitée."
+      "note_editoriale": "Préciser que cela concerne la monnaie scripturale des banques commerciales et que le remboursement du capital détruit cette monnaie ; ne pas suggérer une création monétaire illimitée.",
+      "statut_editorial": "validee"
     },
     {
       "id": "philosophie-01",
@@ -350,13 +349,13 @@
       "accroche": "Socrate est l’un des philosophes les plus célèbres. Pourtant, il n’a rien écrit.",
       "explication": "Nous connaissons surtout Socrate à travers les récits et dialogues d'autres auteurs, notamment Platon et Xénophon. Ces témoignages ne dressent pas toujours le même portrait du personnage, ce qui complique la distinction entre le Socrate historique et ses représentations littéraires.",
       "source": {
-        "type": "lien",
-        "auteurs": "Marcel Barzin",
-        "titre": "Sur les Nuées d’Aristophane — Bulletin de l’Académie royale de Belgique",
-        "url": "https://www.persee.fr/doc/barb_0001-4133_1968_num_54_1_54848",
-        "annee": 1968
+        "type": "livre",
+        "auteurs": "Louis-André Dorion",
+        "titre": "Socrate",
+        "annee": 2004
       },
-      "note_editoriale": "Absence d’écrits connus attribués à Socrate ; ne pas prétendre connaître ses idées exactes sans intermédiaire."
+      "note_editoriale": "Absence d’écrits connus attribués à Socrate ; ne pas prétendre connaître ses idées exactes sans intermédiaire.",
+      "statut_editorial": "validee"
     },
     {
       "id": "philosophie-02",
@@ -365,28 +364,28 @@
       "accroche": "« Cette phrase est fausse. » Si elle dit vrai, elle est fausse. Mais si elle est fausse, elle dit vrai.",
       "explication": "C’est le paradoxe du menteur. Une phrase qui affirme sa propre fausseté semble conduire à une contradiction : si elle est vraie, alors ce qu’elle dit impose qu’elle soit fausse ; mais si elle est fausse, alors elle dit vrai. Ce paradoxe est étudié depuis l’Antiquité et continue d’intéresser la logique et la philosophie du langage.",
       "source": {
-        "type": "lien",
-        "auteurs": "Béatrice Godart-Wendling",
-        "titre": "Le paradoxe du menteur : essai de résolution dans le cadre d’une approche dynamique — Intellectica",
-        "url": "https://www.persee.fr/doc/intel_0769-4113_1988_num_6_2_869",
-        "annee": 1988
+        "type": "livre",
+        "auteurs": "Raymond M. Smullyan",
+        "titre": "Quel est le titre de ce livre ?",
+        "annee": 2007
       },
-      "note_editoriale": "Présenter comme un paradoxe logique, pas comme une preuve que toute vérité est relative."
+      "note_editoriale": "Présenter comme un paradoxe logique, pas comme une preuve que toute vérité est relative.",
+      "statut_editorial": "validee"
     },
     {
       "id": "geographie_humaine-01",
       "categorie": "geographie_humaine",
       "titre": "Le monde change de centre",
       "accroche": "Sur une carte du monde, le Pacifique peut être au milieu… ou être coupé en deux. Le centre est un choix.",
-      "explication": "Une mappemonde doit projeter la surface courbe de la Terre sur une surface plane. Le cartographe choisit où placer le centre et la coupure de la carte : une carte peut être centrée sur l’Atlantique, une autre sur le Pacifique. De plus, toute projection plane déforme au moins certaines distances, formes, surfaces ou directions.",
+      "explication": "Représenter la Terre sur une carte plane pose un problème : il est impossible d'aplatir une surface sphérique sans la déformer.\n\nLes cartographes doivent donc faire des choix. Ils peuvent notamment décider de placer l'Europe au centre de la carte, ou de privilégier une représentation centrée sur l'océan Pacifique. Le monde reste le même, mais sa représentation change.\n\nLe choix de la projection influence également l'apparence des continents. Par exemple, sur la célèbre projection de Mercator, utilisée depuis le XVIe siècle, les territoires proches des pôles paraissent beaucoup plus grands qu'ils ne le sont réellement.\n\nAinsi, le Groenland semble presque aussi vaste que l'Afrique, alors que l'Afrique est environ 14 fois plus grande.\n\nD'autres projections préservent les proportions des surfaces, mais déforment davantage les formes des continents.\n\nAucune carte plane ne peut donc représenter parfaitement la Terre : chaque projection privilégie certaines propriétés au détriment d'autres.\n",
       "source": {
-        "type": "lien",
+        "type": "rapport",
         "auteurs": "IGN — Institut national de l’information géographique et forestière",
         "titre": "Le pouvoir des cartes pour représenter le monde",
-        "url": "https://www.ign.fr/le-pouvoir-des-cartes-pour-representer-le-monde",
         "annee": 2026
       },
-      "note_editoriale": "Le centre du dessin est un choix cartographique ; ne pas généraliser mécaniquement des préférences à un pays entier."
+      "note_editoriale": "Le centre du dessin est un choix cartographique ; ne pas généraliser mécaniquement des préférences à un pays entier.",
+      "statut_editorial": "validee"
     },
     {
       "id": "geographie_humaine-02",
@@ -395,13 +394,13 @@
       "accroche": "Dans une même ville, les quartiers très bétonnés peuvent être plus chauds que ceux qui possèdent beaucoup d’arbres.",
       "explication": "Les bâtiments, routes et autres surfaces minérales absorbent puis restituent de la chaleur. Les arbres, les sols végétalisés et l’eau apportent de l’ombre et favorisent le rafraîchissement par évapotranspiration. C’est l’une des raisons pour lesquelles la température varie entre quartiers d’une même ville : on parle notamment d’îlots de chaleur urbains.",
       "source": {
-        "type": "lien",
+        "type": "autre",
         "auteurs": "Olivier Cantat, Matthieu David et François Beauvais",
         "titre": "L’îlot de chaleur urbain à Caen : un phénomène d’intensité et de répartition géographique très variables — Atlas social de Caen, laboratoire ESO (CNRS)",
-        "url": "https://atlas-social-de-caen.fr/index.php?id=1271",
         "annee": 2024
       },
-      "note_editoriale": "Éviter un écart chiffré fixe : il dépend de la météo, de l’heure et du lieu."
+      "note_editoriale": "Éviter un écart chiffré fixe : il dépend de la météo, de l’heure et du lieu.",
+      "statut_editorial": "a_valider"
     }
   ]
 }
