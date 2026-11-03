@@ -2,7 +2,6 @@
   "version": "0.4.0-proposition",
   "langue": "fr-FR",
   "date_creation": "2026-11-02",
-  "statut": "revision_editoriale_proposee_a_valider_avant_publication",
   "categories": [
     {
       "id": "sociologie",
@@ -66,7 +65,7 @@
       "categorie": "sociologie",
       "titre": "Le goût n’est pas qu’une affaire de goût",
       "accroche": "Tes goûts culturels peuvent aussi raconter ton milieu social.",
-      "explication": "Pierre Bourdieu montre que les préférences artistiques et alimentaires participent aux distinctions entre groupes sociaux.",
+      "explication": "Dans *La Distinction* (1979), Pierre Bourdieu montre que nos goûts ne relèvent pas uniquement de préférences personnelles : ils sont aussi influencés par notre milieu social et notre éducation. Nos habitudes alimentaires, nos préférences musicales ou notre rapport à l'art sont notamment façonnés par le capital culturel transmis au cours de notre socialisation. \n\nCes goûts peuvent alors devenir des marqueurs d'appartenance sociale. \n\nCertaines pratiques sont considérées comme prestigieuses, tandis que d'autres sont dévalorisées. \n\nAinsi, nos préférences participent à la distinction entre les groupes sociaux et peuvent contribuer à reproduire les hiérarchies sociales. \n",
       "source": {
         "type": "article",
         "auteurs": "Pierre Bourdieu et Monique de Saint Martin",
@@ -74,7 +73,7 @@
         "annee": 1976
       },
       "note_editoriale": "Source liée : article de recherche de Bourdieu et Monique de Saint Martin (1976), précurseur de La Distinction (Bourdieu, 1979). Une relation statistique, pas une règle valable pour chaque individu.",
-      "statut_editorial": "a_valider"
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-03",
@@ -104,7 +103,7 @@
         "annee": 1895
       },
       "note_editoriale": "Extrait du chapitre de l’ouvrage publié en 1895. Le texte de la page UQAM traite directement du caractère normal du crime et de son rôle possible dans l’évolution des normes.",
-      "statut_editorial": "a_valider"
+      "statut_editorial": "validee"
     },
     {
       "id": "sociologie-05",

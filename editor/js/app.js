@@ -26,8 +26,6 @@
     $('dirty-state').classList.toggle('unsaved', dirty);
     $('save-button').disabled = !state.catalog || !dirty;
     $('catalog-name').textContent = state.catalog ? state.filename : 'Aucune base ouverte';
-    $('catalog-status').textContent = state.catalog ? String(state.catalog.statut || 'Statut manquant').replaceAll('_', ' ') : 'Importez un fichier JSON pour commencer';
-    $('catalog-status').previousElementSibling?.classList.toggle('online', !!state.catalog);
   }
 
   function updateCounts(filteredCount) {
@@ -119,7 +117,6 @@
     fieldValue('fact-hook', fact.accroche);
     fieldValue('fact-explanation', fact.explication);
     $('fact-validated').checked = fact.statut_editorial === 'validee';
-    fieldValue('catalog-status-input', state.catalog.statut);
     fieldValue('editorial-note', fact.note_editoriale);
     $('editorial-note-wrap').hidden = !Object.prototype.hasOwnProperty.call(fact, 'note_editoriale') && state.selectedIndex >= 0;
     if (state.selectedIndex < 0) $('editorial-note-wrap').hidden = false;
@@ -154,6 +151,7 @@
     }
     const originalCatalog = JSON.stringify(catalog);
     const missingEditorialStatuses = catalog.faits.filter((fact) => fact && typeof fact === 'object' && !Object.prototype.hasOwnProperty.call(fact, 'statut_editorial')).length;
+    const hadGlobalStatus = Object.prototype.hasOwnProperty.call(catalog, 'statut');
     catalog = window.EditorData.normalizeCatalog(catalog);
     state.catalog = catalog;
     state.selectedIndex = catalog.faits.length ? 0 : -1;
@@ -165,6 +163,7 @@
     refreshAll();
     const errors = window.EditorValidation.validateCatalog(catalog);
     if (missingEditorialStatuses) notify(`${missingEditorialStatuses} anecdote(s) sans statut ont été marquées « À valider ». Enregistrez la migration.`);
+    else if (hadGlobalStatus) notify('Le statut global obsolète a été retiré. Enregistrez la migration.');
     else if (errors.length) notify(`Base chargée (${catalog.faits.length} anecdotes). ${errors.length} point(s) à corriger avant l’enregistrement.`, 'error');
     else notify(`${catalog.faits.length} anecdotes et ${catalog.categories.length} catégories chargées.`);
   }
@@ -248,8 +247,7 @@
         'source-type': ['source.type', target.value], 'source-authors': ['source.auteurs', target.value],
         'source-title': ['source.titre', target.value],
       };
-      if (target.id === 'catalog-status-input') { state.catalog.statut = target.value; renderStatusFilter(); }
-      else if (target.id === 'fact-validated') fact.statut_editorial = target.checked ? 'validee' : 'a_valider';
+      if (target.id === 'fact-validated') fact.statut_editorial = target.checked ? 'validee' : 'a_valider';
       else if (target.id === 'source-year') {
         if (!fact.source) fact.source = {};
         if (target.value === '') {
@@ -270,7 +268,7 @@
     $('hook-counter').textContent = `${(fact.accroche || '').length} caractères`;
     $('hook-warning').hidden = (fact.accroche || '').length < 150;
     updatePreview();
-    if (target.id === 'fact-title' || target.id === 'fact-category' || target.id === 'catalog-status-input' || target.id === 'fact-validated' || target.dataset.extraSource) renderList();
+    if (target.id === 'fact-title' || target.id === 'fact-category' || target.id === 'fact-validated' || target.dataset.extraSource) renderList();
     updateSaveState();
   }
 

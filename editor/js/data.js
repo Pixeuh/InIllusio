@@ -29,6 +29,7 @@
 
   function normalizeCatalog(catalog) {
     const normalized = copy(catalog);
+    delete normalized.statut;
     normalized.faits.forEach((fact) => {
       if (!fact || typeof fact !== 'object') return;
       // Legacy entries with no individual status are always marked pending.

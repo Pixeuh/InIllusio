@@ -41,7 +41,7 @@ class CatalogImporterTest {
             .map { it.type }
             .toSet()
         assertEquals(setOf("livre", "article", "rapport", "autre"), importedTypes)
-        assertEquals(0, database.catalogDao().validatedAnecdotes().size)
+        assertEquals(listOf("sociologie-02"), database.catalogDao().validatedAnecdotes().map { it.id })
     }
 
     @Test fun onlyValidatedFactsCanBeDistributedAndRevalidationKeepsCollectedCards() = runBlocking {
@@ -52,13 +52,13 @@ class CatalogImporterTest {
         facts.getJSONObject(0).put("statut_editorial", "validee")
         importer.importJson(catalog.toString())
 
-        assertEquals(listOf("sociologie-01"), dao.validatedAnecdotes().map { it.id })
+        assertEquals(listOf("sociologie-01", "sociologie-02"), dao.validatedAnecdotes().map { it.id })
         dao.putCollection(CollectionEntity("sociologie-01", 10L))
 
         facts.getJSONObject(0).put("statut_editorial", "a_valider")
         importer.importJson(catalog.toString())
 
-        assertEquals(0, dao.validatedAnecdotes().size)
+        assertEquals(listOf("sociologie-02"), dao.validatedAnecdotes().map { it.id })
         assertNotNull(dao.getAnecdote("sociologie-01"))
         assertEquals("sociologie-01", dao.observeCollection().first().single().id)
     }
@@ -69,14 +69,14 @@ class CatalogImporterTest {
         val facts = catalog.getJSONArray("faits")
         facts.getJSONObject(0).remove("statut_editorial")
         importer.importJson(catalog.toString())
-        assertEquals(0, dao.validatedAnecdotes().size)
+        assertEquals(listOf("sociologie-02"), dao.validatedAnecdotes().map { it.id })
 
         val before = dao.anecdoteCount()
         facts.getJSONObject(0).put("statut_editorial", "publie")
         runCatching { importer.importJson(catalog.toString()) }
             .onSuccess { throw AssertionError("Unknown editorial status should be rejected") }
         assertEquals(before, dao.anecdoteCount())
-        assertEquals(0, dao.validatedAnecdotes().size)
+        assertEquals(listOf("sociologie-02"), dao.validatedAnecdotes().map { it.id })
     }
 
     @Test fun obsoleteSourceTypeIsRejectedWithoutChangingCollectionOrCatalog() = runBlocking {

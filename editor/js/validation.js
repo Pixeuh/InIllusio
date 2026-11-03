@@ -11,8 +11,6 @@
     if (!Array.isArray(catalog.categories) || !Array.isArray(catalog.faits)) {
       return ['La structure attendue contient les tableaux « categories » et « faits ».'];
     }
-    if (!text(catalog.statut)) errors.push('Le statut éditorial du catalogue est obligatoire.');
-
     const categoryIds = new Set();
     catalog.categories.forEach((category, index) => {
       if (!category || !text(category.id) || !text(category.nom)) {
