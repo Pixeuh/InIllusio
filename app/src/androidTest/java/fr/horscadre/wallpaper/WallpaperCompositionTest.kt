@@ -19,10 +19,16 @@ class WallpaperCompositionTest {
     @Test
     fun illustrationUsesItsNativeArtboardAspectRatio() {
         val service = WallpaperService(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext)
-        val bounds = service.illustrationBounds(1080, 2400, 1.35f)
-        assertEquals(1000f / 700f, bounds.width() / bounds.height(), .001f)
-        assertTrue("The aspect-correct artwork still spans a substantial part of the display", bounds.height() / 2400f > .4f)
-        assertTrue("The illustration stays near its existing upper-screen anchor", bounds.top / 2400f < .04f)
+        val displays = listOf(1080 to 2400, 1080 to 2340, 1440 to 3200, 1080 to 1920)
+        displays.forEach { (width, height) ->
+            val bounds = service.illustrationBounds(width, height, 1f)
+            assertEquals("Native artwork proportions at ${width}x$height", 1000f / 700f, bounds.width() / bounds.height(), .001f)
+            assertTrue("Artwork stays inside the screen width at ${width}x$height", bounds.left >= 0f && bounds.right <= width)
+            assertEquals("Artwork remains horizontally centered at ${width}x$height", width / 2f, bounds.centerX(), .5f)
+            assertTrue("Full illustration remains substantial at ${width}x$height", bounds.width() / width.toFloat() > .99f)
+            assertTrue("Illustration stays in the upper part at ${width}x$height", bounds.top / height.toFloat() < .04f)
+            assertTrue("Artwork height adapts to the display ratio at ${width}x$height", bounds.height() / height.toFloat() in .30f.. .41f)
+        }
     }
 
     @Test
@@ -50,7 +56,7 @@ class WallpaperCompositionTest {
     }
 
     @Test
-    fun illustrationPixelsBeginNearTenPercentAndSpanNearlyHalfTheDisplay() {
+    fun illustrationPixelsBeginNearTheTopAndFillTheUpperArtworkArea() {
         val service = WallpaperService(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext)
         val fact = AnecdoteWithCategory("layout-test", "histoire", "Histoire", "Test", "Accroche courte.", "")
         val bitmap = service.render(fact, 1080, 2400, darkTheme = true)
@@ -62,8 +68,8 @@ class WallpaperCompositionTest {
         }
 
         assertTrue("Visible illustration pixels should start close to the top of the poster", populatedRows.first().toFloat() / bitmap.height < .11f)
-        assertTrue("Visible illustration pixels should reach the lower part of its allocated area", populatedRows.last().toFloat() / bitmap.height > .42f)
-        assertTrue("Actual artwork should remain large after preserving its native proportions", (populatedRows.last() - populatedRows.first()).toFloat() / bitmap.height > .36f)
+        assertTrue("Visible illustration pixels should reach the lower part of its allocated area", populatedRows.last().toFloat() / bitmap.height > .28f)
+        assertTrue("Actual artwork should remain large after preserving its native proportions", (populatedRows.last() - populatedRows.first()).toFloat() / bitmap.height > .24f)
     }
 
     @Test

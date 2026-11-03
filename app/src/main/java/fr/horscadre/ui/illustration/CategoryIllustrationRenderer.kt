@@ -38,6 +38,22 @@ object CategoryIllustrationRenderer {
         }
         val art = Art(canvas, palette)
         art.commonTexture()
+        val categoryScale = when (categoryId) {
+            SOCIOLOGY -> 1.08f
+            ANTHROPOLOGY -> 1.12f
+            SOCIAL_PSYCHOLOGY -> 1.08f
+            HISTORY -> 1.03f
+            LINGUISTICS -> 1.04f
+            ECONOMICS -> 1.06f
+            PHILOSOPHY -> 1.25f
+            HUMAN_GEOGRAPHY -> 1.20f
+            else -> 1.08f
+        }
+        // Normalize the visual weight of categories whose central motif is
+        // naturally compact. The uniform scale preserves geometry proportions.
+        canvas.translate(500f, 350f)
+        canvas.scale(categoryScale, categoryScale)
+        canvas.translate(-500f, -350f)
         when (categoryId) {
             SOCIOLOGY -> art.sociology()
             ANTHROPOLOGY -> art.anthropology()

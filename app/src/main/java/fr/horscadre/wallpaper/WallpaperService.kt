@@ -109,9 +109,10 @@ class WallpaperService(context: Context) {
         val sourceLabelTop = sourceLabelBaseline + sourceLabelPaint.ascent()
         val hookBottom = sourceLabelTop - height * .035f
 
-        // Keep the native 1000:700 artboard proportions while allowing a modest
-        // horizontal bleed. Long copy can reclaim space by reducing the art size.
-        var artworkScale = 1.35f
+        // Fit the full native 1000:700 artboard to the screen width. The former
+        // 1.35x width cap cropped important drawing elements on portrait phones.
+        // Long copy can still reclaim space by reducing the artwork scale.
+        var artworkScale = 1f
         var artworkWidth = artworkWidth(width, height, artworkScale)
         var artworkHeight = artworkHeight(artworkWidth)
         var categoryTop = artworkTop + artworkHeight + height * .022f
@@ -220,7 +221,7 @@ class WallpaperService(context: Context) {
     }
 
     private fun artworkWidth(width: Int, height: Int, scale: Float): Float =
-        min(width * scale, height * .54f * 1000f / 700f)
+        min(width * scale, min(width.toFloat(), height * .54f * 1000f / 700f))
 
     private fun artworkHeight(artworkWidth: Float): Float = artworkWidth * .7f
 
