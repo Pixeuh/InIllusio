@@ -37,7 +37,7 @@ class CategoryIllustrationTest {
     }
 
     @Test fun everyCategoryHasItsOwnNonEmptyVectorArtwork() {
-        assertEquals(8, CategoryIllustrationRenderer.categoryIds.size)
+        assertEquals(14, CategoryIllustrationRenderer.categoryIds.size)
         val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
         val themedBitmaps = CategoryIllustrationRenderer.categoryIds.map { id ->
             val colors = DisciplinePalettes.forCategory(context, id)

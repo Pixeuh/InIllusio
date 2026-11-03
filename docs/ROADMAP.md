@@ -11,15 +11,16 @@
 - Ajout automatique et idempotent à la collection après diffusion `FLAG_LOCK` réussie ou callback de récompense booster confirmé ; aucune collection sur erreur, aperçu ou publicité interrompue.
 - Boosters et diffusion du fond alimentent la même table Room par transactions distinctes ; seuls les fonds réussis inscrivent un historique de livraison.
 - Renderer d’affiche plein écran adaptatif aux dimensions et au thème ; illustration à l’échelle native, ajustée à la largeur et au ratio de l’écran sans découpage, textes mesurés pour les accroches et références longues, sans zone réservée à l’horloge système ; aperçu et application réutilisent le même bitmap avec recadrage plein cadre et `FLAG_LOCK` exclusivement.
-- Huit illustrations vectorielles originales, une par catégorie, partagées entre accueil, collection, carte agrandie et fond verrouillé.
+- Quatorze illustrations vectorielles originales, une par catégorie, partagées entre accueil, collection, carte agrandie et fond verrouillé.
 - Palettes principale/secondaire centralisées par discipline et partagées entre l’application, le renderer du fond verrouillé et l’éditeur graphique.
 - Suppression de tous les numéros individuels visibles, avec conservation des identifiants techniques.
-- Menu développeur uniquement en debug (7 appuis rapides sur le titre de collection), déblocage idempotent des 24 anecdotes avec sauvegarde persistante, restauration exacte, prévisualisation sans mutation et régénération/application de l’affiche sur le verrouillage uniquement ; build release sans interface ni code de mutation développeur.
+- Menu développeur uniquement en debug (7 appuis rapides sur le titre de collection), déblocage idempotent des 35 anecdotes avec sauvegarde persistante, restauration exacte, prévisualisation sans mutation et régénération/application de l’affiche sur le verrouillage uniquement ; build release sans interface ni code de mutation développeur.
 - Réinitialisation de collection disponible dans le menu DEBUG, avec confirmation, effacement transactionnel des seules acquisitions Room et invalidation des attributions de booster en attente ; le catalogue et les historiques de diffusion sont conservés.
 - 8 tests unitaires et 8 tests Android ciblés exécutés : sélection/consentement/collection, idempotence des imports, archivage, JSON invalide, proportions d’illustration, décalage et textes courts/longs dans les deux thèmes à 1080 × 2400.
 - Documentation produit, architecture, données et consignes agent.
 - Boosters facultatifs avec UMP/AdMob Rewarded, lancement direct depuis le bouton de collection, bloc Booster intégré au défilement de la grille, paquet de révélation affiché uniquement après confirmation et sauvegarde Room transactionnelle/idempotente, IDs de test réservés à DEBUG, migration non destructive 2→3.
 - Une flèche turquoise discrète indique le balayage horizontal des cartes du booster jusqu’au premier changement de page, puis disparaît.
+- Catalogue élargi de 24 à 35 anecdotes et de 8 à 14 disciplines. Onze nouvelles anecdotes restent en attente de validation ; la carte sur les thermopolia conserve son ID et sa collection lors de son reclassement en archéologie.
 - Tests instrumentés du repository booster : lot normal, dernières cartes disponibles, collection complète, statuts individuels, archivage préservé, callback répété et stabilité de la sélection quotidienne.
 - Variante de distribution `beta` distincte (`fr.inillusio.beta`), non débogable, avec façade développeur RELEASE, annonces AdMob de démonstration, signature locale dédiée obligatoire et copie APK dans `dist/` ; procédure documentée dans `docs/BETA.md`.
 

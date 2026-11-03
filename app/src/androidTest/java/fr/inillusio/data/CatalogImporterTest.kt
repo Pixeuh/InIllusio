@@ -16,6 +16,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,17 +34,20 @@ class CatalogImporterTest {
 
     @After fun tearDown() { database.close() }
 
-    @Test fun importContainsTwentyFourFactsAndTenSociologyFacts() = runBlocking {
+    @Test fun importContainsThirtyFiveFactsFourteenCategoriesAndTenSociologyFacts() = runBlocking {
         importer.importBundledCatalog()
-        assertEquals(24, database.catalogDao().anecdoteCount())
-        assertEquals(8, database.catalogDao().categoryCount())
+        assertEquals(35, database.catalogDao().anecdoteCount())
+        assertEquals(14, database.catalogDao().categoryCount())
         assertEquals(10, database.catalogDao().allAnecdotes().count { it.categoryId == "sociologie" })
+        assertEquals("archeologie", database.catalogDao().getAnecdote("histoire-02")?.categoryId)
+        assertTrue(database.catalogDao().allAnecdotes().any { it.id == "ethologie-01" })
+        assertNull(database.catalogDao().getValidatedAnecdote("ethologie-01"))
         val importedTypes = database.catalogDao().allAnecdotes()
             .flatMap { database.catalogDao().sourcesFor(it.id) }
             .map { it.type }
             .toSet()
         assertEquals(setOf("livre", "article", "rapport", "autre"), importedTypes)
-        assertEquals(listOf("sociologie-02", "sociologie-04"), database.catalogDao().validatedAnecdotes().map { it.id })
+        assertEquals(validatedIds(JSONObject(readCatalog())).sorted(), database.catalogDao().validatedAnecdotes().map { it.id }.sorted())
     }
 
     @Test fun onlyValidatedFactsCanBeDistributedAndRevalidationKeepsCollectedCards() = runBlocking {
@@ -54,13 +58,13 @@ class CatalogImporterTest {
         facts.getJSONObject(0).put("statut_editorial", "validee")
         importer.importJson(catalog.toString())
 
-        assertEquals(listOf("sociologie-01", "sociologie-02", "sociologie-04"), dao.validatedAnecdotes().map { it.id })
+        assertEquals(validatedIds(catalog).sorted(), dao.validatedAnecdotes().map { it.id }.sorted())
         dao.putCollection(CollectionEntity("sociologie-01", 10L))
 
         facts.getJSONObject(0).put("statut_editorial", "a_valider")
         importer.importJson(catalog.toString())
 
-        assertEquals(listOf("sociologie-02", "sociologie-04"), dao.validatedAnecdotes().map { it.id })
+        assertEquals(validatedIds(catalog).sorted(), dao.validatedAnecdotes().map { it.id }.sorted())
         assertNotNull(dao.getAnecdote("sociologie-01"))
         assertEquals("sociologie-01", dao.observeCollection().first().single().id)
     }
@@ -89,14 +93,14 @@ class CatalogImporterTest {
         val facts = catalog.getJSONArray("faits")
         facts.getJSONObject(0).remove("statut_editorial")
         importer.importJson(catalog.toString())
-        assertEquals(listOf("sociologie-02", "sociologie-04"), dao.validatedAnecdotes().map { it.id })
+        assertEquals(validatedIds(catalog).sorted(), dao.validatedAnecdotes().map { it.id }.sorted())
 
         val before = dao.anecdoteCount()
         facts.getJSONObject(0).put("statut_editorial", "publie")
         runCatching { importer.importJson(catalog.toString()) }
             .onSuccess { throw AssertionError("Unknown editorial status should be rejected") }
         assertEquals(before, dao.anecdoteCount())
-        assertEquals(listOf("sociologie-02", "sociologie-04"), dao.validatedAnecdotes().map { it.id })
+        assertEquals(validatedIds(catalog).sorted(), dao.validatedAnecdotes().map { it.id }.sorted())
     }
 
     @Test fun obsoleteSourceTypeIsRejectedWithoutChangingCollectionOrCatalog() = runBlocking {
@@ -120,8 +124,8 @@ class CatalogImporterTest {
         importer.importBundledCatalog()
         database.catalogDao().putCollection(CollectionEntity("sociologie-01", 1L))
         importer.importBundledCatalog()
-        assertEquals(24, database.catalogDao().anecdoteCount())
-        assertEquals(8, database.catalogDao().categoryCount())
+        assertEquals(35, database.catalogDao().anecdoteCount())
+        assertEquals(14, database.catalogDao().categoryCount())
         assertEquals(10, database.catalogDao().allAnecdotes().count { it.categoryId == "sociologie" })
         assertNotNull(database.catalogDao().collectionEntry("sociologie-01"))
         val sourceAuthors = JSONObject(readCatalog()).getJSONArray("faits").let { facts ->
@@ -129,6 +133,24 @@ class CatalogImporterTest {
         }
         assertEquals(sourceAuthors.toSet().size, database.catalogDao().authorCount())
         assertEquals(sourceAuthors.size, database.catalogDao().sourceAuthorCount())
+    }
+
+    @Test fun reclassifyingRomanThermopoliumKeepsItsCollectedEntry() = runBlocking {
+        val dao = database.catalogDao()
+        val original = JSONObject(readCatalog())
+        val roman = original.getJSONArray("faits").let { facts ->
+            (0 until facts.length()).map { facts.getJSONObject(it) }.single { it.getString("id") == "histoire-02" }
+        }
+        roman.put("categorie", "histoire")
+        importer.importJson(original.toString())
+        dao.putCollection(CollectionEntity("histoire-02", 42L))
+
+        roman.put("categorie", "archeologie")
+        importer.importJson(original.toString())
+
+        assertEquals("archeologie", dao.getAnecdote("histoire-02")?.categoryId)
+        assertEquals(42L, dao.collectionEntry("histoire-02")?.savedAt)
+        assertEquals("Les Romains avaient aussi des snacks à emporter", dao.getAnecdote("histoire-02")?.title)
     }
 
     @Test fun sourceWithoutUrlKeepsBibliographyAndClearsLegacyUrlColumn() = runBlocking {
@@ -170,7 +192,7 @@ class CatalogImporterTest {
         root.put("faits", retained)
         importer.importJson(root.toString())
 
-        assertEquals(22, dao.allAnecdotes().size)
+        assertEquals(33, dao.allAnecdotes().size)
         assertNotNull(dao.getAnecdote("sociologie-01"))
         assertEquals("sociologie-01", dao.observeCollection().first().single().id)
         assertEquals(0, dao.sourcesFor("anthropologie-01").size)
@@ -184,9 +206,17 @@ class CatalogImporterTest {
         runCatching { importer.importJson("{\"categories\":[") }
             .onSuccess { throw AssertionError("Malformed JSON should fail before database writes") }
         assertEquals(countsBefore, listOf(dao.anecdoteCount(), dao.categoryCount(), dao.sourceCount(), dao.authorCount()))
-        assertEquals(24, dao.allAnecdotes().size)
+        assertEquals(35, dao.allAnecdotes().size)
     }
 
     private fun readCatalog(): String = ApplicationProvider.getApplicationContext<android.content.Context>()
         .assets.open("faits_sciences_humaines_v1_16.json").bufferedReader().use { it.readText() }
+
+    private fun validatedIds(catalog: JSONObject): List<String> {
+        val facts = catalog.getJSONArray("faits")
+        return (0 until facts.length()).mapNotNull { index ->
+            facts.getJSONObject(index).takeIf { it.optString("statut_editorial", "a_valider") == "validee" }
+                ?.getString("id")
+        }
+    }
 }

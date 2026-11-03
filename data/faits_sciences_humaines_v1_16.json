@@ -42,6 +42,36 @@
       "id": "geographie_humaine",
       "nom": "Géographie humaine",
       "couleur": "#88B0A4"
+    },
+    {
+      "id": "ethologie",
+      "nom": "Éthologie",
+      "couleur": "#79513E"
+    },
+    {
+      "id": "archeologie",
+      "nom": "Archéologie",
+      "couleur": "#E58A3C"
+    },
+    {
+      "id": "science_politique",
+      "nom": "Science politique",
+      "couleur": "#193F60"
+    },
+    {
+      "id": "psychologie_cognitive",
+      "nom": "Psychologie cognitive",
+      "couleur": "#C43F78"
+    },
+    {
+      "id": "demographie",
+      "nom": "Démographie",
+      "couleur": "#2583BA"
+    },
+    {
+      "id": "histoire_art",
+      "nom": "Histoire de l'art",
+      "couleur": "#953F53"
     }
   ],
   "faits": [
@@ -270,7 +300,7 @@
     },
     {
       "id": "histoire-02",
-      "categorie": "histoire",
+      "categorie": "archeologie",
       "titre": "Les Romains avaient aussi des snacks à emporter",
       "accroche": "À Pompéi, on trouvait des comptoirs vendant des plats prêts à manger.",
       "explication": "Les thermopolia proposaient boissons et nourriture, avec de grandes jarres intégrées aux comptoirs.",
@@ -401,6 +431,161 @@
       },
       "note_editoriale": "Éviter un écart chiffré fixe : il dépend de la météo, de l’heure et du lieu.",
       "statut_editorial": "validee"
+    },
+    {
+      "id": "ethologie-01",
+      "categorie": "ethologie",
+      "titre": "Le test du miroir",
+      "accroche": "Certains chimpanzés sont capables de reconnaître leur propre reflet dans un miroir.",
+      "explication": "Dans le test du miroir, des chercheurs placent discrètement une marque sur le corps d’un animal, puis observent comment il réagit à son reflet. Gordon Gallup a montré que des chimpanzés familiarisés avec un miroir pouvaient s’en servir pour examiner une marque qu’ils ne pouvaient pas voir directement.\n\nRéussir ce test constitue un indice d’une forme de reconnaissance de soi dans cette situation. Cela ne démontre pas, à lui seul, une conscience de soi au sens large. À l’inverse, un échec ne prouve pas l’absence de toute conscience de soi : la motivation, la perception du miroir et les conditions du test comptent aussi.",
+      "source": {
+        "type": "article",
+        "auteurs": "Gordon G. Gallup Jr.",
+        "titre": "“Chimpanzees: Self-Recognition” — Science, 167(3914), 86–87. DOI : 10.1126/science.167.3914.86",
+        "annee": 1970
+      },
+      "statut_editorial": "a_valider"
+    },
+    {
+      "id": "ethologie-02",
+      "categorie": "ethologie",
+      "titre": "La danse des abeilles",
+      "accroche": "Les abeilles peuvent communiquer l’emplacement d’une source de nourriture grâce à une danse.",
+      "explication": "Lorsqu’une abeille domestique revient à la ruche après avoir trouvé de la nourriture, elle peut effectuer une danse frétillante. L’angle de la portion rectiligne indique une direction par rapport à la position du Soleil, tandis que sa durée renseigne sur la distance. D’autres abeilles peuvent suivre ces indications pour rechercher la source.\n\nCette communication repose sur des signaux propres aux abeilles. Elle ne constitue pas un langage humain : les informations transmises sont limitées et dépendent du contexte de la danse.",
+      "source": {
+        "type": "livre",
+        "auteurs": "Karl von Frisch",
+        "titre": "The Dance Language and Orientation of Bees — Harvard University Press.",
+        "annee": 1967
+      },
+      "statut_editorial": "a_valider",
+      "note_editoriale": "Référence complémentaire : Riley et al. (2005), “The flight paths of honeybees recruited by the waggle dance”, Nature, 435, 205–207. DOI : 10.1038/nature03526."
+    },
+    {
+      "id": "archeologie-01",
+      "categorie": "archeologie",
+      "titre": "Les graffitis de Pompéi",
+      "accroche": "Les habitants de Pompéi écrivaient déjà des graffitis sur leurs murs.",
+      "explication": "Les murs de Pompéi portent des inscriptions incisées de formes variées : noms, déclarations d’amour, insultes, dessins et autres messages. Le projet de recherche « Bruits de couloir » a réexaminé plusieurs centaines de graffiti du couloir des théâtres, dont des inscriptions jusqu’alors inédites, à l’aide notamment de techniques d’imagerie.\n\nCes traces documentent des échanges et des gestes de la vie quotidienne dans un lieu précis. Elles ne sont pas nécessairement comparables aux pratiques contemporaines du graffiti : leurs fonctions et leur contexte social différaient.",
+      "source": {
+        "type": "rapport",
+        "auteurs": "Sorbonne Université",
+        "titre": "Pompéi : le projet de recherche international « Bruits de couloir » découvre et réinterprète de nouveaux graffiti antiques — communiqué de presse institutionnel",
+        "annee": 2026
+      },
+      "statut_editorial": "a_valider"
+    },
+    {
+      "id": "science_politique-01",
+      "categorie": "science_politique",
+      "titre": "Les voix et les sièges",
+      "accroche": "Un parti peut obtenir davantage de voix qu’un autre, mais moins de sièges au Parlement.",
+      "explication": "Dans certains scrutins majoritaires organisés par circonscriptions, les sièges sont attribués selon le résultat obtenu dans chacune d’elles. Un parti dont les voix sont nombreuses mais réparties sans majorité locale peut gagner moins de sièges qu’un parti ayant obtenu des majorités dans davantage de circonscriptions, parfois avec moins de voix au total.\n\nL’écart entre la part des voix et celle des sièges dépend des règles électorales et de la répartition géographique des suffrages. Ce résultat n’est pas une propriété de tous les modes de scrutin : la représentation proportionnelle tend, selon ses règles, à rapprocher davantage ces deux parts.",
+      "source": {
+        "type": "article",
+        "auteurs": "Michael Gallagher",
+        "titre": "“Proportionality, disproportionality and electoral systems” — Electoral Studies, 10(1), 33–51. DOI : 10.1016/0261-3794(91)90004-C",
+        "annee": 1991
+      },
+      "statut_editorial": "a_valider"
+    },
+    {
+      "id": "science_politique-02",
+      "categorie": "science_politique",
+      "titre": "La mal-inscription électorale des jeunes",
+      "accroche": "Une partie de l’abstention des jeunes s’explique par leur inscription électorale dans une commune où ils ne vivent plus.",
+      "explication": "Un jeune adulte peut déménager pour ses études ou son travail sans modifier son inscription électorale, qui reste alors dans la commune de ses parents. Pour voter, il doit retourner dans cette commune, donner procuration ou entreprendre les démarches de changement d’inscription. La distance et les démarches peuvent rendre la participation plus difficile.\n\nLes travaux de Céline Braconnier et Jean-Yves Dormagen décrivent la mal-inscription comme un obstacle qui contribue à la démobilisation électorale, notamment dans certains milieux populaires. Elle n’est toutefois qu’un facteur parmi d’autres : elle ne permet pas d’expliquer toute l’abstention des jeunes ni de supposer que chaque abstentionniste souhaitait voter.",
+      "source": {
+        "type": "livre",
+        "auteurs": "Céline Braconnier et Jean-Yves Dormagen",
+        "titre": "La démocratie de l’abstention : aux origines de la démobilisation électorale en milieux populaires — Folio actuel, no 129, Gallimard.",
+        "annee": 2007
+      },
+      "statut_editorial": "a_valider"
+    },
+    {
+      "id": "psychologie_cognitive-01",
+      "categorie": "psychologie_cognitive",
+      "titre": "Le gorille invisible",
+      "accroche": "Certaines personnes ne remarquent pas un gorille traversant une scène lorsqu’elles sont concentrées sur une autre tâche.",
+      "explication": "Dans une expérience de Daniel Simons et Christopher Chabris, les participants regardaient une vidéo et devaient compter les passes entre joueurs vêtus de couleurs différentes. Pendant la scène, une personne en costume de gorille traversait l’image. Une partie des observateurs ne l’a pas remarquée.\n\nCe phénomène, appelé cécité d’inattention, montre qu’un élément visible peut ne pas être remarqué lorsque l’attention est mobilisée par une autre tâche. Le résultat dépend du protocole et de la tâche demandée ; il ne signifie pas que la vision disparaît ou que l’on manque toujours les événements inattendus.",
+      "source": {
+        "type": "article",
+        "auteurs": "Daniel J. Simons et Christopher F. Chabris",
+        "titre": "“Gorillas in Our Midst: Sustained Inattentional Blindness for Dynamic Events” — Perception, 28(9), 1059–1074. DOI : 10.1068/p281059",
+        "annee": 1999
+      },
+      "statut_editorial": "a_valider"
+    },
+    {
+      "id": "psychologie_cognitive-02",
+      "categorie": "psychologie_cognitive",
+      "titre": "Le multitâche",
+      "accroche": "Passer rapidement d’une tâche à une autre peut réduire notre efficacité.",
+      "explication": "Alterner entre des tâches qui mobilisent des règles ou des objectifs différents demande de réorienter son attention et de réactiver les consignes pertinentes. Des expériences de laboratoire montrent que cette alternance peut entraîner un coût de changement : les réponses sont parfois plus lentes ou moins précises après un changement de tâche.\n\nL’ampleur de ce coût dépend des tâches, de leur complexité, de l’entraînement et de la manière de les combiner. Ces résultats ne signifient pas que toute activité simultanée est impossible ou toujours inefficace ; ils décrivent surtout les limites de l’alternance rapide entre tâches exigeantes.",
+      "source": {
+        "type": "article",
+        "auteurs": "J. M. Rubinstein, D. E. Meyer et J. E. Evans",
+        "titre": "“Executive Control of Cognitive Processes in Task Switching” — Journal of Experimental Psychology: Human Perception and Performance, 27(4), 763–797. DOI : 10.1037/0096-1523.27.4.763",
+        "annee": 2001
+      },
+      "statut_editorial": "a_valider"
+    },
+    {
+      "id": "demographie-01",
+      "categorie": "demographie",
+      "titre": "La stabilisation de la population mondiale",
+      "accroche": "Selon l’ONU, la population mondiale devrait atteindre environ 10,3 milliards d’habitants avant de commencer à diminuer.",
+      "explication": "Dans ses projections publiées en 2024, l’ONU estime que la population mondiale pourrait atteindre un maximum d’environ 10,3 milliards de personnes au milieu des années 2080, puis diminuer légèrement avant la fin du siècle. Cette trajectoire dépend notamment de la baisse de la fécondité observée dans de nombreux pays.\n\nIl s’agit d’une projection fondée sur des hypothèses démographiques, et non d’une prédiction certaine. Les pressions sur les ressources et l’environnement dépendent aussi des modes de production, de consommation et de la répartition des ressources ; elles ne se déduisent pas du seul nombre d’habitants.",
+      "source": {
+        "type": "rapport",
+        "auteurs": "Nations Unies, Département des affaires économiques et sociales",
+        "titre": "World Population Prospects 2024: Summary of Results — United Nations. Projection médiane.",
+        "annee": 2024
+      },
+      "statut_editorial": "a_valider"
+    },
+    {
+      "id": "demographie-02",
+      "categorie": "demographie",
+      "titre": "Davantage de personnes âgées que de jeunes enfants",
+      "accroche": "Depuis 2020, le monde compte davantage de personnes de 60 ans et plus que d’enfants de moins de cinq ans.",
+      "explication": "L’Organisation mondiale de la Santé indique que, depuis 2020, le nombre de personnes âgées de 60 ans ou plus dépasse celui des enfants de moins de cinq ans. Cette évolution reflète notamment l’allongement de la durée de vie et la baisse de la fécondité dans de nombreuses régions.\n\nIl s’agit d’une comparaison des effectifs mondiaux de deux groupes d’âge, pas d’une affirmation selon laquelle les personnes âgées seraient majoritaires dans la population. Les rythmes et les formes du vieillissement démographique varient selon les pays.",
+      "source": {
+        "type": "rapport",
+        "auteurs": "Organisation mondiale de la Santé",
+        "titre": "Ageing and health — fiche d’information institutionnelle. Comparaison des effectifs mondiaux depuis 2020.",
+        "annee": null
+      },
+      "statut_editorial": "a_valider"
+    },
+    {
+      "id": "histoire_art-01",
+      "categorie": "histoire_art",
+      "titre": "Les statues antiques étaient colorées",
+      "accroche": "De nombreuses sculptures grecques et romaines aujourd’hui blanches étaient autrefois peintes de couleurs vives.",
+      "explication": "De nombreuses sculptures de la Grèce et de la Rome antiques étaient polychromes : des pigments étaient appliqués sur la pierre ou le marbre, parfois avec des détails dorés ou d’autres matériaux. L’exposition et les recherches « Chroma » du Metropolitan Museum of Art présentent les méthodes utilisées pour repérer les traces de ces couleurs et proposer des reconstitutions.\n\nLa couleur visible aujourd’hui peut avoir disparu sous l’effet du temps, du nettoyage ou de l’enfouissement. Les reconstitutions reposent sur des indices matériels, mais elles ne permettent pas toujours de retrouver chaque détail avec certitude. Toutes les œuvres n’avaient pas les mêmes couleurs ni le même traitement.",
+      "source": {
+        "type": "rapport",
+        "auteurs": "The Metropolitan Museum of Art",
+        "titre": "Chroma: Ancient Sculpture in Color — exposition et publication institutionnelles.",
+        "annee": 2022
+      },
+      "statut_editorial": "a_valider"
+    },
+    {
+      "id": "histoire_art-02",
+      "categorie": "histoire_art",
+      "titre": "Les couleurs perdues de Van Gogh",
+      "accroche": "Certains tableaux de Van Gogh ont changé de couleur depuis leur création.",
+      "explication": "Les pigments d’une peinture peuvent évoluer sous l’effet de la lumière et du vieillissement. L’analyse de peintures de Vincent van Gogh a montré que certains pigments rouges sensibles à la lumière ont pâli, modifiant l’apparence de passages colorés.\n\nLes méthodes d’analyse et les reconstitutions numériques aident à étudier l’apparence passée des couleurs, mais elles ne restituent pas une image originale certaine : elles dépendent des matériaux identifiés, de leur état et des conditions d’exposition. La conservation préventive limite notamment les effets de la lumière sur les œuvres.",
+      "source": {
+        "type": "article",
+        "auteurs": "E. Geldof et al.",
+        "titre": "“Reconstructing Van Gogh’s palette to determine the optical characteristics of his paints” — Heritage Science, 6, article 17. DOI : 10.1186/s40494-018-0181-6",
+        "annee": 2018
+      },
+      "statut_editorial": "a_valider"
     }
   ]
 }

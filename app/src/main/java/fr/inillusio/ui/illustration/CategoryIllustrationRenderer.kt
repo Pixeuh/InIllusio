@@ -17,8 +17,14 @@ object CategoryIllustrationRenderer {
     const val ECONOMICS = "economie"
     const val PHILOSOPHY = "philosophie"
     const val HUMAN_GEOGRAPHY = "geographie_humaine"
+    const val ETHOLOGY = "ethologie"
+    const val ARCHAEOLOGY = "archeologie"
+    const val POLITICAL_SCIENCE = "science_politique"
+    const val COGNITIVE_PSYCHOLOGY = "psychologie_cognitive"
+    const val DEMOGRAPHY = "demographie"
+    const val ART_HISTORY = "histoire_art"
 
-    val categoryIds = setOf(SOCIOLOGY, ANTHROPOLOGY, SOCIAL_PSYCHOLOGY, HISTORY, LINGUISTICS, ECONOMICS, PHILOSOPHY, HUMAN_GEOGRAPHY)
+    val categoryIds = setOf(SOCIOLOGY, ANTHROPOLOGY, SOCIAL_PSYCHOLOGY, HISTORY, LINGUISTICS, ECONOMICS, PHILOSOPHY, HUMAN_GEOGRAPHY, ETHOLOGY, ARCHAEOLOGY, POLITICAL_SCIENCE, COGNITIVE_PSYCHOLOGY, DEMOGRAPHY, ART_HISTORY)
 
     data class Palette(val primary: Int, val secondary: Int, val ink: Int, val neutral: Int)
 
@@ -47,6 +53,12 @@ object CategoryIllustrationRenderer {
             ECONOMICS -> 1.06f
             PHILOSOPHY -> 1.25f
             HUMAN_GEOGRAPHY -> 1.20f
+            ETHOLOGY -> 1.04f
+            ARCHAEOLOGY -> 1.05f
+            POLITICAL_SCIENCE -> 1.04f
+            COGNITIVE_PSYCHOLOGY -> 1.08f
+            DEMOGRAPHY -> 1.05f
+            ART_HISTORY -> 1.08f
             else -> 1.08f
         }
         // Normalize the visual weight of categories whose central motif is
@@ -63,6 +75,12 @@ object CategoryIllustrationRenderer {
             ECONOMICS -> art.economics()
             PHILOSOPHY -> art.philosophy()
             HUMAN_GEOGRAPHY -> art.geography()
+            ETHOLOGY -> art.ethology()
+            ARCHAEOLOGY -> art.archaeology()
+            POLITICAL_SCIENCE -> art.politicalScience()
+            COGNITIVE_PSYCHOLOGY -> art.cognitivePsychology()
+            DEMOGRAPHY -> art.demography()
+            ART_HISTORY -> art.artHistory()
             else -> art.sociology()
         }
         canvas.restoreToCount(save)
@@ -246,6 +264,159 @@ object CategoryIllustrationRenderer {
             canvas.drawCircle(520f, 320f, 220f, paint(colors.ink, 4f, Paint.Style.STROKE))
             path(colors.primary, 4f, Paint.Style.STROKE) { moveTo(270f, 520f); cubicTo(410f, 610f, 655f, 600f, 790f, 505f) }
             halftone(790f, 505f, 43f, colors.secondary, 11f)
+        }
+
+        fun ethology() {
+            // Human and dog profiles face one another across a shared, quiet gaze path.
+            path(colors.primary) {
+                moveTo(235f, 170f); cubicTo(165f, 180f, 140f, 250f, 160f, 315f)
+                lineTo(145f, 345f); lineTo(190f, 354f); cubicTo(202f, 390f, 220f, 415f, 245f, 425f)
+                lineTo(245f, 485f); lineTo(425f, 485f); cubicTo(415f, 425f, 385f, 405f, 325f, 390f)
+                lineTo(320f, 350f); cubicTo(345f, 330f, 360f, 300f, 360f, 258f)
+                cubicTo(360f, 202f, 310f, 164f, 235f, 170f); close()
+            }
+            path(colors.neutral) {
+                moveTo(280f, 278f); cubicTo(299f, 271f, 312f, 271f, 328f, 278f)
+            }
+            line(296f, 277f, 310f, 278f, colors.ink, 5f)
+            line(314f, 319f, 337f, 314f, colors.secondary, 4f)
+            path(colors.secondary) {
+                moveTo(675f, 233f); cubicTo(698f, 190f, 744f, 174f, 786f, 199f)
+                lineTo(825f, 244f); lineTo(873f, 268f); cubicTo(893f, 282f, 880f, 300f, 860f, 300f)
+                lineTo(820f, 296f); cubicTo(805f, 337f, 774f, 359f, 726f, 356f)
+                lineTo(700f, 397f); lineTo(633f, 397f); cubicTo(652f, 354f, 659f, 306f, 675f, 233f); close()
+            }
+            path(colors.primary) { moveTo(716f, 216f); lineTo(697f, 154f); cubicTo(752f, 160f, 777f, 183f, 789f, 216f); close() }
+            path(colors.primary) { moveTo(770f, 215f); lineTo(811f, 172f); cubicTo(840f, 217f, 838f, 244f, 817f, 267f); close() }
+            dot(685f, 270f, 7f, colors.ink)
+            path(colors.ink, 3f, Paint.Style.STROKE) { moveTo(673f, 320f); cubicTo(705f, 331f, 729f, 330f, 750f, 321f) }
+            path(colors.secondary, 4f, Paint.Style.STROKE) { moveTo(365f, 225f); cubicTo(445f, 170f, 540f, 170f, 615f, 225f) }
+            path(colors.primary, 3f, Paint.Style.STROKE) { moveTo(375f, 275f); cubicTo(450f, 245f, 535f, 245f, 610f, 275f) }
+            dot(485f, 212f, 7f, colors.secondary); dot(500f, 264f, 5f, colors.primary)
+            line(210f, 520f, 800f, 520f, colors.secondary, 4f)
+        }
+
+        fun archaeology() {
+            // A recognizable amphora rises from layered soil with pottery and a field tool.
+            path(colors.secondary) { moveTo(90f, 378f); cubicTo(230f, 350f, 340f, 405f, 485f, 376f); cubicTo(650f, 344f, 750f, 397f, 920f, 367f); lineTo(920f, 585f); lineTo(90f, 585f); close() }
+            path(colors.primary) { moveTo(90f, 445f); cubicTo(250f, 420f, 345f, 467f, 500f, 438f); cubicTo(665f, 410f, 790f, 463f, 920f, 432f); lineTo(920f, 585f); lineTo(90f, 585f); close() }
+            path(colors.ink) { moveTo(90f, 505f); cubicTo(235f, 483f, 382f, 528f, 510f, 501f); cubicTo(654f, 470f, 780f, 519f, 920f, 493f); lineTo(920f, 585f); lineTo(90f, 585f); close() }
+            // Amphora body and neck.
+            path(colors.neutral) { moveTo(440f, 192f); lineTo(560f, 192f); lineTo(552f, 252f); cubicTo(552f, 287f, 630f, 320f, 625f, 385f); cubicTo(619f, 463f, 570f, 500f, 500f, 500f); cubicTo(430f, 500f, 381f, 463f, 375f, 385f); cubicTo(370f, 320f, 448f, 287f, 448f, 252f); close() }
+            path(colors.primary) { moveTo(458f, 218f); lineTo(542f, 218f); lineTo(538f, 255f); cubicTo(540f, 293f, 598f, 322f, 596f, 381f); cubicTo(592f, 435f, 557f, 466f, 500f, 468f); cubicTo(443f, 466f, 408f, 435f, 404f, 381f); cubicTo(402f, 322f, 460f, 293f, 462f, 255f); close() }
+            canvas.drawRoundRect(RectF(425f, 162f, 575f, 206f), 12f, 12f, paint(colors.secondary))
+            canvas.drawOval(RectF(428f, 190f, 572f, 218f), paint(colors.ink))
+            path(colors.secondary, 18f, Paint.Style.STROKE) { moveTo(443f, 273f); cubicTo(360f, 255f, 365f, 344f, 395f, 348f) }
+            path(colors.secondary, 18f, Paint.Style.STROKE) { moveTo(557f, 273f); cubicTo(640f, 255f, 635f, 344f, 605f, 348f) }
+            path(colors.ink, 3f, Paint.Style.STROKE) { moveTo(450f, 350f); cubicTo(480f, 370f, 520f, 370f, 550f, 350f) }
+            // Soil covers the foot of the vessel to make its burial legible.
+            path(colors.secondary) { moveTo(90f, 378f); cubicTo(230f, 350f, 340f, 405f, 485f, 376f); cubicTo(650f, 344f, 750f, 397f, 920f, 367f); lineTo(920f, 402f); cubicTo(750f, 432f, 650f, 379f, 485f, 411f); cubicTo(340f, 440f, 230f, 385f, 90f, 413f); close() }
+            path(colors.primary) { moveTo(220f, 434f); lineTo(290f, 425f); lineTo(318f, 451f); lineTo(266f, 475f); close() }
+            path(colors.neutral) { moveTo(715f, 416f); lineTo(770f, 407f); lineTo(797f, 430f); lineTo(744f, 450f); close() }
+            line(790f, 218f, 866f, 291f, colors.ink, 11f)
+            path(colors.secondary) { moveTo(778f, 204f); lineTo(820f, 218f); lineTo(793f, 248f); close() }
+            line(777f, 219f, 790f, 234f, colors.neutral, 4f)
+            for (i in 0..5) dot(170f + i * 24f, 474f + (i % 2) * 12f, 3.5f, colors.neutral)
+        }
+
+        fun politicalScience() {
+            // Ballot box foreground and a semicircle of assembly seats in the back.
+            val seatRows = listOf(230f to listOf(510f, 610f, 710f), 315f to listOf(420f, 520f, 620f, 720f, 820f), 400f to listOf(345f, 445f, 545f, 645f, 745f, 845f))
+            seatRows.forEachIndexed { row, (y, xs) -> xs.forEachIndexed { i, x ->
+                val color = if ((i + row) % 2 == 0) colors.primary else colors.secondary
+                canvas.drawRoundRect(RectF(x - 23f, y, x + 23f, y + 42f), 7f, 7f, paint(color))
+                line(x - 32f, y + 44f, x + 32f, y + 44f, colors.ink, 4f)
+                line(x - 17f, y + 44f, x - 20f, y + 61f, colors.ink, 3f)
+                line(x + 17f, y + 44f, x + 20f, y + 61f, colors.ink, 3f)
+            } }
+            path(colors.secondary, 4f, Paint.Style.STROKE) { moveTo(330f, 445f); cubicTo(420f, 365f, 690f, 360f, 840f, 450f) }
+            path(colors.primary) { moveTo(245f, 340f); lineTo(505f, 340f); lineTo(478f, 545f); lineTo(272f, 545f); close() }
+            canvas.drawRect(270f, 365f, 480f, 548f, paint(colors.neutral))
+            line(310f, 355f, 440f, 355f, colors.ink, 8f)
+            path(colors.ink) { moveTo(390f, 270f); lineTo(474f, 314f); lineTo(438f, 333f); lineTo(355f, 289f); close() }
+            path(colors.neutral) { moveTo(364f, 276f); lineTo(466f, 329f); lineTo(451f, 357f); lineTo(349f, 304f); close() }
+            path(colors.secondary) { moveTo(290f, 548f); lineTo(462f, 548f); lineTo(500f, 586f); lineTo(252f, 586f); close() }
+            line(292f, 392f, 458f, 392f, colors.secondary, 3f)
+            line(292f, 530f, 458f, 530f, colors.ink, 3f)
+            for (i in 0..3) dot(323f + i * 38f, 465f, 4f, colors.primary)
+        }
+
+        fun cognitivePsychology() {
+            // Two inward-facing profiles frame an eye and small perception cues.
+            path(colors.primary) {
+                moveTo(345f, 150f); cubicTo(230f, 165f, 180f, 265f, 210f, 360f)
+                lineTo(180f, 389f); lineTo(229f, 403f); cubicTo(245f, 454f, 280f, 477f, 334f, 466f)
+                lineTo(345f, 540f); lineTo(466f, 540f); lineTo(444f, 454f); cubicTo(463f, 395f, 467f, 281f, 426f, 208f)
+                cubicTo(404f, 169f, 376f, 151f, 345f, 150f); close()
+            }
+            path(colors.secondary) {
+                moveTo(655f, 150f); cubicTo(770f, 165f, 820f, 265f, 790f, 360f)
+                lineTo(820f, 389f); lineTo(771f, 403f); cubicTo(755f, 454f, 720f, 477f, 666f, 466f)
+                lineTo(655f, 540f); lineTo(534f, 540f); lineTo(556f, 454f); cubicTo(537f, 395f, 533f, 281f, 574f, 208f)
+                cubicTo(596f, 169f, 624f, 151f, 655f, 150f); close()
+            }
+            line(356f, 296f, 382f, 300f, colors.neutral, 5f)
+            line(618f, 296f, 644f, 300f, colors.ink, 5f)
+            path(colors.neutral) { moveTo(407f, 336f); cubicTo(452f, 287f, 548f, 287f, 593f, 336f); cubicTo(548f, 384f, 452f, 384f, 407f, 336f); close() }
+            canvas.drawOval(RectF(463f, 305f, 537f, 367f), paint(colors.primary))
+            dot(500f, 336f, 19f, colors.ink); dot(506f, 329f, 5f, colors.neutral)
+            path(colors.secondary, 4f, Paint.Style.STROKE) { moveTo(270f, 240f); cubicTo(340f, 190f, 410f, 205f, 450f, 250f) }
+            path(colors.primary, 4f, Paint.Style.STROKE) { moveTo(550f, 250f); cubicTo(600f, 204f, 670f, 190f, 730f, 240f) }
+            listOf(215f to 260f, 785f to 260f, 276f to 495f, 724f to 495f).forEachIndexed { i, (x, y) ->
+                canvas.drawCircle(x, y, if (i < 2) 19f else 13f, paint(if (i % 2 == 0) colors.secondary else colors.primary))
+            }
+            path(colors.neutral, 4f, Paint.Style.STROKE) { moveTo(360f, 562f); cubicTo(435f, 585f, 565f, 585f, 640f, 562f) }
+        }
+
+        fun demography() {
+            // Abstract generations arranged as an age pyramid, without chart labels or figures.
+            val rows = listOf(
+                Triple(500f, 205f, 0.92f),
+                Triple(395f, 300f, 0.82f),
+                Triple(290f, 395f, 0.72f),
+                Triple(185f, 490f, 0.62f)
+            )
+            rows.forEachIndexed { row, (left, y, scale) ->
+                val count = 2 + row * 2
+                for (i in 0 until count) {
+                    val x = left + i * 100f
+                    val color = if ((i + row) % 2 == 0) colors.primary else colors.secondary
+                    person(x, y, scale, color)
+                    if ((i + row) % 3 == 0) line(x - 13f * scale, y + 4f * scale, x - 4f * scale, y + 7f * scale, colors.neutral, 2f * scale)
+                }
+            }
+            path(colors.secondary, 3f, Paint.Style.STROKE) { moveTo(140f, 520f); cubicTo(275f, 595f, 710f, 595f, 860f, 520f) }
+            dot(140f, 520f, 7f, colors.primary); dot(860f, 520f, 7f, colors.secondary)
+            path(colors.primary, 3f, Paint.Style.STROKE) { moveTo(235f, 180f); cubicTo(330f, 115f, 670f, 115f, 765f, 180f) }
+        }
+
+        fun artHistory() {
+            // A split-color classical bust stands before a restrained gallery frame.
+            canvas.drawRoundRect(RectF(245f, 105f, 755f, 550f), 8f, 8f, paint(colors.secondary, 5f, Paint.Style.STROKE))
+            canvas.drawRoundRect(RectF(268f, 128f, 732f, 527f), 5f, 5f, paint(colors.primary, 2f, Paint.Style.STROKE))
+            path(colors.neutral) {
+                moveTo(500f, 165f); cubicTo(417f, 165f, 378f, 229f, 390f, 310f)
+                lineTo(368f, 338f); lineTo(406f, 350f); cubicTo(420f, 406f, 453f, 428f, 500f, 429f)
+                lineTo(500f, 495f); lineTo(365f, 495f); cubicTo(369f, 446f, 412f, 420f, 449f, 405f)
+                lineTo(439f, 374f); cubicTo(410f, 350f, 397f, 320f, 399f, 280f)
+                cubicTo(400f, 210f, 438f, 166f, 500f, 165f); close()
+            }
+            path(colors.primary) {
+                moveTo(500f, 165f); cubicTo(583f, 165f, 622f, 229f, 610f, 310f)
+                lineTo(632f, 338f); lineTo(594f, 350f); cubicTo(580f, 406f, 547f, 428f, 500f, 429f)
+                lineTo(500f, 495f); lineTo(635f, 495f); cubicTo(631f, 446f, 588f, 420f, 551f, 405f)
+                lineTo(561f, 374f); cubicTo(590f, 350f, 603f, 320f, 601f, 280f)
+                cubicTo(600f, 210f, 562f, 166f, 500f, 165f); close()
+            }
+            path(colors.secondary) { moveTo(443f, 210f); cubicTo(470f, 178f, 520f, 172f, 558f, 195f); lineTo(539f, 228f); lineTo(458f, 235f); close() }
+            line(446f, 286f, 472f, 290f, colors.ink, 4f); line(528f, 290f, 554f, 286f, colors.neutral, 4f)
+            line(476f, 344f, 500f, 350f, colors.secondary, 3f); line(500f, 350f, 524f, 344f, colors.secondary, 3f)
+            path(colors.secondary) { moveTo(380f, 495f); lineTo(620f, 495f); lineTo(670f, 535f); lineTo(330f, 535f); close() }
+            canvas.drawRect(468f, 430f, 532f, 496f, paint(colors.neutral))
+            path(colors.primary) { moveTo(350f, 210f); lineTo(372f, 220f); lineTo(362f, 248f); lineTo(340f, 238f); close() }
+            path(colors.secondary) { moveTo(650f, 195f); lineTo(673f, 205f); lineTo(663f, 233f); lineTo(640f, 223f); close() }
+            line(307f, 564f, 693f, 564f, colors.primary, 4f)
+            dot(307f, 564f, 6f, colors.secondary); dot(693f, 564f, 6f, colors.secondary)
         }
     }
 }
