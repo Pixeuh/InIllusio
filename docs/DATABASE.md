@@ -2,6 +2,8 @@
 
 Room utilise `hors-cadre.db`, au schéma version 2. Toutes les tables sont locales et l’import du catalogue est transactionnel. La migration 1→2 ajoute le marqueur d’archivage et fusionne les auteurs de même nom en conservant leurs associations.
 
+Le namespace Kotlin et l’identifiant Android sont `fr.inillusio`. Les noms persistants historiques (`hors-cadre.db`, `hors_cadre_preferences` et `hors_cadre_developer`) restent intentionnellement inchangés pour ne pas confondre un renommage de code avec une migration de données. Comme `applicationId` devient `fr.inillusio`, Android isole toutefois cette installation de l’ancienne application `fr.horscadre` : ces fichiers sont créés dans le nouvel espace privé et ne récupèrent pas les données de l’ancienne installation. Aucun export/import de collection ou de préférences n’est actuellement fourni.
+
 | Table | Rôle et relations |
 |---|---|
 | `categories` | Identifiant de discipline et nom. |

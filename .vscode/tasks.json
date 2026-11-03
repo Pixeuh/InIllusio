@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Compiler et lancer Hors Cadre",
+            "label": "Compiler et lancer In Illusio",
             "type": "process",
             "command": "powershell.exe",
             "args": [

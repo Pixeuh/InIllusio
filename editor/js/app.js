@@ -78,7 +78,7 @@
     const shown = matches.slice(0, state.pageSize);
     $('fact-list').innerHTML = shown.map(({ fact, index }) => {
       const category = categoryFor(fact);
-      const color = window.HorsCadrePalettes.forCategory(category?.id).primary;
+      const color = window.InIllusioPalettes.forCategory(category?.id).primary;
       const selected = index === state.selectedIndex;
       const validated = fact.statut_editorial === 'validee';
       return `<button class="fact-row${selected ? ' selected' : ''}" type="button" role="option" aria-selected="${selected}" data-index="${index}"><span class="fact-row-top"><i class="category-dot" style="background:${color}"></i><span class="fact-category">${escapeHtml(category?.nom || 'Catégorie inconnue')}</span></span><span class="fact-row-title">${escapeHtml(fact.titre || 'Sans titre')}</span><span class="fact-row-status ${validated ? 'status-validated' : 'status-pending'}">${validated ? 'Validée' : 'À valider'}</span></button>`;

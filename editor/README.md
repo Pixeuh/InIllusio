@@ -1,4 +1,4 @@
-# Éditeur du catalogue Hors Cadre
+# Éditeur du catalogue In Illusio
 
 Cet éditeur fonctionne localement dans Chrome ou Edge. Il n’utilise ni serveur, ni compte, ni dépendance externe.
 

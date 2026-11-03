@@ -1,8 +1,8 @@
-# Spécification produit — Hors Cadre
+# Spécification produit — In Illusio
 
 ## Concept et principes
 
-Hors Cadre est une application Android en français qui diffuse une anecdote de sciences humaines par jour sous forme d’affiche de fond d’écran de verrouillage. L’utilisateur consulte ensuite une explication sourcée ; toute application réussie au verrouillage ajoute automatiquement cette carte à sa collection. Le ton est rigoureux, accessible et éditorial. L’app fonctionne hors ligne, sans serveur, compte, publicité, suivi comportemental ni achat intégré.
+In Illusio est une application Android en français qui diffuse une anecdote de sciences humaines par jour sous forme d’affiche de fond d’écran de verrouillage. L’utilisateur consulte ensuite une explication sourcée ; toute application réussie au verrouillage ajoute automatiquement cette carte à sa collection. Le ton est rigoureux, accessible et éditorial. L’app fonctionne hors ligne, sans serveur, compte, publicité, suivi comportemental ni achat intégré.
 
 Les états d’une carte sont distincts : entrée du catalogue, sélection du jour, diffusion réellement réussie avec `WallpaperManager.FLAG_LOCK`, puis ajout automatique à la collection. Une carte n’est jamais collectionnée avant une diffusion réussie. Un aperçu ne constitue pas une diffusion. Une erreur ne collectionne rien. Android ne permet pas de savoir si l’utilisateur a réellement regardé son écran de verrouillage.
 

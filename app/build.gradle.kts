@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "fr.horscadre"
+    namespace = "fr.inillusio"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "fr.horscadre"
+        applicationId = "fr.inillusio"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
