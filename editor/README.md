@@ -8,7 +8,7 @@ Cet éditeur fonctionne localement dans Chrome ou Edge. Il n’utilise ni serveu
 2. Cliquez sur **Ouvrir une base JSON**.
 3. Sélectionnez `data/faits_sciences_humaines_v1_16.json`.
 
-Le catalogue fourni contient huit catégories et seize anecdotes. Le navigateur conserve les données uniquement dans la page ouverte; aucune synchronisation n’a lieu.
+Le catalogue fourni contient huit catégories et vingt-quatre anecdotes. Le navigateur conserve les données uniquement dans la page ouverte; aucune synchronisation n’a lieu.
 
 ## Ajouter une anecdote
 
@@ -18,11 +18,11 @@ Cliquez sur le bouton **+** au-dessus de la liste. Un identifiant technique disp
 
 Sélectionnez une anecdote dans la liste puis éditez les champs. L’aperçu smartphone et son compteur d’accroche suivent la saisie. Utilisez le sélecteur Clair/Sombre pour contrôler le contraste. La longue accroche déclenche un avertissement, sans bloquer l’enregistrement.
 
-Le format actuel accepte un objet `source` par anecdote. L’éditeur conserve cet objet et ses propriétés bibliographiques inconnues; les propriétés complémentaires présentes sont affichées dans le formulaire. Il ne transforme pas la source en tableau, ce qui modifierait le contrat lu par l’importeur Android. Le champ de statut est stocké une seule fois dans `statut` à la racine du catalogue et s’applique au catalogue entier.
+Le format actuel accepte un objet `source` par anecdote. Les auteurs, titres, années et propriétés bibliographiques complémentaires restent modifiables. Les anciennes URL sont supprimées au chargement et ne sont pas exportées. L’éditeur ne transforme pas la source en tableau, ce qui modifierait le contrat lu par l’importeur Android. Le champ de statut est stocké une seule fois dans `statut` à la racine du catalogue et s’applique au catalogue entier.
 
 ## Enregistrer les modifications
 
-Cliquez sur **Enregistrer**. Si le navigateur a ouvert le fichier avec son sélecteur de fichiers, il demande l’autorisation d’écriture et enregistre dans le fichier d’origine. Sinon, l’éditeur télécharge un nouveau JSON dans le dossier de téléchargements; le message de confirmation l’indique. La validation bloque l’écriture si des champs requis manquent, si un identifiant est dupliqué, si une catégorie n’existe pas, si une source est mal formée ou si une URL semble invalide.
+Cliquez sur **Enregistrer**. Si le navigateur a ouvert le fichier avec son sélecteur de fichiers, il demande l’autorisation d’écriture et enregistre dans le fichier d’origine. Sinon, l’éditeur télécharge un nouveau JSON dans le dossier de téléchargements; le message de confirmation l’indique. La validation bloque l’écriture si des champs requis manquent, si un identifiant est dupliqué, si une catégorie n’existe pas ou si une source est mal formée.
 
 La suppression demande une confirmation et ne touche au fichier qu’après **Enregistrer**. Une indication signale les changements non enregistrés; le navigateur prévient également avant la fermeture lorsque cette fonction est disponible.
 

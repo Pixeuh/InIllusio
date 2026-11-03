@@ -11,6 +11,7 @@ import fr.horscadre.data.local.dao.SourceDetails
 import fr.horscadre.data.preferences.AppTheme
 import fr.horscadre.data.preferences.PreferencesState
 import fr.horscadre.data.repository.CatalogRepository
+import fr.horscadre.domain.shortCitation
 import fr.horscadre.debug.DeveloperTools
 import fr.horscadre.wallpaper.WallpaperArtwork
 import fr.horscadre.wallpaper.WallpaperService
@@ -82,9 +83,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun loadDaily() {
         val fact = repository.dailyAnecdote()
         _daily.value = fact
-        _reference.value = fact?.let { current -> repository.sources(current.id).firstOrNull()?.let { source ->
-            listOfNotNull(source.author, source.title, source.year?.toString()).joinToString(" · ")
-        } }
+        _reference.value = fact?.let { current -> repository.sources(current.id).firstOrNull()?.shortCitation() }
         if (fact != null && repositoryWasDelivered(fact.id)) _deliveredIds.value = _deliveredIds.value + fact.id
     }
     fun onAppForeground() = viewModelScope.launch {

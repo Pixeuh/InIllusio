@@ -26,7 +26,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -79,7 +78,7 @@ class MainActivity : ComponentActivity() {
                         model.setRefreshEnabled(acceptedConsent); model.completeOnboarding()
                     }
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
-                        composable("home") { HomeScreen(daily, reference, daily?.let { it.id in savedIds } == true, daily?.let { it.id in deliveredIds } == true, { daily?.let { model.save(it.id) } }, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
+                        composable("home") { HomeScreen(daily, daily?.let { it.id in savedIds } == true, daily?.let { it.id in deliveredIds } == true, { daily?.let { model.save(it.id) } }, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
                         composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true, selected?.let { it.id in deliveredIds } == true) }
                         composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { selected = it; model.showSources(it.id); navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
                         composable("card") { CardScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true) }
@@ -116,7 +115,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, reference: String?, saved: Boolean, delivered: Boolean, onSave: () -> Unit, onExplain: () -> Unit, onCollection: () -> Unit, onSettings: () -> Unit) {
+@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, saved: Boolean, delivered: Boolean, onSave: () -> Unit, onExplain: () -> Unit, onCollection: () -> Unit, onSettings: () -> Unit) {
     val heartScale by animateFloatAsState(if (saved) 1.12f else 1f, label = "heart-scale")
     val heartColor by animateColorAsState(if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, label = "heart-color")
     Column(Modifier.fillMaxSize().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -124,7 +123,7 @@ class MainActivity : ComponentActivity() {
         Spacer(Modifier.height(8.dp))
         if (fact == null) { CircularProgressIndicator(); Text("Préparation de la carte du jour…", Modifier.padding(20.dp)) }
         else {
-            EditorialCard(fact, Modifier.weight(1f).fillMaxWidth(), reference)
+            EditorialCard(fact, Modifier.weight(1f).fillMaxWidth(), showSourceReference = false)
             Spacer(Modifier.height(14.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onSave, enabled = saved || delivered, modifier = Modifier.size(54.dp)) {
@@ -139,7 +138,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun EditorialCard(fact: AnecdoteWithCategory, modifier: Modifier = Modifier, reference: String? = null) {
+@Composable private fun EditorialCard(fact: AnecdoteWithCategory, modifier: Modifier = Modifier, reference: String? = null, showSourceReference: Boolean = true) {
     Column(modifier.clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(26.dp)).padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             Column {
@@ -152,8 +151,10 @@ class MainActivity : ComponentActivity() {
             Text(fact.hook, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, lineHeight = 31.sp)
             Spacer(Modifier.height(14.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.secondary, thickness = 2.dp)
-            Text("UNE OBSERVATION, DES SOURCES", style = MaterialTheme.typography.labelSmall, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 12.dp))
-            reference?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+            if (showSourceReference) {
+                Text("UNE OBSERVATION, DES SOURCES", style = MaterialTheme.typography.labelSmall, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 12.dp))
+                reference?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+            }
         }
     }
 }
@@ -187,11 +188,9 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable private fun SourceLine(source: fr.horscadre.data.local.dao.SourceDetails) {
-    val uriHandler = LocalUriHandler.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 26.dp, vertical = 8.dp)) {
         Text(source.author ?: source.type.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
         Text(source.title + (source.year?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodyMedium)
-        source.url?.let { url -> Text(url, Modifier.clickable { runCatching { uriHandler.openUri(url) } }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
     }
 }
 

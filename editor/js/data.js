@@ -22,7 +22,7 @@
       titre: '',
       accroche: '',
       explication: '',
-      source: { type: 'lien', auteurs: '', titre: '', url: '', annee: null },
+      source: { type: 'article', auteurs: '', titre: '', annee: null },
     };
   }
 

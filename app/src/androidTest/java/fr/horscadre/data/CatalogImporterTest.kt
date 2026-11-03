@@ -13,6 +13,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,6 +51,27 @@ class CatalogImporterTest {
         }
         assertEquals(sourceAuthors.toSet().size, database.catalogDao().authorCount())
         assertEquals(sourceAuthors.size, database.catalogDao().sourceAuthorCount())
+    }
+
+    @Test fun sourceWithoutUrlKeepsBibliographyAndClearsLegacyUrlColumn() = runBlocking {
+        val root = JSONObject(readCatalog())
+        val fact = root.getJSONArray("faits").getJSONObject(0)
+        val originalSource = fact.getJSONObject("source")
+        originalSource.put("url", "https://example.invalid/legacy")
+        importer.importJson(root.toString())
+
+        val storedUrl = database.openHelper.readableDatabase.query(
+            "SELECT url FROM sources WHERE id = ?",
+            arrayOf("${fact.getString("id")}-source-1")
+        ).use { cursor ->
+            check(cursor.moveToFirst())
+            if (cursor.isNull(0)) null else cursor.getString(0)
+        }
+        assertNull(storedUrl)
+        val displayedSource = database.catalogDao().sourcesFor(fact.getString("id")).single()
+        assertEquals(originalSource.getString("auteurs"), displayedSource.author)
+        assertEquals(originalSource.getString("titre"), displayedSource.title)
+        assertEquals(originalSource.getInt("annee"), displayedSource.year)
     }
 
     @Test fun removedFactsAreArchivedAndCollectedCardsRemainVisible() = runBlocking {

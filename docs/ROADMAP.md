@@ -10,7 +10,7 @@
 - Renderer d’affiche plein écran adaptatif aux dimensions et au thème ; illustration dominante dans la moitié supérieure, textes mesurés pour les accroches et références longues, sans zone réservée à l’horloge système ; aperçu et application réutilisent le même bitmap avec recadrage plein cadre et `FLAG_LOCK` exclusivement.
 - Huit illustrations vectorielles originales, une par catégorie, partagées entre accueil, collection, carte agrandie et fond verrouillé.
 - Suppression de tous les numéros individuels visibles, avec conservation des identifiants techniques.
-- Menu développeur uniquement en debug (7 appuis rapides sur le titre de collection), déblocage idempotent des 16 anecdotes avec sauvegarde persistante, restauration exacte, prévisualisation sans mutation et régénération/application de l’affiche sur le verrouillage uniquement ; build release sans interface ni code de mutation développeur.
+- Menu développeur uniquement en debug (7 appuis rapides sur le titre de collection), déblocage idempotent des 24 anecdotes avec sauvegarde persistante, restauration exacte, prévisualisation sans mutation et régénération/application de l’affiche sur le verrouillage uniquement ; build release sans interface ni code de mutation développeur.
 - 8 tests unitaires et 8 tests Android ciblés exécutés : sélection/consentement/collection, idempotence des imports, archivage, JSON invalide, proportions d’illustration, décalage et textes courts/longs dans les deux thèmes à 1080 × 2400.
 - Documentation produit, architecture, données et consignes agent.
 

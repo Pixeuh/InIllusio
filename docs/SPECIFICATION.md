@@ -16,8 +16,8 @@ Direction : revue scientifique contemporaine, minimaliste et éditoriale. Fond c
 
 ## Écrans et comportements attendus
 
-- **Accueil** : carte du jour, discipline, illustration associée à la catégorie, accroche et référence courte ; aucun numéro individuel de carte ; cœur volontaire ; accès à l’explication ; accès discret à la collection. Pas de barre inférieure.
-- **Explication** : retour, discipline, titre, développement, références complètes (auteur, titre, année minimum pour un livre) et liens cliquables pour les sources en ligne.
+- **Accueil** : carte du jour, discipline, illustration associée à la catégorie et accroche ; aucune référence bibliographique ni aucun lien ; aucun numéro individuel de carte ; cœur volontaire ; accès à l’explication ; accès discret à la collection. Pas de barre inférieure.
+- **Explication** : retour, discipline, titre, développement et références bibliographiques complètes (auteur, titre, année lorsqu’elle est disponible), sans lien Internet.
 - **Collection unique « Sciences humaines »** : compte et grille à deux colonnes. N’afficher que les cartes volontairement sauvegardées ; la discipline reste visible.
 - **Carte agrandie** : recto illustré, verso explicatif avec sources. Animations d’agrandissement et retournement à venir.
 - **Paramètres** : thème système/clair/sombre, préférence de renouvellement du verrouillage, prévisualisation, application manuelle et informations de version.
@@ -25,11 +25,11 @@ Direction : revue scientifique contemporaine, minimaliste et éditoriale. Fond c
 
 ## Fond d’écran
 
-Un renderer dédié produit une affiche adaptée aux dimensions du téléphone : grande illustration dans la moitié supérieure, catégorie sous l’illustration, anecdote au centre ou dans la moitié inférieure, puis référence courte près du bas. La typographie reste lisible pour les textes longs en adaptant l’espace et, au besoin, la taille de l’illustration. Les thèmes clair et sombre adaptent le fond et les couleurs. L’affiche occupe toute la surface ; l’horloge et les notifications Android peuvent se superposer à l’illustration. Aucun numéro individuel de carte n’est affiché. Ne jamais dessiner l’horloge ou ajouter un logo. L’application native doit employer exclusivement `WallpaperManager.FLAG_LOCK` et ne jamais toucher au fond d’accueil. L’aperçu réutilise le même bitmap et ne débloque pas la carte. Le renouvellement WorkManager est facultatif, persistant et idempotent par date locale ; Android peut retarder l’exécution. L’ouverture de l’application vérifie aussi la date actuelle.
+Un renderer dédié produit une affiche adaptée aux dimensions du téléphone : grande illustration dans la moitié supérieure, catégorie sous l’illustration, anecdote au centre ou dans la moitié inférieure, puis référence bibliographique courte (auteur · publication · année) près du bas, sans URL. La typographie reste lisible pour les textes longs en adaptant l’espace et, au besoin, la taille de l’illustration. Les thèmes clair et sombre adaptent le fond et les couleurs. L’affiche occupe toute la surface ; l’horloge et les notifications Android peuvent se superposer à l’illustration. Aucun numéro individuel de carte n’est affiché. Ne jamais dessiner l’horloge ou ajouter un logo. L’application native doit employer exclusivement `WallpaperManager.FLAG_LOCK` et ne jamais toucher au fond d’accueil. L’aperçu réutilise le même bitmap et ne débloque pas la carte. Le renouvellement WorkManager est facultatif, persistant et idempotent par date locale ; Android peut retarder l’exécution. L’ouverture de l’application vérifie aussi la date actuelle.
 
 ## Données éditoriales
 
-Le catalogue source est `data/faits_sciences_humaines_v1_16.json`, en français, avec 16 anecdotes : deux chacune en sociologie, anthropologie, psychologie sociale, histoire, linguistique, économie, philosophie et géographie humaine. Il est fourni comme corpus de travail à vérifier avant publication. Ne pas inventer d’anecdotes ou de références pour compléter ce corpus. S’il manque, conserver l’importeur et signaler précisément l’absence.
+Le catalogue source est `data/faits_sciences_humaines_v1_16.json`, en français, avec 24 anecdotes, dont dix en sociologie. Les sources conservent les informations bibliographiques disponibles (auteur, titre et année) sans champ URL. Il est fourni comme corpus de travail à vérifier avant publication. Ne pas inventer d’anecdotes ou de références pour compléter ce corpus. S’il manque, conserver l’importeur et signaler précisément l’absence.
 
 ## Contraintes produit
 

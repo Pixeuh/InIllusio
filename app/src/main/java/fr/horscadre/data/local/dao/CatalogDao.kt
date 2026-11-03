@@ -10,7 +10,7 @@ import fr.horscadre.data.local.entities.*
 import kotlinx.coroutines.flow.Flow
 
 data class AnecdoteWithCategory(val id: String, val categoryId: String, val categoryName: String, val title: String, val hook: String, val explanation: String)
-data class SourceDetails(val type: String, val title: String, val year: Int?, val url: String?, val author: String?)
+data class SourceDetails(val type: String, val title: String, val year: Int?, val author: String?)
 
 @Dao
 interface CatalogDao {
@@ -55,7 +55,7 @@ interface CatalogDao {
     @Query("DELETE FROM anecdote_sources WHERE anecdoteId IN (SELECT id FROM anecdotes WHERE archived = 1 AND id NOT IN (SELECT anecdoteId FROM collection))") suspend fun clearArchivedUncollectedSources()
     @Query("DELETE FROM sources WHERE id NOT IN (SELECT sourceId FROM anecdote_sources)") suspend fun deleteUnreferencedSources()
     @Query("DELETE FROM authors WHERE id NOT IN (SELECT authorId FROM source_authors)") suspend fun deleteUnreferencedAuthors()
-    @Query("SELECT s.type, s.title, s.year, s.url, (SELECT GROUP_CONCAT(au.name, ', ') FROM source_authors sa JOIN authors au ON au.id = sa.authorId WHERE sa.sourceId = s.id) AS author FROM sources s JOIN anecdote_sources ax ON ax.sourceId = s.id WHERE ax.anecdoteId = :id")
+    @Query("SELECT s.type, s.title, s.year, (SELECT GROUP_CONCAT(au.name, ', ') FROM source_authors sa JOIN authors au ON au.id = sa.authorId WHERE sa.sourceId = s.id) AS author FROM sources s JOIN anecdote_sources ax ON ax.sourceId = s.id WHERE ax.anecdoteId = :id")
     suspend fun sourcesFor(id: String): List<SourceDetails>
     @Transaction @Query("SELECT * FROM collection WHERE anecdoteId = :id") suspend fun collectionEntry(id: String): CollectionEntity?
 }

@@ -33,7 +33,8 @@ class CatalogImporter(private val context: Context, private val database: HorsCa
                             type = jsonSource.optString("type", "inconnu"),
                             title = jsonSource.optString("titre", "Référence"),
                             year = jsonSource.intOrNull("annee"),
-                            url = jsonSource.optString("url").takeIf { it.isNotBlank() && it != "null" },
+                            // URLs are no longer part of the editorial contract. Clear legacy values on re-import.
+                            url = null,
                             bibliographicDetails = null
                         ),
                         author = jsonSource.optString("auteurs").takeIf { it.isNotBlank() && it != "null" }

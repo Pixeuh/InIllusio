@@ -4,7 +4,7 @@ Hors Cadre est une application Android qui propose une anecdote quotidienne de s
 
 ## Fonctionnalités
 
-- Catalogue éditorial local de 24 anecdotes réparties entre huit disciplines, avec références bibliographiques.
+- Catalogue éditorial local de 24 anecdotes réparties entre huit disciplines, avec références bibliographiques sans liens Internet.
 - Affiche de verrouillage illustrée et adaptée à l’écran, avec thèmes clair et sombre.
 - Collection volontaire des anecdotes et préférences conservées localement.
 - Renouvellement quotidien facultatif, activé uniquement avec le consentement de l’utilisateur.
@@ -22,6 +22,8 @@ Kotlin, Jetpack Compose, Material 3, Room, DataStore, WorkManager et Gradle Kotl
 - `app/src/test/` et `app/src/androidTest/` : tests unitaires et instrumentés.
 - `data/faits_sciences_humaines_v1_16.json` : source éditoriale du catalogue. Gradle utilise directement ce dossier comme source d’assets Android.
 - `editor/` : éditeur HTML/CSS/JavaScript, exécuté localement dans un navigateur, sans serveur ni dépendance externe.
+
+Les références complètes sont consultables sur la page d’explication; le fond verrouillé affiche une version abrégée. L’accueil n’affiche pas de référence.
 - `docs/` et `AGENTS.md` : spécification, architecture, données et consignes du projet.
 - `.vscode/` : tâche de compilation et script Windows pour compiler, installer et lancer l’application.
 

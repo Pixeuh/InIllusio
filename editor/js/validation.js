@@ -44,15 +44,6 @@
       if (fact.source.annee != null && fact.source.annee !== '' && (!Number.isInteger(Number(fact.source.annee)) || Number(fact.source.annee) < 0 || Number(fact.source.annee) > 3000)) {
         errors.push(`${label} « ${fact.id || index + 1} » : année de source invalide.`);
       }
-      const url = fact.source.url;
-      if (url != null && String(url).trim()) {
-        try {
-          const parsed = new URL(String(url).trim());
-          if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname.includes('.')) throw new Error('URL invalide');
-        } catch (_) {
-          errors.push(`${label} « ${fact.id || index + 1} » : URL manifestement malformée.`);
-        }
-      }
     });
     return errors;
   }

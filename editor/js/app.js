@@ -124,7 +124,6 @@
     fieldValue('source-authors', source.auteurs);
     fieldValue('source-title', source.titre);
     fieldValue('source-year', source.annee);
-    fieldValue('source-url', source.url);
     renderSourceExtras(source);
     $('delete-button').hidden = state.selectedIndex < 0;
     $('hook-counter').textContent = `${(fact.accroche || '').length} caractères`;
@@ -149,6 +148,8 @@
     if (!catalog || typeof catalog !== 'object' || Array.isArray(catalog) || !Array.isArray(catalog.categories) || !Array.isArray(catalog.faits)) {
       throw new Error('Structure JSON non reconnue : les tableaux « categories » et « faits » sont nécessaires.');
     }
+    // Legacy catalogs may still contain URLs; discard them so exports follow the current schema.
+    catalog.faits.forEach((fact) => { if (fact?.source && typeof fact.source === 'object') delete fact.source.url; });
     state.catalog = catalog;
     state.selectedIndex = catalog.faits.length ? 0 : -1;
     state.fileHandle = handle || null;
@@ -238,7 +239,7 @@
         'fact-category': ['categorie', target.value], 'fact-title': ['titre', target.value],
         'fact-hook': ['accroche', target.value], 'fact-explanation': ['explication', target.value],
         'source-type': ['source.type', target.value], 'source-authors': ['source.auteurs', target.value],
-        'source-title': ['source.titre', target.value], 'source-url': ['source.url', target.value],
+        'source-title': ['source.titre', target.value],
       };
       if (target.id === 'catalog-status-input') { state.catalog.statut = target.value; renderStatusFilter(); }
       else if (target.id === 'source-year') {
