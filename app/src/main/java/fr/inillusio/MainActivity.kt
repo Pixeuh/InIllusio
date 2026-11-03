@@ -26,8 +26,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -670,6 +672,7 @@ private fun fitBoosterDisplaySize(referenceSize: DpSize?, maxWidth: Dp, availabl
         revealedIdsEncoded = ""
         packOpened = false
         packFullyOpened = false
+        swipeHintDismissed = false
         pagerState.scrollToPage(0)
     }
 
@@ -730,10 +733,7 @@ private fun fitBoosterDisplaySize(referenceSize: DpSize?, maxWidth: Dp, availabl
                                 LaunchedEffect(pagerState.settledPage, awardIdsEncoded) {
                                     if (pagerState.settledPage > 0) swipeHintDismissed = true
                                 }
-                                Box(
-                                    Modifier.align(Alignment.Center).size(fittedSize.width, fittedSize.height),
-                                    contentAlignment = Alignment.CenterEnd
-                                ) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
                                     Column(
                                         Modifier.fillMaxSize(),
                                         verticalArrangement = Arrangement.Center,
@@ -743,33 +743,39 @@ private fun fitBoosterDisplaySize(referenceSize: DpSize?, maxWidth: Dp, availabl
                                             visible = displayCards.size > 1 && pagerState.settledPage == 0 && !swipeHintDismissed,
                                             enter = if (animationsEnabled) fadeIn(tween(180)) else fadeIn(snap()),
                                             exit = if (animationsEnabled) fadeOut(tween(180)) else fadeOut(snap()),
-                                            modifier = Modifier.offset(x = 8.dp)
+                                            modifier = Modifier.padding(end = 8.dp)
                                         ) {
                                             val hintTransition = rememberInfiniteTransition(label = "booster-swipe-hint")
                                             val hintAlpha by hintTransition.animateFloat(
-                                                initialValue = 0.4f,
+                                                initialValue = 0.55f,
                                                 targetValue = 1f,
-                                                animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Reverse),
+                                                animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
                                                 label = "booster-swipe-hint-alpha"
                                             )
                                             val hintTranslation by hintTransition.animateFloat(
                                                 initialValue = 0f,
-                                                targetValue = 5f,
-                                                animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Reverse),
+                                                targetValue = 6f,
+                                                animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
                                                 label = "booster-swipe-hint-position"
                                             )
-                                            Text(
-                                                text = "\u2192",
-                                                modifier = Modifier
+                                            Box(
+                                                Modifier
                                                     .graphicsLayer {
                                                         alpha = if (animationsEnabled) hintAlpha else 1f
                                                         translationX = if (animationsEnabled) hintTranslation.dp.toPx() else 0f
                                                     }
+                                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f), CircleShape)
+                                                    .padding(8.dp)
                                                     .clearAndSetSemantics {},
-                                                color = BoosterTurquoise,
-                                                fontSize = 22.sp,
-                                                lineHeight = 24.sp
-                                            )
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp),
+                                                    tint = BoosterTurquoise
+                                                )
+                                            }
                                         }
                                     }
                                 }
