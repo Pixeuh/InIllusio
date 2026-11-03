@@ -5,7 +5,7 @@ Le projet est un module Android unique. Les responsabilités sont séparées par
 - `data/local/entities` : tables Room et relations normalisées.
 - `data/local/dao` : requêtes, flux de collection et opérations du catalogue.
 - `data/importer` : lecture du JSON embarqué et import idempotent.
-- `data/preferences` : thème, consentement, sélection quotidienne et mode d’affichage de la collection persistés dans DataStore.
+- `data/preferences` : thème, consentement et sélection quotidienne persistés dans DataStore. L’ancienne préférence de mode de collection est supprimée lors du premier chargement.
 - `data/repository` : accès du domaine au catalogue, historique de diffusion et sauvegarde protégée.
 - `domain` : règles pures de sélection et d’éligibilité à la collection.
 - `ui/theme`, `ui/AppViewModel.kt`, `MainActivity.kt` : thème, états d’écran et parcours Compose initial.
@@ -13,6 +13,8 @@ Le projet est un module Android unique. Les responsabilités sont séparées par
 - `wallpaper` : rendu d’affiche et appel natif de `WallpaperManager` limité au drapeau de verrouillage.
 - `worker` : planification unique du renouvellement avec WorkManager et routine partagée d’application idempotente.
 - `src/debug/.../DeveloperTools` : outils exclusivement présents en debug, avec une sauvegarde DataStore indépendante pour restaurer exactement la collection avant un déblocage de test. La variante release ne contient qu’une façade sans interface ni mutation.
+
+Les cartes recto/verso utilisent le même composant Compose sur l’accueil et dans la galerie agrandie. Une rotation Y animée à perspective modérée change de face à 90° ; la face arrière compense sa rotation pour garder le texte lisible. Son extrait vient directement de l’explication et le bouton mène à l’écran complet. L’état de retournement est local à l’identifiant de carte et au changement de page, sans donnée persistée. La galerie réutilise `HorizontalPager`; son index initial est recherché depuis l’identifiant touché dans la grille. La grille utilise un `LazyGridState` sauvegardable pour restaurer son défilement au retour.
 
 Au démarrage, `HorsCadreApplication` construit Room avec ses migrations explicites et DataStore, puis importe le JSON du dossier `data/`, configuré comme asset Android, avant le chargement de la carte par le ViewModel. L’analyse JSON précède la transaction Room : une erreur ne laisse aucun import partiel. L’état d’import est exposé en Flow ; l’interface présente l’erreur et une action de nouvelle tentative. L’import réutilise les auteurs, archive les anecdotes retirées du JSON et maintient leurs lignes de collection. Le catalogue garde des identifiants stables. Le repository sélectionne une carte qui n’a pas déjà une diffusion réussie, puis DataStore conserve l’identifiant pour la journée locale. Les tentatives sont écrites dans Room ; seule une réussite permet au repository de sauvegarder la carte. L’interface observe la collection via Flow.
 

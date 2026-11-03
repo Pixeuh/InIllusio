@@ -16,10 +16,10 @@ Direction : revue scientifique contemporaine, minimaliste et éditoriale. Fond c
 
 ## Écrans et comportements attendus
 
-- **Accueil** : carte du jour, discipline, illustration associée à la catégorie et accroche ; aucune référence bibliographique ni aucun lien ; aucun numéro individuel de carte ; accès à l’explication et accès discret à la collection. L’application réussie au fond verrouillé ajoute automatiquement la carte. Pas de barre inférieure.
+- **Accueil** : carte du jour recto/verso avec retournement 3D ; le verso montre un extrait de l’explication et son bouton ouvre l’écran complet, sans bouton d’explication séparé sous la carte. La discipline, l’illustration associée à la catégorie et l’accroche restent au recto ; aucune référence bibliographique ni aucun lien ; aucun numéro individuel de carte ; accès discret à la collection. L’application réussie au fond verrouillé ajoute automatiquement la carte. Pas de barre inférieure.
 - **Explication** : retour, discipline, titre, développement et références bibliographiques complètes (auteur, titre, année lorsqu’elle est disponible), sans lien Internet.
-- **Collection unique « Sciences humaines »** : compte et choix persistant entre une grille à deux colonnes et un carrousel horizontal paginé. N’afficher que les cartes dont l’application au verrouillage a réussi ; la discipline reste visible. Le carrousel affiche une carte à la fois, avec navigation bornée et compteur de position.
-- **Carte agrandie** : recto illustré, verso explicatif avec sources. Animations d’agrandissement et retournement à venir.
+- **Collection unique « Sciences humaines »** : grille à deux colonnes des cartes dont l’application au verrouillage a réussi ; la discipline reste visible. Toucher une carte ouvre cette carte dans une vue agrandie avec navigation horizontale bornée et compteur de position. Le retour restaure la position de défilement de la grille.
+- **Carte agrandie** : carte recto/verso avec retournement 3D ; un balayage horizontal change de carte sans déclencher le retournement. Le verso présente un extrait de l’explication et ouvre l’écran complet. L’explication complète conserve ses références.
 - **Paramètres** : thème système/clair/sombre, préférence de renouvellement du verrouillage, prévisualisation, application manuelle et informations de version.
 - **Première ouverture** : expliquer la carte quotidienne, le renouvellement et la collection. Le consentement au renouvellement est explicite. Une fois activé, le renouvellement peut appliquer automatiquement l’affiche au verrouillage ; le fond d’accueil n’est jamais modifié.
 

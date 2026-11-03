@@ -1,10 +1,14 @@
 package fr.horscadre
 
 import android.os.Bundle
+import android.animation.ValueAnimator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -17,15 +21,18 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import kotlinx.coroutines.launch
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,9 +43,9 @@ import fr.horscadre.data.local.dao.AnecdoteWithCategory
 import fr.horscadre.BuildConfig
 import fr.horscadre.debug.DeveloperTools
 import fr.horscadre.data.preferences.AppTheme
-import fr.horscadre.data.preferences.CollectionDisplayMode
 import fr.horscadre.CatalogImportState
 import fr.horscadre.ui.AppViewModel
+import fr.horscadre.ui.explanationExcerpt
 import fr.horscadre.ui.illustration.CategoryIllustration
 import fr.horscadre.ui.theme.HorsCadreTheme
 import fr.horscadre.wallpaper.WallpaperArtwork
@@ -80,8 +87,8 @@ class MainActivity : ComponentActivity() {
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
                         composable("home") { HomeScreen(daily, dailyLoaded, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
                         composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }) }
-                        composable("collection") { CollectionScreen(collection, prefs.collectionDisplayMode, selected?.id, model::setCollectionDisplayMode, { navController.popBackStack() }, { selected = it; model.showSources(it.id); navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
-                        composable("card") { CardScreen(selected, sources, { navController.popBackStack() }) }
+                        composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
+                        composable("card") { CardScreen(collection, selected?.id, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") { SettingsScreen(prefs.theme, dark, prefs.wallpaperRefreshEnabled, prefs.wallpaperTextOffset, daily, reference, wallpaperPreview, { model.setTheme(it) }, { model.setRefreshEnabled(it) }, { model.scheduleWallpaperTextOffsetSave(it) }, { model.persistWallpaperTextOffset(it) }, { model.resetWallpaperTextOffset() }, { fact, source, darkTheme, offset -> model.prepareWallpaperPreview(fact, source, darkTheme, offset) }, { fact, source, darkTheme, offset -> model.applyWallpaper(fact, source, darkTheme, offset) }, { navController.popBackStack() }) }
                     }
@@ -129,10 +136,12 @@ class MainActivity : ComponentActivity() {
             TextButton(onClick = onCollection, modifier = Modifier.align(Alignment.End)) { Text("Ma collection") }
         }
         else {
-            EditorialCard(fact, Modifier.weight(1f).fillMaxWidth(), showSourceReference = false)
-            Spacer(Modifier.height(14.dp))
-            Button(onClick = onExplain, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Découvrir l’explication  →") }
-            TextButton(onClick = onCollection, modifier = Modifier.padding(top = 4.dp)) { Text("Ma collection") }
+            FlipCard(
+                fact = fact,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                onOpenExplanation = onExplain
+            )
+            TextButton(onClick = onCollection, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) { Text("Ma collection") }
         }
     }
 }
@@ -155,6 +164,75 @@ class MainActivity : ComponentActivity() {
                 reference?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
             }
         }
+    }
+}
+
+@Composable private fun FlipCard(
+    fact: AnecdoteWithCategory,
+    modifier: Modifier = Modifier,
+    resetKey: Any? = fact.id,
+    onOpenExplanation: () -> Unit
+) {
+    var flipped by remember(fact.id, resetKey) { mutableStateOf(false) }
+    val animationsEnabled = ValueAnimator.areAnimatorsEnabled()
+    val rotation by animateFloatAsState(
+        targetValue = if (flipped) 180f else 0f,
+        animationSpec = if (animationsEnabled) tween(durationMillis = 520, easing = FastOutSlowInEasing) else snap(),
+        label = "card-flip"
+    )
+    val cameraDistance = 16f * LocalDensity.current.density
+    Box(modifier) {
+        if (rotation <= 90f) {
+            EditorialCard(
+                fact = fact,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        rotationY = rotation
+                        this.cameraDistance = cameraDistance
+                    }
+                    .clickable(onClickLabel = "Retourner la carte") { flipped = true }
+                    .semantics { contentDescription = "Recto de la carte, ${fact.categoryName}. Appuyer pour retourner." }
+            )
+        } else {
+            FlipCardBack(
+                fact = fact,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        rotationY = rotation - 180f
+                        this.cameraDistance = cameraDistance
+                    }
+                    .clickable(onClickLabel = "Afficher le recto") { flipped = false }
+                    .semantics { contentDescription = "Verso de la carte, ${fact.categoryName}. Appuyer pour afficher le recto." },
+                onOpenExplanation = onOpenExplanation
+            )
+        }
+    }
+}
+
+@Composable private fun FlipCardBack(fact: AnecdoteWithCategory, modifier: Modifier = Modifier, onOpenExplanation: () -> Unit) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(26.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(26.dp))
+            .padding(24.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text("${fact.categoryName.uppercase()}  ·  AU VERSO", style = MaterialTheme.typography.labelMedium, letterSpacing = 1.2.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+            HorizontalDivider(Modifier.padding(top = 14.dp), color = MaterialTheme.colorScheme.secondary, thickness = 2.dp)
+        }
+        Text(
+            text = explanationExcerpt(fact.explanation),
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 18.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            lineHeight = 25.sp,
+            maxLines = 9,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+        OutlinedButton(onClick = onOpenExplanation, modifier = Modifier.fillMaxWidth()) { Text("Lire l’explication complète") }
     }
 }
 
@@ -192,73 +270,76 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, displayMode: CollectionDisplayMode, selectedCardId: String?, onDisplayMode: (CollectionDisplayMode) -> Unit, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit) {
+@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit) {
     var showDebugMenu by remember { mutableStateOf(false) }
-    var currentCardId by rememberSaveable { mutableStateOf(selectedCardId) }
-    val cardIds = remember(cards) { cards.map { it.id } }
-    val pagerScope = rememberCoroutineScope()
-    val initialPage = cardIds.indexOf(currentCardId ?: selectedCardId).coerceAtLeast(0)
-    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { cards.size })
-    LaunchedEffect(pagerState.currentPage) {
-        cards.getOrNull(pagerState.currentPage)?.let { currentCardId = it.id }
-    }
-    LaunchedEffect(displayMode, selectedCardId, currentCardId) {
-        if (displayMode == CollectionDisplayMode.CAROUSEL && cards.isNotEmpty()) {
-            val target = cardIds.indexOf(currentCardId ?: selectedCardId).takeIf { it >= 0 } ?: pagerState.currentPage.coerceIn(cards.indices)
-            if (target != pagerState.currentPage) pagerState.animateScrollToPage(target)
-        }
-    }
-    LaunchedEffect(cardIds) {
-        if (cards.isNotEmpty()) {
-            val selectedPage = cardIds.indexOf(currentCardId)
-            val target = if (selectedPage >= 0) selectedPage else pagerState.currentPage.coerceIn(cards.indices)
-            if (target != pagerState.currentPage) pagerState.scrollToPage(target)
-            currentCardId = cards[target].id
-        }
-    }
+    val gridState = rememberLazyGridState()
     Column(Modifier.fillMaxSize()) {
         TopLine("Accueil", onBack)
         DeveloperTools.CollectionTitle { showDebugMenu = true }
         DeveloperTools.MenuDialog(showDebugMenu, debugCanRestore, { showDebugMenu = false }, { showDebugMenu = false; onDebugUnlockAll() }, { showDebugMenu = false; onDebugPreviewAll() }, { showDebugMenu = false; onDebugRegenerateWallpaper() }, { showDebugMenu = false; onDebugRunDailyRenewal() }, { showDebugMenu = false; onDebugRestore() })
         Text("Ma collection", Modifier.padding(horizontal = 24.dp, vertical = 6.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         Text("${cards.size} carte${if (cards.size == 1) "" else "s"}", Modifier.padding(horizontal = 24.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyMedium)
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.Center) {
-            FilterChip(selected = displayMode == CollectionDisplayMode.GRID, onClick = { onDisplayMode(CollectionDisplayMode.GRID) }, label = { Text("Grille") })
-            Spacer(Modifier.width(8.dp))
-            FilterChip(selected = displayMode == CollectionDisplayMode.CAROUSEL, onClick = { onDisplayMode(CollectionDisplayMode.CAROUSEL) }, label = { Text("Carrousel") })
-        }
         if (cards.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center) }
-        else if (displayMode == CollectionDisplayMode.GRID) LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        else LazyVerticalGrid(state = gridState, columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(cards, key = { it.id }) { fact ->
-                Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { currentCardId = fact.id; onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.secondary)
                     CategoryIllustration(fact.categoryId, Modifier.fillMaxWidth().height(94.dp))
                     Text(fact.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 3)
                 }
             }
         }
-        else {
-            HorizontalPager(state = pagerState, modifier = Modifier.weight(1f).fillMaxWidth(), key = { cards[it].id }) { page ->
-                cards.getOrNull(page)?.let { fact ->
-                    EditorialCard(fact, Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp).clickable { currentCardId = fact.id; onSelect(fact) })
-                }
-            }
-            Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { pagerScope.launch { pagerState.animateScrollToPage((pagerState.currentPage - 1).coerceAtLeast(0)) } }, enabled = pagerState.currentPage > 0) { Text("‹") }
-                Text("${(pagerState.currentPage + 1).coerceIn(1, cards.size)} / ${cards.size}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = { pagerScope.launch { pagerState.animateScrollToPage((pagerState.currentPage + 1).coerceAtMost(cards.lastIndex)) } }, enabled = pagerState.currentPage < cards.lastIndex) { Text("›") }
-            }
-        }
     }
 }
 
-@Composable private fun CardScreen(fact: AnecdoteWithCategory?, sources: List<fr.horscadre.data.local.dao.SourceDetails>, onBack: () -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        TopLine("Collection", onBack)
-        fact?.let {
-            EditorialCard(it, Modifier.fillMaxWidth().height(480.dp).padding(horizontal = 22.dp))
-            Text(it.explanation, Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.bodyLarge)
-            sources.forEach { source -> SourceLine(source) }
+@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit) {
+    val cardIds = remember(cards) { cards.map { it.id } }
+    var currentCardId by rememberSaveable { mutableStateOf(selectedCardId) }
+    val selectedIndex = cardIds.indexOf(currentCardId).coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = selectedIndex, pageCount = { cards.size })
+    LaunchedEffect(pagerState.settledPage, cardIds) {
+        cards.getOrNull(pagerState.settledPage)?.let { currentCardId = it.id }
+    }
+    LaunchedEffect(cardIds, currentCardId) {
+        if (cards.isNotEmpty()) {
+            val target = cardIds.indexOf(currentCardId).takeIf { it >= 0 }
+                ?: pagerState.currentPage.coerceIn(cards.indices)
+            if (target != pagerState.currentPage) pagerState.scrollToPage(target)
+            currentCardId = cards[target].id
+        }
+    }
+    Column(Modifier.fillMaxSize()) {
+        TopLine("Retour", onBack)
+        if (cards.isEmpty()) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text("Cette carte n’est plus dans la collection.", textAlign = TextAlign.Center)
+            }
+        } else {
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val maxCardHeight = minOf(maxHeight * 0.86f, 620.dp)
+                val maxCardWidth = (maxWidth - 44.dp).coerceAtLeast(0.dp)
+                val cardWidth = minOf(maxCardWidth, maxCardHeight * 0.68f)
+                val cardHeight = cardWidth / 0.68f
+                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { cards[it].id }) { page ->
+                    cards.getOrNull(page)?.let { fact ->
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            FlipCard(
+                                fact = fact,
+                                modifier = Modifier.size(cardWidth, cardHeight),
+                                resetKey = pagerState.currentPage,
+                                onOpenExplanation = { currentCardId = fact.id; onOpenExplanation(fact) }
+                            )
+                        }
+                    }
+                }
+            }
+            Text(
+                "${(pagerState.settledPage + 1).coerceIn(1, cards.size)} / ${cards.size}",
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

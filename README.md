@@ -6,7 +6,8 @@ Hors Cadre est une application Android qui propose une anecdote quotidienne de s
 
 - Catalogue éditorial local de 24 anecdotes réparties entre huit disciplines, avec références bibliographiques sans liens Internet.
 - Affiche de verrouillage illustrée et adaptée à l’écran, avec thèmes clair et sombre.
-- Collection automatique après application réussie au fond verrouillé, consultable en grille ou en carrousel horizontal.
+- Collection automatique après application réussie au fond verrouillé, consultable en grille avec navigation horizontale dans les cartes agrandies.
+- Carte du jour et cartes de collection recto-verso avec retournement 3D et accès à l’explication complète.
 - Renouvellement quotidien facultatif, activé uniquement avec le consentement de l’utilisateur.
 - Éditeur graphique local pour consulter et modifier le catalogue JSON.
 

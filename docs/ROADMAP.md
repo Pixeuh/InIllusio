@@ -6,7 +6,8 @@
 - Schéma Room relationnel version 2 avec migration non destructive, import transactionnel/idempotent du catalogue, fusion des auteurs en doublon et archivage des anecdotes retirées ; l’état d’erreur d’import est présenté avec une action de nouvelle tentative.
 - DataStore pour thème, consentement, préférence de renouvellement et carte du jour.
 - Premier accueil, explication, collection, carte consultée et paramètres.
-- Collection avec modes grille et carrousel horizontal paginé, choix conservé dans DataStore et cartes limitées aux entrées réellement collectionnées.
+- Collection en grille à deux colonnes, avec ouverture de la carte touchée dans une galerie agrandie à navigation horizontale bornée ; position de grille conservée au retour.
+- Retournement 3D partagé de la carte quotidienne et de la galerie agrandie, avec extrait d’explication et accès à la lecture complète.
 - Ajout automatique et idempotent à la collection, dans la même transaction que l’enregistrement d’une diffusion `FLAG_LOCK` réussie ; aucune collection sur erreur ou aperçu.
 - Règle de collection conditionnée à l’historique d’une diffusion réussie.
 - Renderer d’affiche plein écran adaptatif aux dimensions et au thème ; illustration à l’échelle native, ajustée à la largeur et au ratio de l’écran sans découpage, textes mesurés pour les accroches et références longues, sans zone réservée à l’horloge système ; aperçu et application réutilisent le même bitmap avec recadrage plein cadre et `FLAG_LOCK` exclusivement.
