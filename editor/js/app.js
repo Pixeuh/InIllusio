@@ -148,13 +148,14 @@
     if (!catalog || typeof catalog !== 'object' || Array.isArray(catalog) || !Array.isArray(catalog.categories) || !Array.isArray(catalog.faits)) {
       throw new Error('Structure JSON non reconnue : les tableaux « categories » et « faits » sont nécessaires.');
     }
-    // Legacy catalogs may still contain URLs; discard them so exports follow the current schema.
-    catalog.faits.forEach((fact) => { if (fact?.source && typeof fact.source === 'object') delete fact.source.url; });
+    const originalCatalog = JSON.stringify(catalog);
+    catalog = window.EditorData.normalizeCatalog(catalog);
     state.catalog = catalog;
     state.selectedIndex = catalog.faits.length ? 0 : -1;
     state.fileHandle = handle || null;
     state.filename = filename || 'faits_sciences_humaines.json';
-    state.baseline = JSON.stringify(catalog);
+    // Preserve the imported snapshot as baseline so normalization is offered for export.
+    state.baseline = originalCatalog;
     state.pageSize = 100;
     refreshAll();
     const errors = window.EditorValidation.validateCatalog(catalog);

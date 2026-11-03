@@ -18,7 +18,7 @@ Cliquez sur le bouton **+** au-dessus de la liste. Un identifiant technique disp
 
 Sélectionnez une anecdote dans la liste puis éditez les champs. L’aperçu smartphone et son compteur d’accroche suivent la saisie. Utilisez le sélecteur Clair/Sombre pour contrôler le contraste. La longue accroche déclenche un avertissement, sans bloquer l’enregistrement.
 
-Le format actuel accepte un objet `source` par anecdote. Les auteurs, titres, années et propriétés bibliographiques complémentaires restent modifiables. Les anciennes URL sont supprimées au chargement et ne sont pas exportées. L’éditeur ne transforme pas la source en tableau, ce qui modifierait le contrat lu par l’importeur Android. Le champ de statut est stocké une seule fois dans `statut` à la racine du catalogue et s’applique au catalogue entier.
+Le format actuel accepte un objet `source` par anecdote. Le type de publication est choisi parmi `livre`, `article`, `rapport` et `autre`. Les auteurs, titres, années et propriétés bibliographiques complémentaires restent modifiables. Les anciennes URL sont supprimées au chargement et ne sont pas exportées ; l’ancien type `lien` est converti en `autre`. L’éditeur ne transforme pas la source en tableau, ce qui modifierait le contrat lu par l’importeur Android. Le champ de statut est stocké une seule fois dans `statut` à la racine du catalogue et s’applique au catalogue entier.
 
 ## Enregistrer les modifications
 

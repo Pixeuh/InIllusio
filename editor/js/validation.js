@@ -1,5 +1,6 @@
 (function () {
   const text = (value) => typeof value === 'string' && value.trim().length > 0;
+  const sourceTypes = new Set(['livre', 'article', 'rapport', 'autre']);
 
   function validateCatalog(catalog) {
     const errors = [];
@@ -38,7 +39,7 @@
         errors.push(`${label} « ${fact.id || index + 1} » : la source doit être un objet.`);
         return;
       }
-      if (!text(fact.source.type)) errors.push(`${label} « ${fact.id || index + 1} » : type de source obligatoire.`);
+      if (!sourceTypes.has(fact.source.type)) errors.push(`${label} « ${fact.id || index + 1} » : type de publication invalide (livre, article, rapport ou autre).`);
       if (!text(fact.source.auteurs)) errors.push(`${label} « ${fact.id || index + 1} » : auteur ou organisme obligatoire.`);
       if (!text(fact.source.titre)) errors.push(`${label} « ${fact.id || index + 1} » : titre de source obligatoire.`);
       if (fact.source.annee != null && fact.source.annee !== '' && (!Number.isInteger(Number(fact.source.annee)) || Number(fact.source.annee) < 0 || Number(fact.source.annee) > 3000)) {

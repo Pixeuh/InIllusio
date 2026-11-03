@@ -26,6 +26,17 @@
     };
   }
 
+  function normalizeCatalog(catalog) {
+    const normalized = copy(catalog);
+    normalized.faits.forEach((fact) => {
+      if (!fact?.source || typeof fact.source !== 'object') return;
+      delete fact.source.url;
+      // The former "lien" value described access, not the kind of publication.
+      if (fact.source.type === 'lien') fact.source.type = 'autre';
+    });
+    return normalized;
+  }
+
   function shortReference(source) {
     if (!source) return 'Référence bibliographique';
     const authors = String(source.auteurs || '').trim();
@@ -34,5 +45,5 @@
     return [authors, title].filter(Boolean).join(' — ') + year || 'Référence bibliographique';
   }
 
-  window.EditorData = { copy, createFact, shortReference };
+  window.EditorData = { copy, createFact, normalizeCatalog, shortReference };
 })();

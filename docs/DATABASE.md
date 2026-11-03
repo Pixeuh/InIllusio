@@ -7,7 +7,7 @@ Room utilise `hors-cadre.db`, au schéma version 2. Toutes les tables sont local
 | `categories` | Identifiant de discipline et nom. |
 | `anecdotes` | ID stable, catégorie, titre, accroche, explication, statut éditorial, référence d’illustration optionnelle et état archivé. FK vers `categories`. |
 | `authors` | Identifiant numérique et nom d’auteur. |
-| `sources` | Type, titre, année, colonne URL historique nullable et détails bibliographiques facultatifs. L’interface ne lit pas l’URL et l’import la remet à `null`. |
+| `sources` | Type de publication (`livre`, `article`, `rapport` ou `autre`), titre, année, colonne URL historique nullable et détails bibliographiques facultatifs. L’interface ne lit pas l’URL et l’import la remet à `null`. |
 | `source_authors` | Association plusieurs-à-plusieurs source/auteur, clé composée. |
 | `anecdote_sources` | Association plusieurs-à-plusieurs anecdote/source, clé composée. |
 | `illustrations` | Métadonnées de média, séparées du contenu d’anecdote. |

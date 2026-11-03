@@ -36,6 +36,28 @@ class CatalogImporterTest {
         assertEquals(24, database.catalogDao().anecdoteCount())
         assertEquals(8, database.catalogDao().categoryCount())
         assertEquals(10, database.catalogDao().allAnecdotes().count { it.categoryId == "sociologie" })
+        val importedTypes = database.catalogDao().allAnecdotes()
+            .flatMap { database.catalogDao().sourcesFor(it.id) }
+            .map { it.type }
+            .toSet()
+        assertEquals(setOf("livre", "article", "rapport", "autre"), importedTypes)
+    }
+
+    @Test fun obsoleteSourceTypeIsRejectedWithoutChangingCollectionOrCatalog() = runBlocking {
+        importer.importBundledCatalog()
+        val dao = database.catalogDao()
+        dao.putCollection(CollectionEntity("sociologie-01", 1L))
+        val countBefore = dao.anecdoteCount()
+        val root = JSONObject(readCatalog())
+        root.getJSONArray("faits").getJSONObject(0).getJSONObject("source").put("type", "lien")
+
+        runCatching { importer.importJson(root.toString()) }
+            .onSuccess { throw AssertionError("Obsolete source type should fail validation before the Room transaction") }
+
+        assertEquals(countBefore, dao.anecdoteCount())
+        assertNotNull(dao.collectionEntry("sociologie-01"))
+        assertEquals(setOf("livre", "article", "rapport", "autre"), dao.allAnecdotes()
+            .flatMap { dao.sourcesFor(it.id) }.map { it.type }.toSet())
     }
 
     @Test fun repeatedImportDoesNotDuplicateRowsOrDeleteCollection() = runBlocking {

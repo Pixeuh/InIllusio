@@ -27,10 +27,14 @@ class CatalogImporter(private val context: Context, private val database: HorsCa
                 val value = array.getJSONObject(index)
                 val id = value.getString("id")
                 val source = if (value.isNull("source")) null else value.getJSONObject("source").let { jsonSource ->
+                    val sourceType = jsonSource.optString("type").trim()
+                    require(sourceType in ALLOWED_SOURCE_TYPES) {
+                        "Type de source invalide pour « $id » : « $sourceType ». Valeurs autorisées : ${ALLOWED_SOURCE_TYPES.joinToString()}"
+                    }
                     ParsedSource(
                         entity = SourceEntity(
                             id = "$id-source-1",
-                            type = jsonSource.optString("type", "inconnu"),
+                            type = sourceType,
                             title = jsonSource.optString("titre", "Référence"),
                             year = jsonSource.intOrNull("annee"),
                             // URLs are no longer part of the editorial contract. Clear legacy values on re-import.
@@ -86,5 +90,7 @@ class CatalogImporter(private val context: Context, private val database: HorsCa
     private data class ParsedFact(val anecdote: AnecdoteEntity, val source: ParsedSource?)
     private data class ParsedSource(val entity: SourceEntity, val author: String?)
 }
+
+private val ALLOWED_SOURCE_TYPES = setOf("livre", "article", "rapport", "autre")
 
 private fun JSONObject.intOrNull(key: String): Int? = if (isNull(key)) null else optInt(key).takeIf { it != 0 }
