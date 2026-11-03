@@ -157,31 +157,62 @@ class MainActivity : ComponentActivity() {
 @Composable private fun EditorialCard(fact: AnecdoteWithCategory, modifier: Modifier = Modifier, reference: String? = null, showSourceReference: Boolean = true) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
-    Column(modifier.clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(26.dp)).padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-            Column {
-                Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = Color(palette.secondary), fontWeight = FontWeight.Bold)
+    BoxWithConstraints(
+        modifier
+            .clip(RoundedCornerShape(26.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(26.dp))
+            .padding(24.dp)
+    ) {
+        val illustrationHeight = minOf(maxHeight * 0.38f, maxWidth * 0.70f)
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Column {
+                    Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = Color(palette.secondary), fontWeight = FontWeight.Bold)
+                }
+                Box(Modifier.height(32.dp), contentAlignment = Alignment.TopEnd) {
+                    Text("IN ILLUSIO", style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp, lineHeight = 9.sp), textAlign = TextAlign.End, letterSpacing = 0.5.sp, maxLines = 1)
+                }
             }
-            Box(Modifier.height(32.dp), contentAlignment = Alignment.TopEnd) {
-                Text("IN ILLUSIO", style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp, lineHeight = 9.sp), textAlign = TextAlign.End, letterSpacing = 0.5.sp, maxLines = 1)
+            Spacer(Modifier.height(50.dp))
+            Box(
+                Modifier.fillMaxWidth().height(illustrationHeight),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                CategoryIllustration(
+                    fact.categoryId,
+                    Modifier.fillMaxHeight().aspectRatio(10f / 7f)
+                )
             }
-        }
-        CategoryIllustration(fact.categoryId, Modifier.fillMaxWidth().weight(.9f))
-        Column {
-            Text(fact.hook, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, lineHeight = 31.sp)
-            Spacer(Modifier.height(14.dp))
-            HorizontalDivider(color = Color(palette.secondary), thickness = 2.dp)
-            if (showSourceReference) {
-                reference?.takeIf(String::isNotBlank)?.let {
+            Column(Modifier.weight(1f).fillMaxWidth()) {
+                Box(
+                    Modifier.weight(1f).fillMaxWidth().padding(top = 20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        it,
-                        style = MaterialTheme.typography.labelSmall,
-                        letterSpacing = 1.2.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 12.dp),
-                        maxLines = 2,
+                        fact.hook,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 31.sp,
+                        maxLines = Int.MAX_VALUE,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
+                Spacer(Modifier.height(26.dp))
+                HorizontalDivider(color = Color(palette.secondary), thickness = 2.dp)
+                if (showSourceReference) {
+                    reference?.takeIf(String::isNotBlank)?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.labelSmall,
+                            letterSpacing = 1.2.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 12.dp),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
