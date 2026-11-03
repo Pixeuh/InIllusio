@@ -8,8 +8,8 @@
 - Premier accueil, explication, collection, carte consultée et paramètres.
 - Collection en grille à deux colonnes, avec ouverture de la carte touchée dans une galerie agrandie à navigation horizontale bornée ; position de grille conservée au retour.
 - Retournement 3D partagé de la carte quotidienne et de la galerie agrandie, avec extrait d’explication et accès à la lecture complète.
-- Ajout automatique et idempotent à la collection, dans la même transaction que l’enregistrement d’une diffusion `FLAG_LOCK` réussie ; aucune collection sur erreur ou aperçu.
-- Règle de collection conditionnée à l’historique d’une diffusion réussie.
+- Ajout automatique et idempotent à la collection après diffusion `FLAG_LOCK` réussie ou callback de récompense booster confirmé ; aucune collection sur erreur, aperçu ou publicité interrompue.
+- Boosters et diffusion du fond alimentent la même table Room par transactions distinctes ; seuls les fonds réussis inscrivent un historique de livraison.
 - Renderer d’affiche plein écran adaptatif aux dimensions et au thème ; illustration à l’échelle native, ajustée à la largeur et au ratio de l’écran sans découpage, textes mesurés pour les accroches et références longues, sans zone réservée à l’horloge système ; aperçu et application réutilisent le même bitmap avec recadrage plein cadre et `FLAG_LOCK` exclusivement.
 - Huit illustrations vectorielles originales, une par catégorie, partagées entre accueil, collection, carte agrandie et fond verrouillé.
 - Palettes principale/secondaire centralisées par discipline et partagées entre l’application, le renderer du fond verrouillé et l’éditeur graphique.
@@ -17,6 +17,8 @@
 - Menu développeur uniquement en debug (7 appuis rapides sur le titre de collection), déblocage idempotent des 24 anecdotes avec sauvegarde persistante, restauration exacte, prévisualisation sans mutation et régénération/application de l’affiche sur le verrouillage uniquement ; build release sans interface ni code de mutation développeur.
 - 8 tests unitaires et 8 tests Android ciblés exécutés : sélection/consentement/collection, idempotence des imports, archivage, JSON invalide, proportions d’illustration, décalage et textes courts/longs dans les deux thèmes à 1080 × 2400.
 - Documentation produit, architecture, données et consignes agent.
+- Boosters facultatifs avec UMP/AdMob Rewarded, progression de collection, IDs de test réservés à DEBUG, attribution Room transactionnelle et idempotente, migration non destructive 2→3 et écran de révélation réutilisant les cartes officielles.
+- Tests instrumentés du repository booster : lot normal, dernières cartes disponibles, collection complète, statuts individuels, archivage préservé, callback répété et stabilité de la sélection quotidienne.
 
 ## En cours / à valider
 
@@ -26,6 +28,7 @@
 - Valider visuellement la composition plein écran sur d’autres ratios et résolutions ; la compilation et l’installation sur l’AVD 1080 × 2400 sont vérifiées.
 - Validation éditoriale et bibliographique du corpus, explicitement fourni comme proposition de travail.
 - Vérification de la migration Room 1→2 sur une base réelle avant le premier déploiement physique.
+- Tester UMP et l’annonce test AdMob sur appareil connecté, puis vérifier la migration 2→3 sur un appareil conservant déjà une base v2.
 
 ## Prévu
 
@@ -34,10 +37,9 @@
 - Animations de sauvegarde, agrandissement et retournement de carte.
 - Variantes graphiques de cartes, tout en gardant l’identité commune des disciplines.
 - Synchronisation éventuelle d’une base distante, hors première version.
-- Éventuel système de boosters, seulement si le produit évolue dans ce sens.
 
 ## Reporté
 
-- Comptes, backend, publicité, analyse comportementale et achats intégrés : hors périmètre.
+- Comptes, backend, analyse comportementale et achats intégrés : hors périmètre. Seules les publicités récompensées facultatives décrites par la spécification sont autorisées.
 - Historique de cartes manquées accessible à l’utilisateur : exclu par la spécification.
 - Statut éditorial individuel `a_valider` / `validee` dans le catalogue et l’éditeur local ; seuls les faits validés sont diffusés. Les statuts absents sont importés en attente et les cartes collectionnées restent accessibles.

@@ -36,3 +36,9 @@ Chaque anecdote porte son propre champ `statut_editorial`, limité à `a_valider
 ## Contraintes produit
 
 Kotlin, Compose, Material 3, Room, DataStore, Navigation Compose, Coroutines/Flow, ViewModel, WorkManager et Gradle Kotlin DSL. Architecture lisible par responsabilités, sans module superflu. Pas de synchronisation distante dans cette première étape ; prévoir une séparation entre stockage, repository, logique métier et UI. Toute évolution doit maintenir le verrouillage exclusif, le consentement, la collection volontaire et le fonctionnement hors ligne.
+
+## Évolution autorisée : boosters facultatifs
+
+La règle de collection comporte désormais une seconde voie explicitement limitée : après callback AdMob `onUserEarnedReward`, un booster peut ajouter jusqu’à cinq anecdotes validées, non archivées et absentes de la collection. L’attribution est transactionnelle et idempotente ; fermer/interrompre la publicité sans callback ne donne rien. Le booster ne déclenche pas WallpaperManager et ne crée aucun historique de diffusion. La progression ne compte que les anecdotes validées non archivées, tandis que les cartes archivées déjà collectées restent consultables.
+
+Les identifiants Google de test ne sont utilisés qu’en DEBUG. RELEASE reste désactivé jusqu’à fourniture explicite de `ADMOB_RELEASE_ENABLED=true`, `ADMOB_PRIVACY_CONFIGURED=true`, `ADMOB_APP_ID` et `ADMOB_REWARDED_UNIT_ID`. UMP actualise le consentement au lancement et l’annonce n’est sollicitée qu’après action de l’utilisateur si `canRequestAds()` est vrai. Avant une mise en production, configurer la politique de confidentialité, les déclarations de données Google Play et les paramètres UMP/AdMob du pays visé.

@@ -18,6 +18,26 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    val testRewardedUnitId = "ca-app-pub-3940256099942544/5224354917"
+    val releaseAppId = providers.gradleProperty("ADMOB_APP_ID").orNull.orEmpty()
+    val releaseRewardedId = providers.gradleProperty("ADMOB_REWARDED_UNIT_ID").orNull.orEmpty()
+    val releaseAdsEnabled = providers.gradleProperty("ADMOB_RELEASE_ENABLED").orNull == "true" &&
+        providers.gradleProperty("ADMOB_PRIVACY_CONFIGURED").orNull == "true" &&
+        releaseAppId.isNotBlank() && releaseRewardedId.isNotBlank()
+
+    buildTypes {
+        debug {
+            buildConfigField("boolean", "ADS_ENABLED", "true")
+            buildConfigField("String", "ADMOB_REWARDED_UNIT_ID", "\"$testRewardedUnitId\"")
+            manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-3940256099942544~3347511713"
+        }
+        release {
+            buildConfigField("boolean", "ADS_ENABLED", releaseAdsEnabled.toString())
+            buildConfigField("String", "ADMOB_REWARDED_UNIT_ID", "\"${if (releaseAdsEnabled) releaseRewardedId else ""}\"")
+            manifestPlaceholders["ADMOB_APP_ID"] = if (releaseAdsEnabled) releaseAppId else ""
+        }
+    }
+
     sourceSets.getByName("main").assets.setSrcDirs(listOf(rootProject.file("data")))
 
     buildFeatures {
@@ -52,6 +72,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.google.play.services.ads)
+    implementation(libs.google.ump)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation("androidx.test:core:1.6.1")

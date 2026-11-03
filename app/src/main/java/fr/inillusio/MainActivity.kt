@@ -2,6 +2,7 @@ package fr.inillusio
 
 import android.os.Bundle
 import android.animation.ValueAnimator
+import android.app.Activity
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -10,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -25,6 +27,9 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -35,6 +40,9 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,10 +59,21 @@ import fr.inillusio.ui.illustration.CategoryIllustration
 import fr.inillusio.ui.illustration.DisciplinePalettes
 import fr.inillusio.ui.theme.InIllusioTheme
 import fr.inillusio.wallpaper.WallpaperArtwork
+import fr.inillusio.data.local.dao.BoosterProgress
+import fr.inillusio.data.repository.BoosterAwardResult
+import fr.inillusio.domain.BoosterPolicy
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     private val model by viewModels<AppViewModel> { object : ViewModelProvider.AndroidViewModelFactory(application) { @Suppress("UNCHECKED_CAST") override fun <T : ViewModel> create(modelClass: Class<T>): T = AppViewModel(application) as T } }
-    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { InIllusioRoot(model) } }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (BuildConfig.ADS_ENABLED) (application as InIllusioApplication).adsConsent.updateForLaunch(this)
+        setContent { InIllusioRoot(model) }
+    }
     override fun onResume() { super.onResume(); model.onAppForeground() }
 }
 
@@ -64,6 +83,11 @@ class MainActivity : ComponentActivity() {
     val daily by model.daily.collectAsStateWithLifecycle()
     val dailyLoaded by model.dailyLoaded.collectAsStateWithLifecycle()
     val collection by model.collection.collectAsStateWithLifecycle(initialValue = emptyList())
+    val boosterProgress by model.boosterProgress.collectAsStateWithLifecycle(initialValue = BoosterProgress(0, 0))
+    val boosterAwards = model.boosterAwards
+    val activity = LocalContext.current as Activity
+    val app = LocalApp(applicationContext = androidx.compose.ui.platform.LocalContext.current.applicationContext)
+    val adsConsent by app.adsConsent.state.collectAsStateWithLifecycle()
     val sources by model.sources.collectAsStateWithLifecycle()
     val message by model.message.collectAsStateWithLifecycle()
     val reference by model.reference.collectAsStateWithLifecycle()
@@ -90,14 +114,27 @@ class MainActivity : ComponentActivity() {
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
                         composable("home") { HomeScreen(daily, dailyLoaded, reference, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { id -> model.cardCitation(id) }, { navController.navigate("collection") }, { navController.navigate("settings") }, { homeCardSize = it }) }
                         composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }) }
-                        composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
+                        composable("collection") { CollectionScreen(collection, boosterProgress, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, { navController.navigate("booster") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
+                        composable("booster") {
+                            BoosterScreen(
+                                progress = boosterProgress,
+                                collection = collection,
+                                consent = adsConsent,
+                                awards = boosterAwards,
+                                onBack = { navController.popBackStack() },
+                                onRewardConfirmed = model::redeemBoosterAfterReward,
+                                onDebugReward = model::debugSimulateBoosterReward,
+                                onLoadReference = { id -> model.cardCitation(id) },
+                                onOpenExplanation = { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }
+                            )
+                        }
                         composable("card") { CardScreen(collection, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { id -> model.cardCitation(id) }) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") {
                             SettingsScreen(
                                 prefs.theme, dark, prefs.wallpaperRefreshEnabled,
                                 prefs.wallpaperTextOffset, prefs.wallpaperSourceOffset,
-                                daily, reference, wallpaperPreview,
+                                daily, reference, wallpaperPreview, adsConsent.privacyOptionsRequired,
                                 { model.setTheme(it) }, { model.setRefreshEnabled(it) },
                                 { text, sources -> model.scheduleWallpaperOffsetSave(text, sources) },
                                 { text, sources -> model.persistWallpaperOffsets(text, sources) },
@@ -106,6 +143,7 @@ class MainActivity : ComponentActivity() {
                                 { model.resetWallpaperOffsets() },
                                 { fact, source, darkTheme, text, sources -> model.prepareWallpaperPreview(fact, source, darkTheme, text, sources) },
                                 { fact, source, darkTheme, text, sources -> model.applyWallpaper(fact, source, darkTheme, text, sources) },
+                                { app.adsConsent.showPrivacyOptions(activity) {} },
                                 { navController.popBackStack() }
                             )
                         }
@@ -116,6 +154,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+@Composable private fun LocalApp(applicationContext: android.content.Context): InIllusioApplication =
+    applicationContext.applicationContext as InIllusioApplication
 
 @Composable private fun CatalogLoadingScreen() {
     Column(Modifier.fillMaxSize().padding(28.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -347,7 +388,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit) {
+@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, boosterProgress: BoosterProgress, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, onOpenBooster: () -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit) {
     var showDebugMenu by remember { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
     Column(Modifier.fillMaxSize()) {
@@ -356,6 +397,17 @@ class MainActivity : ComponentActivity() {
         DeveloperTools.MenuDialog(showDebugMenu, debugCanRestore, { showDebugMenu = false }, { showDebugMenu = false; onDebugUnlockAll() }, { showDebugMenu = false; onDebugPreviewAll() }, { showDebugMenu = false; onDebugRegenerateWallpaper() }, { showDebugMenu = false; onDebugRunDailyRenewal() }, { showDebugMenu = false; onDebugRestore() })
         Text("Ma collection", Modifier.padding(horizontal = 24.dp, vertical = 6.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         Text("${cards.size} carte${if (cards.size == 1) "" else "s"}", Modifier.padding(horizontal = 24.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyMedium)
+        Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Découvrir 5 nouvelles cartes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Regarder une publicité pour agrandir sa collection.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${boosterProgress.discovered} / ${boosterProgress.total} anecdotes découvertes", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+                val canOpenBooster = BoosterPolicy.canOfferRewardedAd(boosterProgress.total, boosterProgress.discovered)
+                Button(onClick = onOpenBooster, enabled = canOpenBooster, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (canOpenBooster) "Ouvrir un booster" else "Collection complète")
+                }
+            }
+        }
         if (cards.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center) }
         else LazyVerticalGrid(state = gridState, columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(cards, key = { it.id }) { fact ->
@@ -431,7 +483,360 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun SettingsScreen(theme: AppTheme, darkTheme: Boolean, refresh: Boolean, savedTextOffset: Float, savedSourceOffset: Float, daily: AnecdoteWithCategory?, reference: String?, wallpaperPreview: WallpaperArtwork?, onTheme: (AppTheme) -> Unit, onRefresh: (Boolean) -> Unit, onScheduleOffsetSave: (Float, Float) -> Unit, onPersistOffsets: (Float, Float) -> Unit, onResetTextOffset: (Float) -> Unit, onResetSourceOffset: (Float) -> Unit, onResetOffsets: () -> Unit, onPreparePreview: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onApply: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onBack: () -> Unit) {
+@Composable private fun BoosterScreen(
+    progress: BoosterProgress,
+    collection: List<AnecdoteWithCategory>,
+    consent: AdsConsentState,
+    awards: Flow<BoosterAwardResult>,
+    onBack: () -> Unit,
+    onRewardConfirmed: (String) -> Unit,
+    onDebugReward: () -> Unit,
+    onLoadReference: suspend (String) -> String?,
+    onOpenExplanation: (AnecdoteWithCategory) -> Unit
+) {
+    val activity = LocalContext.current as Activity
+    val adController = remember(activity) { RewardedBoosterAd(activity) }
+    var isBusy by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var newCards by remember { mutableStateOf<List<AnecdoteWithCategory>>(emptyList()) }
+    var awardIdsEncoded by rememberSaveable { mutableStateOf("") }
+    val awardIds = remember(awardIdsEncoded) { awardIdsEncoded.split('|').filter(String::isNotBlank) }
+    val restoredAwardCards = remember(awardIds, collection) { awardIds.mapNotNull { id -> collection.firstOrNull { it.id == id } } }
+    val isRestoringAward = awardIds.isNotEmpty() && restoredAwardCards.size != awardIds.size && newCards.isEmpty()
+    val displayCards = if (restoredAwardCards.size == awardIds.size && awardIds.isNotEmpty()) restoredAwardCards else newCards
+    var revealedIdsEncoded by rememberSaveable { mutableStateOf("") }
+    val revealedIds = remember(revealedIdsEncoded) { revealedIdsEncoded.split('|').filter(String::isNotBlank).toSet() }
+    var packOpened by rememberSaveable { mutableStateOf(false) }
+    var packFullyOpened by rememberSaveable { mutableStateOf(false) }
+    var skipPackAnimation by remember { mutableStateOf(false) }
+    val animationsEnabled = ValueAnimator.areAnimatorsEnabled()
+    val openingProgress by animateFloatAsState(
+        targetValue = if (packOpened) 1f else 0f,
+        animationSpec = if (animationsEnabled && !skipPackAnimation && !packFullyOpened) tween(620, easing = FastOutSlowInEasing) else snap(),
+        label = "booster-pack-opening"
+    )
+    val pagerState = rememberPagerState(pageCount = { displayCards.size })
+
+    LaunchedEffect(packOpened, openingProgress) {
+        if (packOpened && openingProgress >= 0.999f) packFullyOpened = true
+    }
+
+    LaunchedEffect(awards) {
+        awards.collect { result ->
+            isBusy = false
+            if (result.duplicateRedemption) {
+                errorMessage = "Cette récompense a déjà été enregistrée."
+            } else if (result.cards.isNotEmpty()) {
+                newCards = result.cards
+                awardIdsEncoded = result.cards.joinToString("|") { it.id }
+                revealedIdsEncoded = ""
+                packOpened = false
+                packFullyOpened = false
+                skipPackAnimation = false
+                errorMessage = null
+                pagerState.scrollToPage(0)
+            } else {
+                errorMessage = "Aucune nouvelle anecdote n’est disponible : ta collection est complète."
+            }
+        }
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        TopLine("Ma collection", onBack)
+        Text("Booster", Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+        if (displayCards.isEmpty()) {
+            Column(
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                BoosterPack(
+                    modifier = Modifier.fillMaxWidth().height(250.dp),
+                    openingProgress = openingProgress,
+                    gestureEnabled = false,
+                    onOpen = {}
+                )
+                Spacer(Modifier.height(20.dp))
+                Text("Jusqu’à 5 nouvelles anecdotes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                Text("Les cartes seront ajoutées à ta collection dès que la récompense est confirmée.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Text(
+                    if (isRestoringAward) "Récupération des cartes sauvegardées…" else "${progress.discovered} / ${progress.total} anecdotes découvertes",
+                    Modifier.padding(top = 16.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                if (isRestoringAward) {
+                    CircularProgressIndicator(Modifier.padding(top = 12.dp).size(22.dp), strokeWidth = 2.dp)
+                } else if (!BoosterPolicy.canOfferRewardedAd(progress.total, progress.discovered)) {
+                    Text("Ta collection est complète.", Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+                } else {
+                    Button(
+                        onClick = {
+                            errorMessage = null
+                            isBusy = true
+                            val redemptionId = UUID.randomUUID().toString()
+                            adController.loadAndShow(
+                                BuildConfig.ADMOB_REWARDED_UNIT_ID,
+                                onReward = { onRewardConfirmed(redemptionId) },
+                                onFailure = { message -> isBusy = false; errorMessage = message }
+                            )
+                        },
+                        enabled = BuildConfig.ADS_ENABLED && consent.canRequestAds && !isBusy,
+                        modifier = Modifier.fillMaxWidth().padding(top = 18.dp)
+                    ) {
+                        if (isBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else Text("Regarder une publicité récompensée")
+                    }
+                    when {
+                        !BuildConfig.ADS_ENABLED && !BuildConfig.DEBUG -> Text("Les publicités ne sont pas configurées pour cette version.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                        !consent.canRequestAds && consent.updateFinished -> Text("Aucune publicité ne peut être demandée selon les choix de confidentialité actuels.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                        !consent.canRequestAds -> Text("Vérification des choix de confidentialité…", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                    }
+                    if (BuildConfig.DEBUG) {
+                        OutlinedButton(onClick = { isBusy = true; onDebugReward() }, enabled = !isBusy, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                            Text("DEBUG · Simuler une récompense")
+                        }
+                    }
+                }
+                errorMessage?.let { Text(it, Modifier.padding(top = 14.dp), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
+            }
+        } else if (!packFullyOpened) {
+            Column(
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("Ton paquet est prêt", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                Text("Tes cartes sont déjà enregistrées dans ta collection.", Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                BoosterPack(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp, max = 430.dp).padding(top = 8.dp),
+                    openingProgress = openingProgress,
+                    gestureEnabled = !packOpened,
+                    onOpen = { packOpened = true }
+                )
+                Text(
+                    if (packOpened) "Le paquet s’ouvre…" else "Glisser pour ouvrir →",
+                    Modifier.padding(top = 2.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Button(
+                    onClick = { packOpened = true },
+                    enabled = !packOpened,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                ) {
+                    Text(if (packOpened) "Ouverture en cours" else "Ouvrir le paquet")
+                }
+                TextButton(
+                    onClick = { skipPackAnimation = true; packOpened = true; packFullyOpened = true },
+                    enabled = openingProgress < 0.999f,
+                    modifier = Modifier.padding(top = 2.dp)
+                ) { Text("Passer l’animation") }
+            }
+        } else {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("${displayCards.size} nouvelle${if (displayCards.size == 1) " carte" else "s cartes"}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                TextButton(onClick = { revealedIdsEncoded = displayCards.joinToString("|") { it.id } }) { Text("Tout révéler") }
+            }
+            HorizontalPager(state = pagerState, modifier = Modifier.weight(1f).fillMaxWidth(), key = { displayCards[it].id }) { page ->
+                val fact = displayCards[page]
+                BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    val cardWidth = minOf(maxWidth - 32.dp, (maxHeight - 24.dp) * 0.68f)
+                    val cardHeight = minOf(maxHeight - 24.dp, cardWidth / 0.68f)
+                    RewardRevealCard(
+                        fact = fact,
+                        revealed = fact.id in revealedIds,
+                        modifier = Modifier.size(cardWidth, cardHeight),
+                        onReveal = { revealedIdsEncoded = (revealedIds + fact.id).joinToString("|") },
+                        onLoadReference = onLoadReference,
+                        onOpenExplanation = { onOpenExplanation(fact) }
+                    )
+                }
+            }
+            Text("${pagerState.settledPage + 1} / ${displayCards.size}", Modifier.fillMaxWidth().padding(vertical = 8.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            Button(onClick = onBack, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) { Text("Retour à ma collection") }
+        }
+    }
+}
+
+internal const val BOOSTER_PACK_OPEN_THRESHOLD = 0.58f
+internal fun boosterPackSwipeOpens(progress: Float): Boolean = progress.coerceIn(0f, 1f) >= BOOSTER_PACK_OPEN_THRESHOLD
+private val BoosterIvory = Color(0xFFF7F3E8)
+private val BoosterCoral = Color(0xFFFF6347)
+private val BoosterTurquoise = Color(0xFF00A995)
+
+@Composable private fun BoosterPack(
+    modifier: Modifier = Modifier,
+    openingProgress: Float,
+    gestureEnabled: Boolean,
+    onOpen: () -> Unit
+) {
+    var tearProgress by remember { mutableFloatStateOf(0f) }
+    val animationScope = rememberCoroutineScope()
+    val animationsEnabled = ValueAnimator.areAnimatorsEnabled()
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val packWidth = minOf(maxWidth * 0.91f, maxHeight * 0.76f)
+        val packHeight = minOf(packWidth * 1.3f, maxHeight * 0.98f)
+        Box(Modifier.width(packWidth).height(packHeight), contentAlignment = Alignment.TopCenter) {
+            // Cards peek out from behind the pouch as its front panel opens.
+            listOf(-7f, 0f, 7f).forEachIndexed { index, rotation ->
+                BoosterCardSleeve(
+                    Modifier
+                        .width(packWidth * 0.76f)
+                        .aspectRatio(0.68f)
+                        .align(Alignment.TopCenter)
+                        .offset(y = packHeight * (0.13f - openingProgress * 0.47f))
+                        .rotate(rotation)
+                        .graphicsLayer { alpha = (openingProgress * (0.65f + index * 0.1f)).coerceIn(0f, 1f) }
+                )
+            }
+
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.88f + (1f - openingProgress) * 0.12f)
+                    .align(Alignment.BottomCenter)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(BoosterCoral)
+                    .border(1.dp, Color(0xFFCF513E), RoundedCornerShape(24.dp))
+            ) {
+                Canvas(Modifier.fillMaxSize()) {
+                    drawCircle(BoosterTurquoise.copy(alpha = 0.25f), radius = size.width * 0.3f, center = Offset(size.width * 0.78f, size.height * 0.63f))
+                    drawCircle(BoosterIvory.copy(alpha = 0.18f), radius = size.width * 0.43f, center = Offset(size.width * 0.12f, size.height * 0.84f))
+                    drawLine(BoosterIvory.copy(alpha = 0.36f), Offset(size.width * 0.08f, size.height * 0.84f), Offset(size.width * 0.92f, size.height * 0.84f), strokeWidth = 1.dp.toPx())
+                }
+                Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("IN ILLUSIO", style = MaterialTheme.typography.labelMedium, letterSpacing = 2.2.sp, color = BoosterIvory, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    Box(Modifier.size(68.dp).clip(RoundedCornerShape(20.dp)).background(BoosterIvory), contentAlignment = Alignment.Center) {
+                        Image(painterResource(R.drawable.illusio_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("CARTES À DÉCOUVRIR", style = MaterialTheme.typography.labelSmall, letterSpacing = 1.2.sp, color = BoosterIvory, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            // The perforated tear strip follows the finger horizontally.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(42.dp)
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer {
+                        translationX = maxOf(tearProgress, openingProgress).coerceIn(0f, 1f) * size.width * 0.82f
+                        translationY = -openingProgress * size.height * 0.13f
+                        rotationZ = openingProgress * 13f
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                        alpha = (1f - openingProgress * 0.25f).coerceIn(0f, 1f)
+                    }
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 10.dp, bottomEnd = 10.dp))
+                    .background(BoosterIvory)
+                    .then(
+                        if (gestureEnabled) Modifier.pointerInput(gestureEnabled) {
+                            var dragFraction = 0f
+                            detectDragGestures(
+                                onDragStart = { dragFraction = 0f; tearProgress = 0f },
+                                onDragEnd = {
+                                    if (boosterPackSwipeOpens(dragFraction)) {
+                                        onOpen()
+                                    } else {
+                                        val start = dragFraction
+                                        animationScope.launch {
+                                            if (animationsEnabled) {
+                                                androidx.compose.animation.core.animate(
+                                                    initialValue = start,
+                                                    targetValue = 0f,
+                                                    animationSpec = tween(260, easing = FastOutSlowInEasing)
+                                                ) { value, _ -> tearProgress = value }
+                                            } else tearProgress = 0f
+                                        }
+                                    }
+                                },
+                                onDragCancel = { tearProgress = 0f }
+                            ) { change, dragAmount ->
+                                change.consume()
+                                dragFraction = (dragFraction + dragAmount.x / size.width.coerceAtLeast(1)).coerceIn(0f, 1f)
+                                tearProgress = dragFraction
+                            }
+                        } else Modifier
+                    )
+            ) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val y = size.height - 1.5.dp.toPx()
+                    drawLine(BoosterCoral.copy(alpha = 0.58f), Offset(12.dp.toPx(), y), Offset(size.width - 12.dp.toPx(), y), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())) )
+                    for (x in 14.dp.toPx().toInt()..(size.width - 14.dp.toPx()).toInt() step 12.dp.toPx().toInt().coerceAtLeast(1)) {
+                        drawCircle(BoosterTurquoise.copy(alpha = 0.65f), radius = 1.5.dp.toPx(), center = Offset(x.toFloat(), size.height * 0.48f))
+                    }
+                }
+                Text("DÉCHIRER", Modifier.align(Alignment.Center), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.3.sp, color = BoosterCoral, fontWeight = FontWeight.Bold)
+            }
+
+            Text("GLISSER →", Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 10.dp), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = BoosterIvory.copy(alpha = 0.92f), fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable private fun RewardRevealCard(
+    fact: AnecdoteWithCategory,
+    revealed: Boolean,
+    modifier: Modifier,
+    onReveal: () -> Unit,
+    onLoadReference: suspend (String) -> String?,
+    onOpenExplanation: () -> Unit
+) {
+    val rotation by animateFloatAsState(if (revealed) 180f else 0f, animationSpec = tween(420, easing = FastOutSlowInEasing), label = "booster-reveal")
+    val density = LocalDensity.current.density
+    Box(modifier) {
+        if (rotation <= 90f) {
+            BoosterCardSleeve(
+                Modifier.fillMaxSize().graphicsLayer {
+                    rotationY = rotation
+                    cameraDistance = 16f * density
+                    alpha = (1f - rotation / 90f).coerceIn(0f, 1f)
+                }.clickable(onClickLabel = "Révéler cette carte", onClick = onReveal)
+            )
+        } else {
+            FlipCard(
+                fact = fact,
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    alpha = ((rotation - 90f) / 90f).coerceIn(0f, 1f)
+                },
+                onLoadReference = onLoadReference,
+                onOpenExplanation = onOpenExplanation
+            )
+        }
+    }
+}
+
+@Composable private fun BoosterCardSleeve(modifier: Modifier = Modifier) {
+    Box(modifier.clip(RoundedCornerShape(26.dp)).background(BoosterIvory).border(1.dp, Color(0xFFCEC9BE), RoundedCornerShape(26.dp))) {
+        Canvas(Modifier.fillMaxSize()) {
+            val inset = 12.dp.toPx()
+            drawRoundRect(BoosterCoral.copy(alpha = 0.7f), topLeft = Offset(inset, inset), size = androidx.compose.ui.geometry.Size(size.width - inset * 2f, size.height - inset * 2f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.dp.toPx()), style = Stroke(1.dp.toPx()))
+            val step = 12.dp.toPx()
+            for (x in 20.dp.toPx().toInt()..(size.width - 20.dp.toPx()).toInt() step step.toInt().coerceAtLeast(1)) {
+                drawCircle(BoosterTurquoise.copy(alpha = 0.22f), radius = 1.25.dp.toPx(), center = Offset(x.toFloat(), 22.dp.toPx()))
+                drawCircle(BoosterCoral.copy(alpha = 0.2f), radius = 1.25.dp.toPx(), center = Offset(x.toFloat(), size.height - 22.dp.toPx()))
+            }
+            drawCircle(BoosterTurquoise.copy(alpha = 0.16f), radius = size.width * 0.19f, center = Offset(size.width * 0.82f, size.height * 0.24f))
+            drawCircle(BoosterCoral.copy(alpha = 0.12f), radius = size.width * 0.15f, center = Offset(size.width * 0.18f, size.height * 0.76f))
+        }
+        Column(Modifier.fillMaxSize().padding(22.dp), verticalArrangement = Arrangement.SpaceBetween, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("IN ILLUSIO", style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = Color(0xFF24323A), fontWeight = FontWeight.Bold)
+            Box(Modifier.fillMaxWidth().weight(1f).padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxHeight(0.72f).aspectRatio(1f).clip(RoundedCornerShape(24.dp)).background(BoosterTurquoise.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                    Image(painterResource(R.drawable.illusio_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxSize().padding(8.dp), contentScale = ContentScale.Fit)
+                }
+            }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                HorizontalDivider(color = BoosterCoral.copy(alpha = 0.62f), thickness = 1.dp)
+                Text("TOUCHE POUR RÉVÉLER", Modifier.background(BoosterIvory).padding(horizontal = 8.dp), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.1.sp, color = Color(0xFF24323A), fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable private fun SettingsScreen(theme: AppTheme, darkTheme: Boolean, refresh: Boolean, savedTextOffset: Float, savedSourceOffset: Float, daily: AnecdoteWithCategory?, reference: String?, wallpaperPreview: WallpaperArtwork?, privacyOptionsRequired: Boolean, onTheme: (AppTheme) -> Unit, onRefresh: (Boolean) -> Unit, onScheduleOffsetSave: (Float, Float) -> Unit, onPersistOffsets: (Float, Float) -> Unit, onResetTextOffset: (Float) -> Unit, onResetSourceOffset: (Float) -> Unit, onResetOffsets: () -> Unit, onPreparePreview: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onApply: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onPrivacyOptions: () -> Unit, onBack: () -> Unit) {
     var textOffset by remember(daily?.id) { mutableFloatStateOf(savedTextOffset) }
     var sourceOffset by remember(daily?.id) { mutableFloatStateOf(savedSourceOffset) }
     LaunchedEffect(savedTextOffset, savedSourceOffset) {
@@ -535,5 +940,10 @@ class MainActivity : ComponentActivity() {
             ) { Text("Appliquer le fond d’écran") }
         }
         Text("In Illusio · Version 0.1.0", Modifier.align(Alignment.CenterHorizontally).padding(top = 20.dp), style = MaterialTheme.typography.labelSmall)
+        if (privacyOptionsRequired) {
+            TextButton(onClick = onPrivacyOptions, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text("Options de confidentialité")
+            }
+        }
     }
 }

@@ -11,6 +11,7 @@ import fr.inillusio.data.local.dao.SourceDetails
 import fr.inillusio.data.preferences.AppTheme
 import fr.inillusio.data.preferences.PreferencesState
 import fr.inillusio.data.repository.CatalogRepository
+import fr.inillusio.data.repository.BoosterAwardResult
 import fr.inillusio.domain.shortCitation
 import fr.inillusio.debug.DeveloperTools
 import fr.inillusio.wallpaper.WallpaperArtwork
@@ -25,6 +26,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import java.time.ZoneId
 
@@ -36,6 +39,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _dailyLoaded = MutableStateFlow(false)
     val dailyLoaded = _dailyLoaded.asStateFlow()
     val collection = repository.collection
+    val boosterProgress = repository.boosterProgress
+    private val _boosterAwards = MutableSharedFlow<BoosterAwardResult>(extraBufferCapacity = 1)
+    val boosterAwards = _boosterAwards.asSharedFlow()
     val preferences = app.preferences.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PreferencesState())
     val catalogImportState = app.catalogImportState
     private val _sources = MutableStateFlow<List<SourceDetails>>(emptyList())
@@ -162,6 +168,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .onFailure { error -> repository.recordDelivery(fact.id, false, error.message); _message.value = "Échec de l’application du fond d’écran : ${error.message ?: "erreur inconnue"}" }
     }
     fun clearMessage() { _message.value = null }
+
+    fun redeemBoosterAfterReward(redemptionId: String) {
+        app.redeemBoosterAfterReward(redemptionId) { result -> _boosterAwards.tryEmit(result) }
+    }
+
+    fun debugSimulateBoosterReward() {
+        if (!BuildConfig.DEBUG) return
+        app.redeemBoosterAfterReward("debug-${java.util.UUID.randomUUID()}") { result ->
+            _boosterAwards.tryEmit(result)
+            _message.value = if (result.cards.isEmpty()) "Aucune nouvelle carte disponible pour le test."
+                else "Récompense de test enregistrée : ${result.cards.size} carte${if (result.cards.size == 1) "" else "s"}."
+        }
+    }
 
     fun loadDeveloperPreview() {
         if (!BuildConfig.DEBUG) return

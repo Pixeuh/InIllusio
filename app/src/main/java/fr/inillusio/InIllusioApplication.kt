@@ -6,6 +6,7 @@ import fr.inillusio.data.importer.CatalogImporter
 import fr.inillusio.data.local.InIllusioDatabase
 import fr.inillusio.data.preferences.UserPreferences
 import fr.inillusio.data.repository.CatalogRepository
+import fr.inillusio.data.repository.BoosterAwardResult
 import fr.inillusio.worker.DailyWallpaperScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,7 @@ class InIllusioApplication : Application() {
     lateinit var database: InIllusioDatabase; private set
     lateinit var preferences: UserPreferences; private set
     lateinit var repository: CatalogRepository; private set
+    lateinit var adsConsent: AdsConsentManager; private set
     lateinit var catalogImport: Job; private set
     private val _catalogImportState = MutableStateFlow<CatalogImportState>(CatalogImportState.Loading)
     val catalogImportState: StateFlow<CatalogImportState> = _catalogImportState.asStateFlow()
@@ -37,14 +39,26 @@ class InIllusioApplication : Application() {
         super.onCreate()
         database = Room.databaseBuilder(this, InIllusioDatabase::class.java, "hors-cadre.db")
             .addMigrations(InIllusioDatabase.MIGRATION_1_2)
+            .addMigrations(InIllusioDatabase.MIGRATION_2_3)
             .build()
         preferences = UserPreferences(this)
         repository = CatalogRepository(database, preferences)
+        adsConsent = AdsConsentManager(this)
         retryCatalogImport()
         appScope.launch {
             preferences.state.map { it.wallpaperRefreshEnabled }.distinctUntilChanged().collect { enabled ->
                 DailyWallpaperScheduler.setEnabled(this@InIllusioApplication, enabled)
             }
+        }
+    }
+
+    /** Runs on the application scope so leaving the reveal screen cannot cancel a confirmed reward. */
+    fun redeemBoosterAfterReward(redemptionId: String, onComplete: (BoosterAwardResult) -> Unit) {
+        appScope.launch {
+            catalogImport.join()
+            if (_catalogImportState.value != CatalogImportState.Ready) return@launch
+            val result = repository.redeemBooster(redemptionId)
+            kotlinx.coroutines.withContext(Dispatchers.Main.immediate) { onComplete(result) }
         }
     }
 

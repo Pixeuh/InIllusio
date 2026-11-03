@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 
 data class AnecdoteWithCategory(val id: String, val categoryId: String, val categoryName: String, val title: String, val hook: String, val explanation: String)
 data class SourceDetails(val type: String, val title: String, val year: Int?, val author: String?)
+data class BoosterProgress(val discovered: Int, val total: Int)
 
 @Dao
 interface CatalogDao {
@@ -22,10 +23,14 @@ interface CatalogDao {
     suspend fun allAnecdotes(): List<AnecdoteWithCategory>
     @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.archived = 0 AND a.editorialStatus = 'validee' ORDER BY a.id")
     suspend fun validatedAnecdotes(): List<AnecdoteWithCategory>
+    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.archived = 0 AND a.editorialStatus = 'validee' AND NOT EXISTS (SELECT 1 FROM collection x WHERE x.anecdoteId = a.id) ORDER BY RANDOM()")
+    suspend fun uncollectedValidatedAnecdotes(): List<AnecdoteWithCategory>
     @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.id = :id AND a.archived = 0 AND a.editorialStatus = 'validee'")
     suspend fun getValidatedAnecdote(id: String): AnecdoteWithCategory?
     @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM collection x JOIN anecdotes a ON a.id = x.anecdoteId JOIN categories c ON c.id = a.categoryId ORDER BY x.savedAt DESC")
     fun observeCollection(): Flow<List<AnecdoteWithCategory>>
+    @Query("SELECT (SELECT COUNT(*) FROM collection x JOIN anecdotes a ON a.id = x.anecdoteId WHERE a.archived = 0 AND a.editorialStatus = 'validee') AS discovered, (SELECT COUNT(*) FROM anecdotes WHERE archived = 0 AND editorialStatus = 'validee') AS total")
+    fun observeBoosterProgress(): Flow<BoosterProgress>
     @Query("SELECT * FROM collection ORDER BY savedAt") suspend fun allCollectionEntries(): List<CollectionEntity>
     @Query("DELETE FROM collection") suspend fun clearCollection()
     @Query("SELECT EXISTS(SELECT 1 FROM delivery_history WHERE anecdoteId = :id AND succeeded = 1)")
@@ -49,6 +54,7 @@ interface CatalogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putAnecdoteSource(value: AnecdoteSourceEntity)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putDelivery(value: DeliveryEntity)
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun putCollection(value: CollectionEntity)
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun putBoosterRedemption(value: BoosterRedemptionEntity): Long
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun putCollection(values: List<CollectionEntity>)
     @Query("DELETE FROM source_authors WHERE sourceId = :sourceId") suspend fun clearSourceAuthors(sourceId: String)
     @Query("DELETE FROM anecdote_sources WHERE anecdoteId = :anecdoteId") suspend fun clearAnecdoteSources(anecdoteId: String)

@@ -11,6 +11,8 @@ lifecycle = "2.9.4"
 junit = "4.13.2"
 coroutines = "1.10.2"
 work = "2.11.2"
+playServicesAds = "25.4.0"
+ump = "4.0.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -37,3 +39,5 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+google-play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "playServicesAds" }
+google-ump = { module = "com.google.android.ump:user-messaging-platform", version.ref = "ump" }

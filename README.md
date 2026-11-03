@@ -10,12 +10,15 @@ In Illusio est une application Android qui propose une anecdote quotidienne de s
 - Carte du jour et cartes de collection recto-verso avec retournement 3D et accès à l’explication complète.
 - Renouvellement quotidien facultatif, activé uniquement avec le consentement de l’utilisateur.
 - Éditeur graphique local pour consulter et modifier le catalogue JSON.
+- Boosters facultatifs : une publicité récompensée confirmée peut ajouter jusqu’à cinq anecdotes validées à la collection.
 
 L’application fonctionne sans compte ni serveur. Le renouvellement quotidien dépend de WorkManager et peut être retardé par Android. Les fonds d’écran sont appliqués exclusivement à l’écran de verrouillage.
 
+Les cartes, explications, collection et fonds d’écran restent utilisables hors ligne. Seules les publicités récompensées nécessitent Internet. DEBUG utilise exclusivement les identifiants de test Google. RELEASE garde les annonces désactivées tant que les identifiants réels, la configuration de confidentialité et les informations requises pour Google Play ne sont pas fournis.
+
 ## Technologies
 
-Kotlin, Jetpack Compose, Material 3, Room, DataStore, WorkManager et Gradle Kotlin DSL. Le projet cible Android 8.0 (API 26) ou ultérieur, compile avec l’API 36 et utilise Java 17, Gradle 8.13, Android Gradle Plugin 8.13.2 et Kotlin 2.2.20.
+Kotlin, Jetpack Compose, Material 3, Room, DataStore, WorkManager, Google Mobile Ads SDK (Rewarded), Google UMP et Gradle Kotlin DSL. Le projet cible Android 8.0 (API 26) ou ultérieur, compile avec l’API 36 et utilise Java 17, Gradle 8.13, Android Gradle Plugin 8.13.2 et Kotlin 2.2.20.
 
 ## Organisation
 
