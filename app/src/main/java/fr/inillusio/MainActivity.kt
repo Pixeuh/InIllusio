@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
     val developerPreview by model.developerPreview.collectAsStateWithLifecycle()
     val debugCanRestore by model.debugCanRestore.collectAsStateWithLifecycle()
     var selected by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
+    var homeCardSize by remember { mutableStateOf(IntSize.Zero) }
     val navController = rememberNavController()
     var acceptedConsent by remember { mutableStateOf(false) }
     val dark = when (prefs.theme) { AppTheme.DARK -> true; AppTheme.LIGHT -> false; AppTheme.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme() }
@@ -87,10 +89,10 @@ class MainActivity : ComponentActivity() {
                         model.setRefreshEnabled(acceptedConsent); model.completeOnboarding()
                     }
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
-                        composable("home") { HomeScreen(daily, dailyLoaded, reference, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { id -> model.cardCitation(id) }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
+                        composable("home") { HomeScreen(daily, dailyLoaded, reference, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { id -> model.cardCitation(id) }, { navController.navigate("collection") }, { navController.navigate("settings") }, { homeCardSize = it }) }
                         composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }) }
                         composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
-                        composable("card") { CardScreen(collection, selected?.id, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { id -> model.cardCitation(id) }) }
+                        composable("card") { CardScreen(collection, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { id -> model.cardCitation(id) }) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") { SettingsScreen(prefs.theme, dark, prefs.wallpaperRefreshEnabled, prefs.wallpaperTextOffset, daily, reference, wallpaperPreview, { model.setTheme(it) }, { model.setRefreshEnabled(it) }, { model.scheduleWallpaperTextOffsetSave(it) }, { model.persistWallpaperTextOffset(it) }, { model.resetWallpaperTextOffset() }, { fact, source, darkTheme, offset -> model.prepareWallpaperPreview(fact, source, darkTheme, offset) }, { fact, source, darkTheme, offset -> model.applyWallpaper(fact, source, darkTheme, offset) }, { navController.popBackStack() }) }
                     }
@@ -127,7 +129,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, dailyLoaded: Boolean, reference: String?, onExplain: () -> Unit, onLoadReference: suspend (String) -> String?, onCollection: () -> Unit, onSettings: () -> Unit) {
+@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, dailyLoaded: Boolean, reference: String?, onExplain: () -> Unit, onLoadReference: suspend (String) -> String?, onCollection: () -> Unit, onSettings: () -> Unit, onCardMeasured: (IntSize) -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         TopLine(onSettings = onSettings)
         Spacer(Modifier.height(8.dp))
@@ -143,7 +145,7 @@ class MainActivity : ComponentActivity() {
         else {
             FlipCard(
                 fact = fact,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth().onSizeChanged(onCardMeasured),
                 reference = reference,
                 onLoadReference = onLoadReference,
                 onOpenExplanation = onExplain
@@ -324,7 +326,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit, onLoadReference: suspend (String) -> String?) {
+@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, homeCardSize: IntSize, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit, onLoadReference: suspend (String) -> String?) {
     val cardIds = remember(cards) { cards.map { it.id } }
     var currentCardId by rememberSaveable { mutableStateOf(selectedCardId) }
     val selectedIndex = cardIds.indexOf(currentCardId).coerceAtLeast(0)
@@ -347,17 +349,24 @@ class MainActivity : ComponentActivity() {
                 Text("Cette carte n’est plus dans la collection.", textAlign = TextAlign.Center)
             }
         } else {
-            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                val maxCardHeight = minOf(maxHeight * 0.86f, 620.dp)
-                val maxCardWidth = (maxWidth - 44.dp).coerceAtLeast(0.dp)
-                val cardWidth = minOf(maxCardWidth, maxCardHeight * 0.68f)
-                val cardHeight = cardWidth / 0.68f
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                val density = LocalDensity.current
+                val measuredHomeSize = with(density) {
+                    if (homeCardSize.width > 0 && homeCardSize.height > 0) {
+                        DpSize(homeCardSize.width.toDp(), homeCardSize.height.toDp())
+                    } else null
+                }
                 HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { cards[it].id }) { page ->
                     cards.getOrNull(page)?.let { fact ->
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            val requestedWidth = measuredHomeSize?.width ?: (maxWidth - 44.dp).coerceAtLeast(0.dp)
+                            val requestedHeight = measuredHomeSize?.height ?: maxHeight
+                            val fitScale = if (requestedWidth > 0.dp && requestedHeight > 0.dp) {
+                                minOf(1f, maxWidth / requestedWidth, maxHeight / requestedHeight)
+                            } else 1f
                             FlipCard(
                                 fact = fact,
-                                modifier = Modifier.size(cardWidth, cardHeight),
+                                modifier = Modifier.size(requestedWidth * fitScale, requestedHeight * fitScale),
                                 resetKey = pagerState.currentPage,
                                 onLoadReference = onLoadReference,
                                 onOpenExplanation = { currentCardId = fact.id; onOpenExplanation(fact) }
