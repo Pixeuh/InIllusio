@@ -14,9 +14,9 @@
     document.getElementById('preview-hook').textContent = safeFact.accroche || 'L’accroche de votre anecdote s’affichera ici au fil de votre saisie.';
     document.getElementById('preview-explanation').textContent = safeFact.explication || 'L’explication scientifique complète apparaîtra ici.';
     document.getElementById('preview-citation-text').textContent = window.EditorData.shortReference(safeFact.source);
-    const color = /^#[0-9a-f]{6}$/i.test(safeCategory.couleur || '') ? safeCategory.couleur : '#00a995';
-    const art = document.getElementById('preview-artwork');
-    art.style.setProperty('--category-color', color);
+    const palette = window.HorsCadrePalettes.forCategory(safeCategory.id);
+    document.getElementById('preview-shell').style.setProperty('--category-primary', palette.primary);
+    document.getElementById('preview-shell').style.setProperty('--category-secondary', palette.secondary);
   }
 
   window.EditorPreview = { render };

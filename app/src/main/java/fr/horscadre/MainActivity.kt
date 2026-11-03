@@ -47,6 +47,7 @@ import fr.horscadre.CatalogImportState
 import fr.horscadre.ui.AppViewModel
 import fr.horscadre.ui.explanationExcerpt
 import fr.horscadre.ui.illustration.CategoryIllustration
+import fr.horscadre.ui.illustration.DisciplinePalettes
 import fr.horscadre.ui.theme.HorsCadreTheme
 import fr.horscadre.wallpaper.WallpaperArtwork
 
@@ -147,10 +148,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable private fun EditorialCard(fact: AnecdoteWithCategory, modifier: Modifier = Modifier, reference: String? = null, showSourceReference: Boolean = true) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
     Column(modifier.clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(26.dp)).padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             Column {
-                Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = Color(palette.secondary), fontWeight = FontWeight.Bold)
             }
             Text("HORS\nCADRE", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, letterSpacing = 1.sp)
         }
@@ -158,7 +161,7 @@ class MainActivity : ComponentActivity() {
         Column {
             Text(fact.hook, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, lineHeight = 31.sp)
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.secondary, thickness = 2.dp)
+            HorizontalDivider(color = Color(palette.secondary), thickness = 2.dp)
             if (showSourceReference) {
                 Text("UNE OBSERVATION, DES SOURCES", style = MaterialTheme.typography.labelSmall, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 12.dp))
                 reference?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
@@ -212,6 +215,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable private fun FlipCardBack(fact: AnecdoteWithCategory, modifier: Modifier = Modifier, onOpenExplanation: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
     Column(
         modifier
             .clip(RoundedCornerShape(26.dp))
@@ -221,8 +226,8 @@ class MainActivity : ComponentActivity() {
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
-            Text("${fact.categoryName.uppercase()}  ·  AU VERSO", style = MaterialTheme.typography.labelMedium, letterSpacing = 1.2.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
-            HorizontalDivider(Modifier.padding(top = 14.dp), color = MaterialTheme.colorScheme.secondary, thickness = 2.dp)
+            Text("${fact.categoryName.uppercase()}  ·  AU VERSO", style = MaterialTheme.typography.labelMedium, letterSpacing = 1.2.sp, color = Color(palette.secondary), fontWeight = FontWeight.Bold)
+            HorizontalDivider(Modifier.padding(top = 14.dp), color = Color(palette.secondary), thickness = 2.dp)
         }
         Text(
             text = explanationExcerpt(fact.explanation),
@@ -283,7 +288,9 @@ class MainActivity : ComponentActivity() {
         else LazyVerticalGrid(state = gridState, columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(cards, key = { it.id }) { fact ->
                 Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                    Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.secondary)
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
+                    Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = Color(palette.secondary))
                     CategoryIllustration(fact.categoryId, Modifier.fillMaxWidth().height(94.dp))
                     Text(fact.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 3)
                 }

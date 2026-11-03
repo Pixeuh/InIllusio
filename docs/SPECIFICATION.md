@@ -12,7 +12,7 @@ La sélection quotidienne reste stable durant la journée locale. La rotation é
 
 ## Identité visuelle
 
-Direction : revue scientifique contemporaine, minimaliste et éditoriale. Fond clair chaud, texte noir bleuté, corail `#FF6347` et turquoise `#00BFAE`. En sombre : fond `#0B141B`, texte `#F7F3E8`, mêmes accents. Les disciplines partagent une identité commune. Préférer une typographie géométrique proche de Sora, des catégories en petites capitales espacées, des textes adaptatifs et compacts. Une illustration vectorielle éditoriale est associée à chacune des huit catégories et réutilisée par ses anecdotes. Les compositions sont construites en Canvas natif avec trames, silhouettes, gravures et formes géométriques ; elles s’adaptent aux couleurs du thème dans l’interface.
+Direction : revue scientifique contemporaine, minimaliste et éditoriale. Fond clair chaud, texte noir bleuté, corail `#FF6347` et turquoise `#00BFAE` pour les éléments généraux de l’application. En sombre : fond `#0B141B`, texte `#F7F3E8`, mêmes accents généraux. Chaque discipline dispose en plus d’une paire de couleurs dédiée, définie une seule fois dans `data/discipline-palettes.css` et utilisée par les cartes et illustrations. Les éléments neutres et le texte principal restent adaptés au thème. Préférer une typographie géométrique proche de Sora, des catégories en petites capitales espacées, des textes adaptatifs et compacts. Une illustration vectorielle éditoriale est associée à chacune des huit catégories et réutilisée par ses anecdotes. Les compositions sont construites en Canvas natif avec trames, silhouettes, gravures et formes géométriques.
 
 ## Écrans et comportements attendus
 
