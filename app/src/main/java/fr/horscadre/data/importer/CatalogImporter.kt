@@ -15,7 +15,6 @@ class CatalogImporter(private val context: Context, private val database: HorsCa
     /** Parses the entire catalogue before opening a transaction, so invalid JSON cannot partially import. */
     suspend fun importJson(json: String) {
         val root = JSONObject(json)
-        val editorialStatus = root.optString("statut", "corpus_editorial")
         val categories = root.getJSONArray("categories").let { array ->
             (0 until array.length()).map { index ->
                 val value = array.getJSONObject(index)
@@ -26,14 +25,23 @@ class CatalogImporter(private val context: Context, private val database: HorsCa
             (0 until array.length()).map { index ->
                 val value = array.getJSONObject(index)
                 val id = value.getString("id")
+                val editorialStatus = value.optString("statut_editorial", STATUS_PENDING)
+                require(editorialStatus in ALLOWED_EDITORIAL_STATUSES) {
+                    "Statut éditorial invalide pour « $id » : « $editorialStatus ». Valeurs autorisées : ${ALLOWED_EDITORIAL_STATUSES.joinToString()}"
+                }
                 val source = if (value.isNull("source")) null else value.getJSONObject("source").let { jsonSource ->
+                    val sourceType = jsonSource.optString("type").trim()
+                    require(sourceType in ALLOWED_SOURCE_TYPES) {
+                        "Type de source invalide pour « $id » : « $sourceType ». Valeurs autorisées : ${ALLOWED_SOURCE_TYPES.joinToString()}"
+                    }
                     ParsedSource(
                         entity = SourceEntity(
                             id = "$id-source-1",
-                            type = jsonSource.optString("type", "inconnu"),
+                            type = sourceType,
                             title = jsonSource.optString("titre", "Référence"),
                             year = jsonSource.intOrNull("annee"),
-                            url = jsonSource.optString("url").takeIf { it.isNotBlank() && it != "null" },
+                            // URLs are no longer part of the editorial contract. Clear legacy values on re-import.
+                            url = null,
                             bibliographicDetails = null
                         ),
                         author = jsonSource.optString("auteurs").takeIf { it.isNotBlank() && it != "null" }
@@ -85,5 +93,9 @@ class CatalogImporter(private val context: Context, private val database: HorsCa
     private data class ParsedFact(val anecdote: AnecdoteEntity, val source: ParsedSource?)
     private data class ParsedSource(val entity: SourceEntity, val author: String?)
 }
+
+private const val STATUS_PENDING = "a_valider"
+private val ALLOWED_EDITORIAL_STATUSES = setOf("a_valider", "validee")
+private val ALLOWED_SOURCE_TYPES = setOf("livre", "article", "rapport", "autre")
 
 private fun JSONObject.intOrNull(key: String): Int? = if (isNull(key)) null else optInt(key).takeIf { it != 0 }

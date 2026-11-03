@@ -1,0 +1,19 @@
+/* Shared official discipline palettes. Android reads this file from assets; the local editor links it directly. */
+:root {
+  --discipline-sociologie-primary: #FF6347;
+  --discipline-sociologie-secondary: #00A995;
+  --discipline-anthropologie-primary: #C16E4B;
+  --discipline-anthropologie-secondary: #745574;
+  --discipline-psychologie_sociale-primary: #C65385;
+  --discipline-psychologie_sociale-secondary: #628CB5;
+  --discipline-histoire-primary: #A17BFF;
+  --discipline-histoire-secondary: #253A94;
+  --discipline-linguistique-primary: #426FC7;
+  --discipline-linguistique-secondary: #FFE000;
+  --discipline-economie-primary: #B2DC25;
+  --discipline-economie-secondary: #DB4939;
+  --discipline-philosophie-primary: #583D65;
+  --discipline-philosophie-secondary: #D8BE91;
+  --discipline-geographie_humaine-primary: #3E7859;
+  --discipline-geographie_humaine-secondary: #F29AB1;
+}

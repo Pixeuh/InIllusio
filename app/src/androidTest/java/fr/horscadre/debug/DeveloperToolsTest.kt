@@ -20,14 +20,14 @@ class DeveloperToolsTest {
         val dao = application.database.catalogDao()
         val before = dao.allCollectionEntries().sortedBy { it.anecdoteId }
         val preview = DeveloperTools.allAnecdotes(application)
-        assertEquals(16, preview.size)
+        assertEquals(24, preview.size)
         assertEquals(before, dao.allCollectionEntries().sortedBy { it.anecdoteId })
 
         val unlocked = DeveloperTools.unlockAll(application)
-        assertEquals(16, unlocked)
+        assertEquals(24, unlocked)
         assertEquals(preview.map { it.id }.sorted(), dao.allCollectionEntries().map { it.anecdoteId }.sorted())
-        assertEquals(16, DeveloperTools.unlockAll(application))
-        assertEquals(16, dao.allCollectionEntries().map { it.anecdoteId }.distinct().size)
+        assertEquals(24, DeveloperTools.unlockAll(application))
+        assertEquals(24, dao.allCollectionEntries().map { it.anecdoteId }.distinct().size)
 
         assertEquals(before.size, DeveloperTools.restoreCollection(application))
         assertEquals(before, dao.allCollectionEntries().sortedBy { it.anecdoteId })

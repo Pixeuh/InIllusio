@@ -1,32 +1,38 @@
 package fr.horscadre
 
 import android.os.Bundle
+import android.animation.ValueAnimator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,7 +45,9 @@ import fr.horscadre.debug.DeveloperTools
 import fr.horscadre.data.preferences.AppTheme
 import fr.horscadre.CatalogImportState
 import fr.horscadre.ui.AppViewModel
+import fr.horscadre.ui.explanationExcerpt
 import fr.horscadre.ui.illustration.CategoryIllustration
+import fr.horscadre.ui.illustration.DisciplinePalettes
 import fr.horscadre.ui.theme.HorsCadreTheme
 import fr.horscadre.wallpaper.WallpaperArtwork
 
@@ -53,9 +61,8 @@ class MainActivity : ComponentActivity() {
     val prefs by model.preferences.collectAsStateWithLifecycle()
     val catalogImportState by model.catalogImportState.collectAsStateWithLifecycle()
     val daily by model.daily.collectAsStateWithLifecycle()
+    val dailyLoaded by model.dailyLoaded.collectAsStateWithLifecycle()
     val collection by model.collection.collectAsStateWithLifecycle(initialValue = emptyList())
-    val savedIds by model.savedIds.collectAsStateWithLifecycle()
-    val deliveredIds by model.deliveredIds.collectAsStateWithLifecycle()
     val sources by model.sources.collectAsStateWithLifecycle()
     val message by model.message.collectAsStateWithLifecycle()
     val reference by model.reference.collectAsStateWithLifecycle()
@@ -79,10 +86,10 @@ class MainActivity : ComponentActivity() {
                         model.setRefreshEnabled(acceptedConsent); model.completeOnboarding()
                     }
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
-                        composable("home") { HomeScreen(daily, reference, daily?.let { it.id in savedIds } == true, daily?.let { it.id in deliveredIds } == true, { daily?.let { model.save(it.id) } }, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
-                        composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true, selected?.let { it.id in deliveredIds } == true) }
-                        composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { selected = it; model.showSources(it.id); navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
-                        composable("card") { CardScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true) }
+                        composable("home") { HomeScreen(daily, dailyLoaded, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
+                        composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }) }
+                        composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
+                        composable("card") { CardScreen(collection, selected?.id, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") { SettingsScreen(prefs.theme, dark, prefs.wallpaperRefreshEnabled, prefs.wallpaperTextOffset, daily, reference, wallpaperPreview, { model.setTheme(it) }, { model.setRefreshEnabled(it) }, { model.scheduleWallpaperTextOffsetSave(it) }, { model.persistWallpaperTextOffset(it) }, { model.resetWallpaperTextOffset() }, { fact, source, darkTheme, offset -> model.prepareWallpaperPreview(fact, source, darkTheme, offset) }, { fact, source, darkTheme, offset -> model.applyWallpaper(fact, source, darkTheme, offset) }, { navController.popBackStack() }) }
                     }
@@ -116,34 +123,37 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, reference: String?, saved: Boolean, delivered: Boolean, onSave: () -> Unit, onExplain: () -> Unit, onCollection: () -> Unit, onSettings: () -> Unit) {
-    val heartScale by animateFloatAsState(if (saved) 1.12f else 1f, label = "heart-scale")
-    val heartColor by animateColorAsState(if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, label = "heart-color")
+@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, dailyLoaded: Boolean, onExplain: () -> Unit, onCollection: () -> Unit, onSettings: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         TopLine(onSettings = onSettings)
         Spacer(Modifier.height(8.dp))
-        if (fact == null) { CircularProgressIndicator(); Text("Préparation de la carte du jour…", Modifier.padding(20.dp)) }
-        else {
-            EditorialCard(fact, Modifier.weight(1f).fillMaxWidth(), reference)
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onSave, enabled = saved || delivered, modifier = Modifier.size(54.dp)) {
-                    Icon(if (saved) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Enregistrer", tint = heartColor, modifier = Modifier.size(30.dp).scale(heartScale))
-                }
-                Spacer(Modifier.width(10.dp))
-                Button(onClick = onExplain, modifier = Modifier.weight(1f).height(52.dp)) { Text("Découvrir l’explication  →") }
+        if (fact == null && !dailyLoaded) { CircularProgressIndicator(); Text("Préparation de la carte du jour…", Modifier.padding(20.dp)) }
+        else if (fact == null) {
+            Column(Modifier.weight(1f).fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Aucune anecdote validée", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                Text("Le catalogue ne contient pas encore d’anecdote disponible pour la diffusion.", Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
-            Text("Pour collectionner, applique d’abord la carte au fond verrouillé dans les paramètres.", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
-            TextButton(onClick = onCollection, modifier = Modifier.padding(top = 4.dp)) { Text("Ma collection") }
+            TextButton(onClick = onSettings, modifier = Modifier.align(Alignment.End)) { Icon(Icons.Default.Settings, null); Text(" Paramètres") }
+            TextButton(onClick = onCollection, modifier = Modifier.align(Alignment.End)) { Text("Ma collection") }
+        }
+        else {
+            FlipCard(
+                fact = fact,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                onOpenExplanation = onExplain
+            )
+            TextButton(onClick = onCollection, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) { Text("Ma collection") }
         }
     }
 }
 
-@Composable private fun EditorialCard(fact: AnecdoteWithCategory, modifier: Modifier = Modifier, reference: String? = null) {
+@Composable private fun EditorialCard(fact: AnecdoteWithCategory, modifier: Modifier = Modifier, reference: String? = null, showSourceReference: Boolean = true) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
     Column(modifier.clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(26.dp)).padding(24.dp), verticalArrangement = Arrangement.SpaceBetween) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             Column {
-                Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = Color(palette.secondary), fontWeight = FontWeight.Bold)
             }
             Text("HORS\nCADRE", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, letterSpacing = 1.sp)
         }
@@ -151,10 +161,83 @@ class MainActivity : ComponentActivity() {
         Column {
             Text(fact.hook, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, lineHeight = 31.sp)
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.secondary, thickness = 2.dp)
-            Text("UNE OBSERVATION, DES SOURCES", style = MaterialTheme.typography.labelSmall, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 12.dp))
-            reference?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+            HorizontalDivider(color = Color(palette.secondary), thickness = 2.dp)
+            if (showSourceReference) {
+                Text("UNE OBSERVATION, DES SOURCES", style = MaterialTheme.typography.labelSmall, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 12.dp))
+                reference?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+            }
         }
+    }
+}
+
+@Composable private fun FlipCard(
+    fact: AnecdoteWithCategory,
+    modifier: Modifier = Modifier,
+    resetKey: Any? = fact.id,
+    onOpenExplanation: () -> Unit
+) {
+    var flipped by remember(fact.id, resetKey) { mutableStateOf(false) }
+    val animationsEnabled = ValueAnimator.areAnimatorsEnabled()
+    val rotation by animateFloatAsState(
+        targetValue = if (flipped) 180f else 0f,
+        animationSpec = if (animationsEnabled) tween(durationMillis = 520, easing = FastOutSlowInEasing) else snap(),
+        label = "card-flip"
+    )
+    val cameraDistance = 16f * LocalDensity.current.density
+    Box(modifier) {
+        if (rotation <= 90f) {
+            EditorialCard(
+                fact = fact,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        rotationY = rotation
+                        this.cameraDistance = cameraDistance
+                    }
+                    .clickable(onClickLabel = "Retourner la carte") { flipped = true }
+                    .semantics { contentDescription = "Recto de la carte, ${fact.categoryName}. Appuyer pour retourner." }
+            )
+        } else {
+            FlipCardBack(
+                fact = fact,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        rotationY = rotation - 180f
+                        this.cameraDistance = cameraDistance
+                    }
+                    .clickable(onClickLabel = "Afficher le recto") { flipped = false }
+                    .semantics { contentDescription = "Verso de la carte, ${fact.categoryName}. Appuyer pour afficher le recto." },
+                onOpenExplanation = onOpenExplanation
+            )
+        }
+    }
+}
+
+@Composable private fun FlipCardBack(fact: AnecdoteWithCategory, modifier: Modifier = Modifier, onOpenExplanation: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
+    Column(
+        modifier
+            .clip(RoundedCornerShape(26.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(26.dp))
+            .padding(24.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text("${fact.categoryName.uppercase()}  ·  AU VERSO", style = MaterialTheme.typography.labelMedium, letterSpacing = 1.2.sp, color = Color(palette.secondary), fontWeight = FontWeight.Bold)
+            HorizontalDivider(Modifier.padding(top = 14.dp), color = Color(palette.secondary), thickness = 2.dp)
+        }
+        Text(
+            text = explanationExcerpt(fact.explanation),
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 18.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            lineHeight = 25.sp,
+            maxLines = 9,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+        OutlinedButton(onClick = onOpenExplanation, modifier = Modifier.fillMaxWidth()) { Text("Lire l’explication complète") }
     }
 }
 
@@ -162,7 +245,7 @@ class MainActivity : ComponentActivity() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp), verticalArrangement = Arrangement.Center) {
         Text("HORS CADRE", style = MaterialTheme.typography.labelLarge, letterSpacing = 3.sp, color = MaterialTheme.colorScheme.secondary)
         Spacer(Modifier.height(30.dp)); Text("Une idée\nà garder en tête.", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(22.dp)); Text("Chaque jour, une anecdote des sciences humaines. Lis son explication, explore les sources et garde les cartes qui te plaisent.", style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(22.dp)); Text("Chaque jour, une anecdote des sciences humaines. Lis son explication et retrouve dans ta collection les cartes appliquées à ton écran verrouillé.", style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(18.dp)); Text("Le fond d’écran", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text("Avec ton accord, Hors Cadre renouvelle chaque jour l’affiche du fond d’écran verrouillé. L’application ne touche jamais au fond d’accueil. Android peut retarder l’exécution pour économiser la batterie.", style = MaterialTheme.typography.bodyMedium)
         Row(Modifier.padding(vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -173,7 +256,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun ExplanationScreen(fact: AnecdoteWithCategory?, sources: List<fr.horscadre.data.local.dao.SourceDetails>, onBack: () -> Unit, onSave: () -> Unit, saved: Boolean, delivered: Boolean) {
+@Composable private fun ExplanationScreen(fact: AnecdoteWithCategory?, sources: List<fr.horscadre.data.local.dao.SourceDetails>, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         TopLine("Retour", onBack)
         if (fact == null) return@Column
@@ -182,32 +265,32 @@ class MainActivity : ComponentActivity() {
         Text(fact.explanation, Modifier.padding(horizontal = 26.dp), style = MaterialTheme.typography.bodyLarge, lineHeight = 28.sp)
         Text("SOURCES", Modifier.padding(start = 26.dp, top = 28.dp, bottom = 8.dp), style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
         sources.forEach { SourceLine(it) }
-        TextButton(onClick = onSave, enabled = saved || delivered) { Text(if (saved) "♥  Dans ma collection" else "♡  Ajouter à ma collection") }
     }
 }
 
 @Composable private fun SourceLine(source: fr.horscadre.data.local.dao.SourceDetails) {
-    val uriHandler = LocalUriHandler.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 26.dp, vertical = 8.dp)) {
         Text(source.author ?: source.type.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
         Text(source.title + (source.year?.let { " · $it" } ?: ""), style = MaterialTheme.typography.bodyMedium)
-        source.url?.let { url -> Text(url, Modifier.clickable { runCatching { uriHandler.openUri(url) } }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
     }
 }
 
 @Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit) {
     var showDebugMenu by remember { mutableStateOf(false) }
+    val gridState = rememberLazyGridState()
     Column(Modifier.fillMaxSize()) {
         TopLine("Accueil", onBack)
         DeveloperTools.CollectionTitle { showDebugMenu = true }
         DeveloperTools.MenuDialog(showDebugMenu, debugCanRestore, { showDebugMenu = false }, { showDebugMenu = false; onDebugUnlockAll() }, { showDebugMenu = false; onDebugPreviewAll() }, { showDebugMenu = false; onDebugRegenerateWallpaper() }, { showDebugMenu = false; onDebugRunDailyRenewal() }, { showDebugMenu = false; onDebugRestore() })
         Text("Ma collection", Modifier.padding(horizontal = 24.dp, vertical = 6.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         Text("${cards.size} carte${if (cards.size == 1) "" else "s"}", Modifier.padding(horizontal = 24.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyMedium)
-        if (cards.isEmpty()) Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center) }
-        else LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (cards.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center) }
+        else LazyVerticalGrid(state = gridState, columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(cards, key = { it.id }) { fact ->
                 Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                    Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.secondary)
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
+                    Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = Color(palette.secondary))
                     CategoryIllustration(fact.categoryId, Modifier.fillMaxWidth().height(94.dp))
                     Text(fact.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 3)
                 }
@@ -216,14 +299,54 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CardScreen(fact: AnecdoteWithCategory?, sources: List<fr.horscadre.data.local.dao.SourceDetails>, onBack: () -> Unit, onSave: () -> Unit, saved: Boolean) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        TopLine("Collection", onBack)
-        fact?.let {
-            EditorialCard(it, Modifier.fillMaxWidth().height(480.dp).padding(horizontal = 22.dp))
-            Button(onClick = onSave, enabled = saved, modifier = Modifier.fillMaxWidth().padding(22.dp)) { Text("♥  Enregistrée") }
-            Text(it.explanation, Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.bodyLarge)
-            sources.forEach { source -> SourceLine(source) }
+@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit) {
+    val cardIds = remember(cards) { cards.map { it.id } }
+    var currentCardId by rememberSaveable { mutableStateOf(selectedCardId) }
+    val selectedIndex = cardIds.indexOf(currentCardId).coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = selectedIndex, pageCount = { cards.size })
+    LaunchedEffect(pagerState.settledPage, cardIds) {
+        cards.getOrNull(pagerState.settledPage)?.let { currentCardId = it.id }
+    }
+    LaunchedEffect(cardIds, currentCardId) {
+        if (cards.isNotEmpty()) {
+            val target = cardIds.indexOf(currentCardId).takeIf { it >= 0 }
+                ?: pagerState.currentPage.coerceIn(cards.indices)
+            if (target != pagerState.currentPage) pagerState.scrollToPage(target)
+            currentCardId = cards[target].id
+        }
+    }
+    Column(Modifier.fillMaxSize()) {
+        TopLine("Retour", onBack)
+        if (cards.isEmpty()) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text("Cette carte n’est plus dans la collection.", textAlign = TextAlign.Center)
+            }
+        } else {
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val maxCardHeight = minOf(maxHeight * 0.86f, 620.dp)
+                val maxCardWidth = (maxWidth - 44.dp).coerceAtLeast(0.dp)
+                val cardWidth = minOf(maxCardWidth, maxCardHeight * 0.68f)
+                val cardHeight = cardWidth / 0.68f
+                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { cards[it].id }) { page ->
+                    cards.getOrNull(page)?.let { fact ->
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            FlipCard(
+                                fact = fact,
+                                modifier = Modifier.size(cardWidth, cardHeight),
+                                resetKey = pagerState.currentPage,
+                                onOpenExplanation = { currentCardId = fact.id; onOpenExplanation(fact) }
+                            )
+                        }
+                    }
+                }
+            }
+            Text(
+                "${(pagerState.settledPage + 1).coerceIn(1, cards.size)} / ${cards.size}",
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

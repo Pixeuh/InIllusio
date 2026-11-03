@@ -17,6 +17,7 @@ import fr.horscadre.data.local.dao.AnecdoteWithCategory
 import fr.horscadre.data.preferences.MAX_WALLPAPER_TEXT_OFFSET
 import fr.horscadre.data.preferences.MIN_WALLPAPER_TEXT_OFFSET
 import fr.horscadre.ui.illustration.CategoryIllustrationRenderer
+import fr.horscadre.ui.illustration.DisciplinePalettes
 import kotlin.math.max
 import kotlin.math.min
 
@@ -72,6 +73,7 @@ class WallpaperService(context: Context) {
         val neutral = if (darkTheme) ColorPalette.darkNeutral else ColorPalette.lightNeutral
         val teal = ColorPalette.teal
         val labelColor = if (darkTheme) teal else ColorPalette.darkTeal
+        val disciplinePalette = DisciplinePalettes.forCategory(appContext, fact.categoryId)
         canvas.drawColor(background)
 
         val scale = min(width / 420f, height / 900f)
@@ -90,7 +92,7 @@ class WallpaperService(context: Context) {
         )
 
         val categoryPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = labelColor
+            color = textColor
             textSize = 11.5f * scale
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         }
@@ -109,9 +111,10 @@ class WallpaperService(context: Context) {
         val sourceLabelTop = sourceLabelBaseline + sourceLabelPaint.ascent()
         val hookBottom = sourceLabelTop - height * .035f
 
-        // Keep the native 1000:700 artboard proportions while allowing a modest
-        // horizontal bleed. Long copy can reclaim space by reducing the art size.
-        var artworkScale = 1.35f
+        // Fit the full native 1000:700 artboard to the screen width. The former
+        // 1.35x width cap cropped important drawing elements on portrait phones.
+        // Long copy can still reclaim space by reducing the artwork scale.
+        var artworkScale = 1f
         var artworkWidth = artworkWidth(width, height, artworkScale)
         var artworkHeight = artworkHeight(artworkWidth)
         var categoryTop = artworkTop + artworkHeight + height * .022f
@@ -175,8 +178,8 @@ class WallpaperService(context: Context) {
             canvas,
             illustrationBounds,
             CategoryIllustrationRenderer.Palette(
-                coral = ColorPalette.coral,
-                turquoise = teal,
+                primary = disciplinePalette.primary,
+                secondary = disciplinePalette.secondary,
                 ink = textColor,
                 neutral = neutral
             ),
@@ -185,14 +188,14 @@ class WallpaperService(context: Context) {
 
         drawTrackedText(canvas, fact.categoryName.uppercase(), margin, categoryBaseline + effectiveTextOffset, categoryPaint, 1.8f * scale)
         canvas.drawLine(margin, categoryRuleY + effectiveTextOffset, margin + 38f * scale, categoryRuleY + effectiveTextOffset, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = ColorPalette.coral
+            color = disciplinePalette.primary
             strokeWidth = 2.2f * scale
             strokeCap = Paint.Cap.ROUND
         })
 
         // A short editorial rule leads into the headline without constraining copy width.
         canvas.drawLine(margin - 11f * scale, hookTop + effectiveTextOffset, margin - 11f * scale, hookTop + effectiveTextOffset + min(hookLayout.height.toFloat(), height * .09f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = ColorPalette.coral
+            color = disciplinePalette.secondary
             strokeWidth = 2.4f * scale
             strokeCap = Paint.Cap.ROUND
         })
@@ -220,7 +223,7 @@ class WallpaperService(context: Context) {
     }
 
     private fun artworkWidth(width: Int, height: Int, scale: Float): Float =
-        min(width * scale, height * .54f * 1000f / 700f)
+        min(width * scale, min(width.toFloat(), height * .54f * 1000f / 700f))
 
     private fun artworkHeight(artworkWidth: Float): Float = artworkWidth * .7f
 
@@ -282,7 +285,6 @@ class WallpaperService(context: Context) {
     private object ColorPalette {
         val ink = android.graphics.Color.rgb(11, 20, 27)
         val paper = android.graphics.Color.rgb(255, 252, 246)
-        val coral = android.graphics.Color.rgb(255, 99, 71)
         val teal = android.graphics.Color.rgb(0, 191, 174)
         val darkTeal = android.graphics.Color.rgb(0, 112, 102)
         val darkNeutral = android.graphics.Color.rgb(36, 51, 59)

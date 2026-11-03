@@ -6,6 +6,7 @@ import fr.horscadre.CatalogImportState
 import fr.horscadre.data.preferences.AppTheme
 import fr.horscadre.data.repository.CatalogRepository
 import fr.horscadre.domain.DailyRenewalPolicy
+import fr.horscadre.domain.shortCitation
 import fr.horscadre.wallpaper.WallpaperService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -57,9 +58,7 @@ class DailyWallpaperUpdater(private val app: HorsCadreApplication) {
 
             try {
                 val source = repository.sources(fact.id).firstOrNull()
-                val reference = source?.let {
-                    listOfNotNull(it.author, it.title, it.year?.toString()).joinToString(" · ")
-                }
+                val reference = source?.shortCitation()
                 val dark = when (settings.theme) {
                     AppTheme.DARK -> true
                     AppTheme.LIGHT -> false
@@ -78,7 +77,7 @@ class DailyWallpaperUpdater(private val app: HorsCadreApplication) {
             }
 
             try {
-                repository.recordDelivery(fact.id, true)
+                repository.recordSuccessfulLockScreenApplication(fact.id)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {

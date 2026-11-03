@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import fr.horscadre.domain.DailySelectionPolicy
 import java.time.LocalDate
 
@@ -24,10 +25,13 @@ class UserPreferences(private val context: Context) {
         val wallpaper = booleanPreferencesKey("wallpaper_refresh_enabled")
         val onboarding = booleanPreferencesKey("onboarding_complete")
         val wallpaperTextOffset = floatPreferencesKey("wallpaper_text_vertical_offset")
+        val legacyCollectionDisplayMode = stringPreferencesKey("collection_display_mode")
         val dailyDate = stringPreferencesKey("daily_date")
         val dailyId = stringPreferencesKey("daily_id")
     }
-    val state = context.preferences.data.map { p -> PreferencesState(
+    val state = context.preferences.data
+        .onStart { context.preferences.edit { it.remove(Keys.legacyCollectionDisplayMode) } }
+        .map { p -> PreferencesState(
         theme = runCatching { AppTheme.valueOf(p[Keys.theme] ?: "SYSTEM") }.getOrDefault(AppTheme.SYSTEM),
         wallpaperRefreshEnabled = p[Keys.wallpaper] ?: false,
         onboardingComplete = p[Keys.onboarding] ?: false,

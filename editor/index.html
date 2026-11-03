@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f5f1">
   <title>Hors Cadre — Éditeur du catalogue</title>
+  <link rel="stylesheet" href="../data/discipline-palettes.css">
   <link rel="stylesheet" href="styles.css">
   <script defer src="js/data.js"></script>
   <script defer src="js/validation.js"></script>
+  <script defer src="js/palettes.js"></script>
   <script defer src="js/preview.js"></script>
   <script defer src="js/io.js"></script>
   <script defer src="js/app.js"></script>
@@ -33,6 +35,7 @@
         <button id="add-button" class="icon-button add-button" type="button" aria-label="Ajouter une anecdote" title="Ajouter une anecdote" disabled>＋</button>
       </div>
       <div class="catalog-count"><strong id="fact-count">—</strong><span>dans le catalogue</span><span id="filtered-count" class="filtered-count"></span></div>
+      <div id="editorial-counts" class="editorial-counts" aria-live="polite">0 validées · 0 à valider</div>
       <label class="search-box"><span aria-hidden="true">⌕</span><input id="search-input" type="search" placeholder="Rechercher une anecdote…" autocomplete="off"><kbd>⌘ K</kbd></label>
       <div class="filter-row">
         <label class="sr-only" for="category-filter">Filtrer par catégorie</label>
@@ -42,7 +45,6 @@
       </div>
       <div id="fact-list" class="fact-list" role="listbox" aria-label="Anecdotes"></div>
       <button id="load-more" class="load-more" type="button" hidden>Afficher plus</button>
-      <div class="catalog-footer"><span class="status-dot"></span><span id="catalog-status">Importez un fichier JSON pour commencer</span></div>
     </aside>
 
     <section class="editor-panel panel" aria-label="Édition de l’anecdote">
@@ -66,7 +68,7 @@
               <label class="field full-field"><span>Titre <i>*</i></span><input id="fact-title" name="titre" required maxlength="160" placeholder="Le titre de l’anecdote"></label>
               <label class="field full-field"><span>Accroche <i>*</i><small id="hook-counter">0 caractères</small></span><textarea id="fact-hook" name="accroche" rows="3" required placeholder="La phrase qui donne envie d’en savoir plus"></textarea><small id="hook-warning" class="field-warning" hidden>Cette accroche est longue : vérifiez son rendu sur le téléphone.</small></label>
               <label class="field full-field"><span>Explication scientifique <i>*</i></span><textarea id="fact-explanation" name="explication" rows="6" required placeholder="Développez le contexte, les nuances et les limites du fait."></textarea></label>
-              <label class="field"><span>Statut éditorial du catalogue <i>*</i></span><input id="catalog-status-input" name="statut" list="status-options" required><datalist id="status-options"><option value="brouillon"><option value="en_revision"><option value="revision_editoriale_proposee_a_valider_avant_publication"><option value="valide"><option value="publie"><option value="a_revoir"></datalist><small class="field-help">Ce statut est stocké une seule fois à la racine du JSON et s’applique à toutes les anecdotes.</small></label>
+              <label class="validation-checkbox full-field"><input id="fact-validated" type="checkbox"><span><strong>Anecdote validée</strong><small>Seules les anecdotes validées peuvent être diffusées dans l’application Android.</small></span></label>
               <div class="field id-field"><span>Identifiant technique</span><code id="fact-id">Attribué à l’enregistrement</code><small class="field-help">Conservé pour les cartes déjà collectionnées.</small></div>
               <label id="editorial-note-wrap" class="field full-field" hidden><span>Note éditoriale <small>champ facultatif existant</small></span><textarea id="editorial-note" rows="3" placeholder="Précautions ou remarques éditoriales"></textarea></label>
             </div>
@@ -75,11 +77,10 @@
             <div class="section-title"><span class="section-index">02</span><div><h3>La source</h3><p>Référence bibliographique de cette anecdote.</p></div></div>
             <div class="source-schema-note">Le catalogue actuel prévoit une source par anecdote. Sa structure d’origine et ses champs complémentaires sont conservés.</div>
             <div class="field-grid">
-              <label class="field"><span>Type de source <i>*</i></span><input id="source-type" required placeholder="lien, livre, article…"></label>
+              <label class="field"><span>Type de publication <i>*</i></span><select id="source-type" required><option value="">Sélectionner un type</option><option value="livre">Livre</option><option value="article">Article scientifique</option><option value="rapport">Rapport</option><option value="autre">Autre</option></select></label>
               <label class="field"><span>Auteur(s) <i>*</i></span><input id="source-authors" required placeholder="Nom de l’auteur ou organisme"></label>
               <label class="field full-field"><span>Titre de la référence <i>*</i></span><input id="source-title" required placeholder="Titre de l’article, de l’ouvrage ou de la page"></label>
               <label class="field"><span>Année de publication</span><input id="source-year" type="number" min="0" max="3000" placeholder="Facultatif"></label>
-              <label class="field"><span>URL <small>facultative</small></span><input id="source-url" type="url" placeholder="https://…"></label>
             </div>
             <div id="source-extra-fields" class="field-grid extra-fields"></div>
           </section>

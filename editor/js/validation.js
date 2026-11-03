@@ -1,5 +1,7 @@
 (function () {
   const text = (value) => typeof value === 'string' && value.trim().length > 0;
+  const sourceTypes = new Set(['livre', 'article', 'rapport', 'autre']);
+  const editorialStatuses = new Set(['a_valider', 'validee']);
 
   function validateCatalog(catalog) {
     const errors = [];
@@ -9,8 +11,6 @@
     if (!Array.isArray(catalog.categories) || !Array.isArray(catalog.faits)) {
       return ['La structure attendue contient les tableaux « categories » et « faits ».'];
     }
-    if (!text(catalog.statut)) errors.push('Le statut éditorial du catalogue est obligatoire.');
-
     const categoryIds = new Set();
     catalog.categories.forEach((category, index) => {
       if (!category || !text(category.id) || !text(category.nom)) {
@@ -34,24 +34,16 @@
       if (!text(fact.titre)) errors.push(`${label} « ${fact.id || index + 1} » : titre obligatoire.`);
       if (!text(fact.accroche)) errors.push(`${label} « ${fact.id || index + 1} » : accroche obligatoire.`);
       if (!text(fact.explication)) errors.push(`${label} « ${fact.id || index + 1} » : explication obligatoire.`);
+      if (!editorialStatuses.has(fact.statut_editorial)) errors.push(`${label}: Statut individuel invalide (a_valider ou validee).`);
       if (!fact.source || typeof fact.source !== 'object' || Array.isArray(fact.source)) {
         errors.push(`${label} « ${fact.id || index + 1} » : la source doit être un objet.`);
         return;
       }
-      if (!text(fact.source.type)) errors.push(`${label} « ${fact.id || index + 1} » : type de source obligatoire.`);
+      if (!sourceTypes.has(fact.source.type)) errors.push(`${label} « ${fact.id || index + 1} » : type de publication invalide (livre, article, rapport ou autre).`);
       if (!text(fact.source.auteurs)) errors.push(`${label} « ${fact.id || index + 1} » : auteur ou organisme obligatoire.`);
       if (!text(fact.source.titre)) errors.push(`${label} « ${fact.id || index + 1} » : titre de source obligatoire.`);
       if (fact.source.annee != null && fact.source.annee !== '' && (!Number.isInteger(Number(fact.source.annee)) || Number(fact.source.annee) < 0 || Number(fact.source.annee) > 3000)) {
         errors.push(`${label} « ${fact.id || index + 1} » : année de source invalide.`);
-      }
-      const url = fact.source.url;
-      if (url != null && String(url).trim()) {
-        try {
-          const parsed = new URL(String(url).trim());
-          if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname.includes('.')) throw new Error('URL invalide');
-        } catch (_) {
-          errors.push(`${label} « ${fact.id || index + 1} » : URL manifestement malformée.`);
-        }
       }
     });
     return errors;

@@ -6,7 +6,7 @@ import fr.horscadre.data.local.dao.SourceDetails
 import fr.horscadre.data.local.entities.CollectionEntity
 import fr.horscadre.data.local.entities.DeliveryEntity
 import fr.horscadre.data.preferences.UserPreferences
-import fr.horscadre.domain.CollectionPolicy
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -14,11 +14,11 @@ class CatalogRepository(private val db: HorsCadreDatabase, private val preferenc
     val collection: Flow<List<AnecdoteWithCategory>> = db.catalogDao().observeCollection()
     suspend fun dailyAnecdote(today: LocalDate = LocalDate.now()): AnecdoteWithCategory? {
         val dao = db.catalogDao()
-        val all = dao.allAnecdotes()
+        val all = dao.validatedAnecdotes()
         val delivered = dao.successfullyDeliveredIds().toSet()
         val eligible = all.filterNot { it.id in delivered }.ifEmpty { all }
         val id = preferences.dailySelection(today, all.map { it.id }, eligible.map { it.id }) ?: return null
-        return dao.getAnecdote(id)
+        return dao.getValidatedAnecdote(id)
     }
     suspend fun hasSuccessfulDeliveryOn(id: String, date: LocalDate): Boolean {
         val zone = java.time.ZoneId.systemDefault()
@@ -32,8 +32,11 @@ class CatalogRepository(private val db: HorsCadreDatabase, private val preferenc
     suspend fun recordDelivery(id: String, succeeded: Boolean, error: String? = null) {
         db.catalogDao().putDelivery(DeliveryEntity(anecdoteId = id, attemptedAt = System.currentTimeMillis(), succeeded = succeeded, error = error))
     }
-    suspend fun save(id: String, savedAt: Long = System.currentTimeMillis()) {
-        check(CollectionPolicy.canCollect(db.catalogDao().hasSuccessfulDelivery(id))) { "Cette carte doit d’abord avoir été appliquée au fond d’écran verrouillé." }
-        db.catalogDao().putCollection(CollectionEntity(id, savedAt))
+    /** Records a successful FLAG_LOCK application and adds the card without replacing its first discovery date. */
+    suspend fun recordSuccessfulLockScreenApplication(id: String, appliedAt: Long = System.currentTimeMillis()) {
+        db.withTransaction {
+            db.catalogDao().putDelivery(DeliveryEntity(anecdoteId = id, attemptedAt = appliedAt, succeeded = true))
+            db.catalogDao().putCollection(CollectionEntity(id, appliedAt))
+        }
     }
 }
