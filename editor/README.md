@@ -34,3 +34,7 @@ L’aperçu est une simulation graphique de téléphone et ne prétend pas repro
 ## Validation éditoriale individuelle
 
 Chaque anecdote possède une case **Anecdote validée**. Les nouvelles anecdotes commencent à `a_valider` ; une ancienne entrée sans statut est normalisée ainsi et doit être enregistrée dans le JSON. Le filtre de statut permet de consulter les anecdotes à valider ou validées. Aucun statut éditorial global n’est utilisé. Android ne diffuse que les anecdotes marquées `validee` ; changer ce statut ne retire pas une carte déjà enregistrée dans la collection.
+
+## Vérifier l’éditeur
+
+Avec Node.js 18 ou plus récent, les tests de normalisation et d’export/réimport UTF-8 se lancent depuis la racine du projet avec `node --test editor/tests/catalog-editor.test.cjs`. Les tests Android de la chaîne Room utilisent une base en mémoire et des anecdotes fictives dans `CatalogEditorialFlowTest`.
