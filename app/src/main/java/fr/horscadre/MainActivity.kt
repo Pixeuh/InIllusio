@@ -6,8 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -15,8 +13,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -59,8 +55,6 @@ class MainActivity : ComponentActivity() {
     val daily by model.daily.collectAsStateWithLifecycle()
     val dailyLoaded by model.dailyLoaded.collectAsStateWithLifecycle()
     val collection by model.collection.collectAsStateWithLifecycle(initialValue = emptyList())
-    val savedIds by model.savedIds.collectAsStateWithLifecycle()
-    val deliveredIds by model.deliveredIds.collectAsStateWithLifecycle()
     val sources by model.sources.collectAsStateWithLifecycle()
     val message by model.message.collectAsStateWithLifecycle()
     val reference by model.reference.collectAsStateWithLifecycle()
@@ -84,10 +78,10 @@ class MainActivity : ComponentActivity() {
                         model.setRefreshEnabled(acceptedConsent); model.completeOnboarding()
                     }
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
-                        composable("home") { HomeScreen(daily, dailyLoaded, daily?.let { it.id in savedIds } == true, daily?.let { it.id in deliveredIds } == true, { daily?.let { model.save(it.id) } }, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
-                        composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true, selected?.let { it.id in deliveredIds } == true) }
+                        composable("home") { HomeScreen(daily, dailyLoaded, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
+                        composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }) }
                         composable("collection") { CollectionScreen(collection, prefs.collectionDisplayMode, selected?.id, model::setCollectionDisplayMode, { navController.popBackStack() }, { selected = it; model.showSources(it.id); navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
-                        composable("card") { CardScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true) }
+                        composable("card") { CardScreen(selected, sources, { navController.popBackStack() }) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") { SettingsScreen(prefs.theme, dark, prefs.wallpaperRefreshEnabled, prefs.wallpaperTextOffset, daily, reference, wallpaperPreview, { model.setTheme(it) }, { model.setRefreshEnabled(it) }, { model.scheduleWallpaperTextOffsetSave(it) }, { model.persistWallpaperTextOffset(it) }, { model.resetWallpaperTextOffset() }, { fact, source, darkTheme, offset -> model.prepareWallpaperPreview(fact, source, darkTheme, offset) }, { fact, source, darkTheme, offset -> model.applyWallpaper(fact, source, darkTheme, offset) }, { navController.popBackStack() }) }
                     }
@@ -121,9 +115,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, dailyLoaded: Boolean, saved: Boolean, delivered: Boolean, onSave: () -> Unit, onExplain: () -> Unit, onCollection: () -> Unit, onSettings: () -> Unit) {
-    val heartScale by animateFloatAsState(if (saved) 1.12f else 1f, label = "heart-scale")
-    val heartColor by animateColorAsState(if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, label = "heart-color")
+@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, dailyLoaded: Boolean, onExplain: () -> Unit, onCollection: () -> Unit, onSettings: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         TopLine(onSettings = onSettings)
         Spacer(Modifier.height(8.dp))
@@ -139,14 +131,7 @@ class MainActivity : ComponentActivity() {
         else {
             EditorialCard(fact, Modifier.weight(1f).fillMaxWidth(), showSourceReference = false)
             Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onSave, enabled = saved || delivered, modifier = Modifier.size(54.dp)) {
-                    Icon(if (saved) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Enregistrer", tint = heartColor, modifier = Modifier.size(30.dp).scale(heartScale))
-                }
-                Spacer(Modifier.width(10.dp))
-                Button(onClick = onExplain, modifier = Modifier.weight(1f).height(52.dp)) { Text("Découvrir l’explication  →") }
-            }
-            Text("Pour collectionner, applique d’abord la carte au fond verrouillé dans les paramètres.", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+            Button(onClick = onExplain, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Découvrir l’explication  →") }
             TextButton(onClick = onCollection, modifier = Modifier.padding(top = 4.dp)) { Text("Ma collection") }
         }
     }
@@ -177,7 +162,7 @@ class MainActivity : ComponentActivity() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp), verticalArrangement = Arrangement.Center) {
         Text("HORS CADRE", style = MaterialTheme.typography.labelLarge, letterSpacing = 3.sp, color = MaterialTheme.colorScheme.secondary)
         Spacer(Modifier.height(30.dp)); Text("Une idée\nà garder en tête.", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(22.dp)); Text("Chaque jour, une anecdote des sciences humaines. Lis son explication, explore les sources et garde les cartes qui te plaisent.", style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(22.dp)); Text("Chaque jour, une anecdote des sciences humaines. Lis son explication et retrouve dans ta collection les cartes appliquées à ton écran verrouillé.", style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(18.dp)); Text("Le fond d’écran", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text("Avec ton accord, Hors Cadre renouvelle chaque jour l’affiche du fond d’écran verrouillé. L’application ne touche jamais au fond d’accueil. Android peut retarder l’exécution pour économiser la batterie.", style = MaterialTheme.typography.bodyMedium)
         Row(Modifier.padding(vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -188,7 +173,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun ExplanationScreen(fact: AnecdoteWithCategory?, sources: List<fr.horscadre.data.local.dao.SourceDetails>, onBack: () -> Unit, onSave: () -> Unit, saved: Boolean, delivered: Boolean) {
+@Composable private fun ExplanationScreen(fact: AnecdoteWithCategory?, sources: List<fr.horscadre.data.local.dao.SourceDetails>, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         TopLine("Retour", onBack)
         if (fact == null) return@Column
@@ -197,7 +182,6 @@ class MainActivity : ComponentActivity() {
         Text(fact.explanation, Modifier.padding(horizontal = 26.dp), style = MaterialTheme.typography.bodyLarge, lineHeight = 28.sp)
         Text("SOURCES", Modifier.padding(start = 26.dp, top = 28.dp, bottom = 8.dp), style = MaterialTheme.typography.labelLarge, letterSpacing = 2.sp)
         sources.forEach { SourceLine(it) }
-        TextButton(onClick = onSave, enabled = saved || delivered) { Text(if (saved) "♥  Dans ma collection" else "♡  Ajouter à ma collection") }
     }
 }
 
@@ -268,12 +252,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CardScreen(fact: AnecdoteWithCategory?, sources: List<fr.horscadre.data.local.dao.SourceDetails>, onBack: () -> Unit, onSave: () -> Unit, saved: Boolean) {
+@Composable private fun CardScreen(fact: AnecdoteWithCategory?, sources: List<fr.horscadre.data.local.dao.SourceDetails>, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         TopLine("Collection", onBack)
         fact?.let {
             EditorialCard(it, Modifier.fillMaxWidth().height(480.dp).padding(horizontal = 22.dp))
-            Button(onClick = onSave, enabled = saved, modifier = Modifier.fillMaxWidth().padding(22.dp)) { Text("♥  Enregistrée") }
             Text(it.explanation, Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.bodyLarge)
             sources.forEach { source -> SourceLine(source) }
         }

@@ -49,10 +49,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var wallpaperOffsetSaveJob: Job? = null
     private val _message = MutableStateFlow<String?>(null)
     val message = _message.asStateFlow()
-    private val _savedIds = MutableStateFlow<Set<String>>(emptySet())
-    val savedIds = _savedIds.asStateFlow()
-    private val _deliveredIds = MutableStateFlow<Set<String>>(emptySet())
-    val deliveredIds = _deliveredIds.asStateFlow()
     val debugCanRestore = DeveloperTools.hasSnapshot(app).stateIn(viewModelScope, SharingStarted.Eagerly, false)
     private val _developerPreview = MutableStateFlow<List<AnecdoteWithCategory>>(emptyList())
     val developerPreview = _developerPreview.asStateFlow()
@@ -62,7 +58,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             app.catalogImport.join()
             if (app.catalogImportState.value == CatalogImportState.Ready) onAppForeground()
         }
-        viewModelScope.launch { repository.collection.collect { _savedIds.value = it.map(AnecdoteWithCategory::id).toSet() } }
         viewModelScope.launch {
             while (isActive) {
                 val now = java.time.ZonedDateTime.now()
@@ -87,7 +82,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val fact = repository.dailyAnecdote()
         _daily.value = fact
         _reference.value = fact?.let { current -> repository.sources(current.id).firstOrNull()?.shortCitation() }
-        if (fact != null && repositoryWasDelivered(fact.id)) _deliveredIds.value = _deliveredIds.value + fact.id
         _dailyLoaded.value = true
     }
     fun onAppForeground() = viewModelScope.launch {
@@ -98,12 +92,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val settings = app.preferences.state.first()
             if (settings.wallpaperRefreshEnabled) {
                 val result = DailyWallpaperUpdater(app).update()
-                if (result == DailyUpdateResult.APPLIED) _daily.value?.let { _deliveredIds.value = _deliveredIds.value + it.id }
                 if (result == DailyUpdateResult.FAILED) _message.value = "Le renouvellement du fond verrouillé a échoué. Il sera réessayé plus tard."
             }
         }
     }
-    private suspend fun repositoryWasDelivered(id: String) = app.database.catalogDao().hasSuccessfulDelivery(id)
     fun showSources(id: String) = viewModelScope.launch { _sources.value = repository.sources(id) }
     fun setTheme(theme: AppTheme) = viewModelScope.launch { app.preferences.setTheme(theme) }
     fun setCollectionDisplayMode(mode: CollectionDisplayMode) = viewModelScope.launch { app.preferences.setCollectionDisplayMode(mode) }
@@ -116,7 +108,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (!BuildConfig.DEBUG) return
         viewModelScope.launch {
             when (DailyWallpaperUpdater(app).update(forceApply = true)) {
-                DailyUpdateResult.APPLIED -> { _daily.value?.let { _deliveredIds.value = _deliveredIds.value + it.id }; _message.value = "Test du renouvellement appliqué au fond verrouillé." }
+                DailyUpdateResult.APPLIED -> _message.value = "Test du renouvellement appliqué au fond verrouillé et carte ajoutée à la collection."
                 DailyUpdateResult.DISABLED -> _message.value = "Activez d’abord le renouvellement quotidien pour tester le Worker."
                 DailyUpdateResult.ALREADY_APPLIED -> _message.value = "L’affiche du jour est déjà à jour."
                 DailyUpdateResult.NO_ANECDOTE -> _message.value = "Aucune anecdote disponible pour le test."
@@ -125,9 +117,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun completeOnboarding() = viewModelScope.launch { app.preferences.completeOnboarding() }
-    fun save(id: String) = viewModelScope.launch {
-        runCatching { repository.save(id) }.onSuccess { _message.value = "Carte ajoutée à votre collection." }.onFailure { _message.value = it.message }
-    }
     fun prepareWallpaperPreview(fact: AnecdoteWithCategory, reference: String?, darkTheme: Boolean, textVerticalOffset: Float) {
         wallpaperPreviewJob?.cancel()
         _wallpaperPreview.value = null
@@ -160,8 +149,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 wallpaperService.renderForCurrentDisplay(fact, reference, darkTheme, textVerticalOffset)
             }
             withContext(Dispatchers.IO) { wallpaperService.applyToLockScreen(freshArtwork) }
-            repository.recordDelivery(fact.id, true)
-        }.onSuccess { _deliveredIds.value = _deliveredIds.value + fact.id; _message.value = "Affiche appliquée au fond d’écran verrouillé." }
+            repository.recordSuccessfulLockScreenApplication(fact.id)
+        }.onSuccess { _message.value = "Affiche appliquée au fond verrouillé ; carte ajoutée à la collection." }
             .onFailure { error -> repository.recordDelivery(fact.id, false, error.message); _message.value = "Échec de l’application du fond d’écran : ${error.message ?: "erreur inconnue"}" }
     }
     fun clearMessage() { _message.value = null }
@@ -209,10 +198,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     wallpaperService.renderForCurrentDisplay(fact, _reference.value, darkTheme, currentPreferences.wallpaperTextOffset)
                 }
                 withContext(Dispatchers.IO) { wallpaperService.applyToLockScreen(freshArtwork) }
+                repository.recordSuccessfulLockScreenApplication(fact.id)
                 freshArtwork
             }.onSuccess { artwork ->
                 _wallpaperPreview.value = artwork
-                _message.value = "Nouveau fond d’écran de verrouillage régénéré et appliqué."
+                _message.value = "Nouveau fond verrouillé appliqué ; carte ajoutée à la collection."
             }.onFailure { error ->
                 _message.value = "Échec de la régénération du fond verrouillé : ${error.message ?: "erreur inconnue"}"
             }

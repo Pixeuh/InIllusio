@@ -77,7 +77,7 @@ class DailyWallpaperUpdater(private val app: HorsCadreApplication) {
             }
 
             try {
-                repository.recordDelivery(fact.id, true)
+                repository.recordSuccessfulLockScreenApplication(fact.id)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {

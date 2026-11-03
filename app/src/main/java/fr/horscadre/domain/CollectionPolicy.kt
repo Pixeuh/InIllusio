@@ -1,9 +1,5 @@
 package fr.horscadre.domain
 
-object CollectionPolicy {
-    fun canCollect(successfullyDeliveredToLockScreen: Boolean): Boolean = successfullyDeliveredToLockScreen
-}
-
 object DailyRotation {
     fun choose(todayEpochDay: Long, eligibleIds: List<String>, previousId: String?): String? {
         if (eligibleIds.isEmpty()) return null

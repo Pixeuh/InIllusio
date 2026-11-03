@@ -5,10 +5,6 @@ import org.junit.Test
 import java.time.LocalDate
 
 class CollectionPolicyTest {
-    @Test fun collectionRequiresSuccessfulLockScreenDelivery() {
-        assertFalse(CollectionPolicy.canCollect(false))
-        assertTrue(CollectionPolicy.canCollect(true))
-    }
     @Test fun rotationIsStableForSameInputsAndAvoidsImmediateRepeat() {
         val ids = listOf("a", "b", "c")
         assertEquals(DailyRotation.choose(12, ids, null), DailyRotation.choose(12, ids, null))

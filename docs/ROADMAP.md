@@ -7,6 +7,7 @@
 - DataStore pour thème, consentement, préférence de renouvellement et carte du jour.
 - Premier accueil, explication, collection, carte consultée et paramètres.
 - Collection avec modes grille et carrousel horizontal paginé, choix conservé dans DataStore et cartes limitées aux entrées réellement collectionnées.
+- Ajout automatique et idempotent à la collection, dans la même transaction que l’enregistrement d’une diffusion `FLAG_LOCK` réussie ; aucune collection sur erreur ou aperçu.
 - Règle de collection conditionnée à l’historique d’une diffusion réussie.
 - Renderer d’affiche plein écran adaptatif aux dimensions et au thème ; illustration à l’échelle native, ajustée à la largeur et au ratio de l’écran sans découpage, textes mesurés pour les accroches et références longues, sans zone réservée à l’horloge système ; aperçu et application réutilisent le même bitmap avec recadrage plein cadre et `FLAG_LOCK` exclusivement.
 - Huit illustrations vectorielles originales, une par catégorie, partagées entre accueil, collection, carte agrandie et fond verrouillé.

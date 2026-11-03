@@ -2,9 +2,9 @@
 
 ## Concept et principes
 
-Hors Cadre est une application Android en français qui diffuse une anecdote de sciences humaines par jour sous forme d’affiche de fond d’écran de verrouillage. L’utilisateur consulte ensuite une explication sourcée et choisit lui-même les cartes qu’il garde. Le ton est rigoureux, accessible et éditorial. L’app fonctionne hors ligne, sans serveur, compte, publicité, suivi comportemental ni achat intégré.
+Hors Cadre est une application Android en français qui diffuse une anecdote de sciences humaines par jour sous forme d’affiche de fond d’écran de verrouillage. L’utilisateur consulte ensuite une explication sourcée ; toute application réussie au verrouillage ajoute automatiquement cette carte à sa collection. Le ton est rigoureux, accessible et éditorial. L’app fonctionne hors ligne, sans serveur, compte, publicité, suivi comportemental ni achat intégré.
 
-Les états d’une carte sont distincts : entrée du catalogue, sélection du jour, diffusion réellement réussie avec `WallpaperManager.FLAG_LOCK`, puis ajout volontaire à la collection. Une carte n’est jamais collectionnable avant une diffusion réussie. Un aperçu ne constitue pas une diffusion. Une erreur ne débloque rien. Android ne permet pas de savoir si l’utilisateur a réellement regardé son écran de verrouillage.
+Les états d’une carte sont distincts : entrée du catalogue, sélection du jour, diffusion réellement réussie avec `WallpaperManager.FLAG_LOCK`, puis ajout automatique à la collection. Une carte n’est jamais collectionnée avant une diffusion réussie. Un aperçu ne constitue pas une diffusion. Une erreur ne collectionne rien. Android ne permet pas de savoir si l’utilisateur a réellement regardé son écran de verrouillage.
 
 Les identifiants d’anecdotes restent techniques. Aucun numéro individuel de carte ne doit être rendu dans l’accueil, les fiches, la collection, la carte agrandie ou le fond d’écran. Les années des références et le nombre de cartes dans la collection restent autorisés.
 
@@ -16,9 +16,9 @@ Direction : revue scientifique contemporaine, minimaliste et éditoriale. Fond c
 
 ## Écrans et comportements attendus
 
-- **Accueil** : carte du jour, discipline, illustration associée à la catégorie et accroche ; aucune référence bibliographique ni aucun lien ; aucun numéro individuel de carte ; cœur volontaire ; accès à l’explication ; accès discret à la collection. Pas de barre inférieure.
+- **Accueil** : carte du jour, discipline, illustration associée à la catégorie et accroche ; aucune référence bibliographique ni aucun lien ; aucun numéro individuel de carte ; accès à l’explication et accès discret à la collection. L’application réussie au fond verrouillé ajoute automatiquement la carte. Pas de barre inférieure.
 - **Explication** : retour, discipline, titre, développement et références bibliographiques complètes (auteur, titre, année lorsqu’elle est disponible), sans lien Internet.
-- **Collection unique « Sciences humaines »** : compte et choix persistant entre une grille à deux colonnes et un carrousel horizontal paginé. N’afficher que les cartes volontairement sauvegardées ; la discipline reste visible. Le carrousel affiche une carte à la fois, avec navigation bornée et compteur de position.
+- **Collection unique « Sciences humaines »** : compte et choix persistant entre une grille à deux colonnes et un carrousel horizontal paginé. N’afficher que les cartes dont l’application au verrouillage a réussi ; la discipline reste visible. Le carrousel affiche une carte à la fois, avec navigation bornée et compteur de position.
 - **Carte agrandie** : recto illustré, verso explicatif avec sources. Animations d’agrandissement et retournement à venir.
 - **Paramètres** : thème système/clair/sombre, préférence de renouvellement du verrouillage, prévisualisation, application manuelle et informations de version.
 - **Première ouverture** : expliquer la carte quotidienne, le renouvellement et la collection. Le consentement au renouvellement est explicite. Une fois activé, le renouvellement peut appliquer automatiquement l’affiche au verrouillage ; le fond d’accueil n’est jamais modifié.

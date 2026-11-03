@@ -6,6 +6,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.horscadre.data.importer.CatalogImporter
 import fr.horscadre.data.local.HorsCadreDatabase
 import fr.horscadre.data.local.entities.CollectionEntity
+import fr.horscadre.data.preferences.UserPreferences
+import fr.horscadre.data.repository.CatalogRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
@@ -41,7 +43,7 @@ class CatalogImporterTest {
             .map { it.type }
             .toSet()
         assertEquals(setOf("livre", "article", "rapport", "autre"), importedTypes)
-        assertEquals(listOf("sociologie-02"), database.catalogDao().validatedAnecdotes().map { it.id })
+        assertEquals(listOf("sociologie-02", "sociologie-04"), database.catalogDao().validatedAnecdotes().map { it.id })
     }
 
     @Test fun onlyValidatedFactsCanBeDistributedAndRevalidationKeepsCollectedCards() = runBlocking {
@@ -52,15 +54,33 @@ class CatalogImporterTest {
         facts.getJSONObject(0).put("statut_editorial", "validee")
         importer.importJson(catalog.toString())
 
-        assertEquals(listOf("sociologie-01", "sociologie-02"), dao.validatedAnecdotes().map { it.id })
+        assertEquals(listOf("sociologie-01", "sociologie-02", "sociologie-04"), dao.validatedAnecdotes().map { it.id })
         dao.putCollection(CollectionEntity("sociologie-01", 10L))
 
         facts.getJSONObject(0).put("statut_editorial", "a_valider")
         importer.importJson(catalog.toString())
 
-        assertEquals(listOf("sociologie-02"), dao.validatedAnecdotes().map { it.id })
+        assertEquals(listOf("sociologie-02", "sociologie-04"), dao.validatedAnecdotes().map { it.id })
         assertNotNull(dao.getAnecdote("sociologie-01"))
         assertEquals("sociologie-01", dao.observeCollection().first().single().id)
+    }
+
+    @Test fun successfulLockScreenApplicationCollectsIdempotentlyAndFailuresDoNot() = runBlocking {
+        importer.importBundledCatalog()
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val repository = CatalogRepository(database, UserPreferences(context))
+        val dao = database.catalogDao()
+
+        repository.recordDelivery("sociologie-01", succeeded = false, error = "test failure")
+        assertNull(dao.collectionEntry("sociologie-01"))
+
+        repository.recordSuccessfulLockScreenApplication("sociologie-02", appliedAt = 100L)
+        assertEquals(100L, dao.collectionEntry("sociologie-02")?.savedAt)
+        repository.recordSuccessfulLockScreenApplication("sociologie-02", appliedAt = 200L)
+
+        assertEquals(100L, dao.collectionEntry("sociologie-02")?.savedAt)
+        assertNull(dao.collectionEntry("sociologie-01"))
+        assertEquals(setOf("sociologie-02"), dao.successfullyDeliveredIds().toSet())
     }
 
     @Test fun missingIndividualStatusDefaultsToPendingAndInvalidStatusIsRejectedAtomically() = runBlocking {
@@ -69,14 +89,14 @@ class CatalogImporterTest {
         val facts = catalog.getJSONArray("faits")
         facts.getJSONObject(0).remove("statut_editorial")
         importer.importJson(catalog.toString())
-        assertEquals(listOf("sociologie-02"), dao.validatedAnecdotes().map { it.id })
+        assertEquals(listOf("sociologie-02", "sociologie-04"), dao.validatedAnecdotes().map { it.id })
 
         val before = dao.anecdoteCount()
         facts.getJSONObject(0).put("statut_editorial", "publie")
         runCatching { importer.importJson(catalog.toString()) }
             .onSuccess { throw AssertionError("Unknown editorial status should be rejected") }
         assertEquals(before, dao.anecdoteCount())
-        assertEquals(listOf("sociologie-02"), dao.validatedAnecdotes().map { it.id })
+        assertEquals(listOf("sociologie-02", "sociologie-04"), dao.validatedAnecdotes().map { it.id })
     }
 
     @Test fun obsoleteSourceTypeIsRejectedWithoutChangingCollectionOrCatalog() = runBlocking {
