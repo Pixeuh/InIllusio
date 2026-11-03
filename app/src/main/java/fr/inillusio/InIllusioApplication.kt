@@ -2,6 +2,8 @@ package fr.inillusio
 
 import android.app.Application
 import androidx.room.Room
+import androidx.room.withTransaction
+import fr.inillusio.BuildConfig
 import fr.inillusio.data.importer.CatalogImporter
 import fr.inillusio.data.local.InIllusioDatabase
 import fr.inillusio.data.preferences.UserPreferences
@@ -19,6 +21,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicLong
 
 sealed interface CatalogImportState {
     data object Loading : CatalogImportState
@@ -35,6 +40,8 @@ class InIllusioApplication : Application() {
     private val _catalogImportState = MutableStateFlow<CatalogImportState>(CatalogImportState.Loading)
     val catalogImportState: StateFlow<CatalogImportState> = _catalogImportState.asStateFlow()
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val boosterMutationMutex = Mutex()
+    private val collectionResetGeneration = AtomicLong(0L)
     override fun onCreate() {
         super.onCreate()
         database = Room.databaseBuilder(this, InIllusioDatabase::class.java, "hors-cadre.db")
@@ -54,11 +61,28 @@ class InIllusioApplication : Application() {
 
     /** Runs on the application scope so leaving the reveal screen cannot cancel a confirmed reward. */
     fun redeemBoosterAfterReward(redemptionId: String, onComplete: (BoosterAwardResult) -> Unit) {
+        val requestGeneration = collectionResetGeneration.get()
         appScope.launch {
             catalogImport.join()
             if (_catalogImportState.value != CatalogImportState.Ready) return@launch
-            val result = repository.redeemBooster(redemptionId)
-            kotlinx.coroutines.withContext(Dispatchers.Main.immediate) { onComplete(result) }
+            val result = boosterMutationMutex.withLock {
+                if (requestGeneration != collectionResetGeneration.get()) return@withLock null
+                repository.redeemBooster(redemptionId)
+                    .takeIf { requestGeneration == collectionResetGeneration.get() }
+            } ?: return@launch
+            kotlinx.coroutines.withContext(Dispatchers.Main.immediate) {
+                if (requestGeneration == collectionResetGeneration.get()) onComplete(result)
+            }
+        }
+    }
+
+    /** Debug-only reset, serialized with reward attribution and without touching delivery history. */
+    internal suspend fun clearCollectionForDeveloper() {
+        check(BuildConfig.DEBUG) { "La réinitialisation développeur n'est disponible qu'en debug." }
+        collectionResetGeneration.incrementAndGet()
+        catalogImport.join()
+        boosterMutationMutex.withLock {
+            database.withTransaction { database.catalogDao().clearCollection() }
         }
     }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.PathEffect
@@ -37,7 +39,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import kotlin.math.PI
+import kotlin.math.sin
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
@@ -114,11 +120,12 @@ class MainActivity : ComponentActivity() {
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
                         composable("home") { HomeScreen(daily, dailyLoaded, reference, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { id -> model.cardCitation(id) }, { navController.navigate("collection") }, { navController.navigate("settings") }, { homeCardSize = it }) }
                         composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }) }
-                        composable("collection") { CollectionScreen(collection, boosterProgress, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, { navController.navigate("booster") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
+                        composable("collection") { CollectionScreen(collection, boosterProgress, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, { navController.navigate("booster") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection, model::debugClearCollection) }
                         composable("booster") {
                             BoosterScreen(
                                 progress = boosterProgress,
                                 collection = collection,
+                                homeCardSize = homeCardSize,
                                 consent = adsConsent,
                                 awards = boosterAwards,
                                 onBack = { navController.popBackStack() },
@@ -173,7 +180,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun TopLine(actionLabel: String? = null, onBack: (() -> Unit)? = null, onSettings: (() -> Unit)? = null) {
+@Composable private fun TopLine(actionLabel: String? = null, onBack: (() -> Unit)? = null, onSettings: (() -> Unit)? = null, trailingText: String? = null) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) TextButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null); Spacer(Modifier.width(6.dp)); Text(actionLabel ?: "Retour") }
         else Column {
@@ -181,6 +188,7 @@ class MainActivity : ComponentActivity() {
             Text("Parce que la connaissance libère.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (onSettings != null) IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Paramètres") }
+        else if (trailingText != null) Text(trailingText, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -388,19 +396,35 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, boosterProgress: BoosterProgress, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, onOpenBooster: () -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit) {
+@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, boosterProgress: BoosterProgress, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, onOpenBooster: () -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit, onDebugClearCollection: () -> Unit) {
     var showDebugMenu by remember { mutableStateOf(false) }
+    var showClearCollectionConfirmation by remember { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
     Column(Modifier.fillMaxSize()) {
         TopLine("Accueil", onBack)
         DeveloperTools.CollectionTitle { showDebugMenu = true }
-        DeveloperTools.MenuDialog(showDebugMenu, debugCanRestore, { showDebugMenu = false }, { showDebugMenu = false; onDebugUnlockAll() }, { showDebugMenu = false; onDebugPreviewAll() }, { showDebugMenu = false; onDebugRegenerateWallpaper() }, { showDebugMenu = false; onDebugRunDailyRenewal() }, { showDebugMenu = false; onDebugRestore() })
+        DeveloperTools.MenuDialog(
+            showDebugMenu,
+            debugCanRestore,
+            { showDebugMenu = false },
+            { showDebugMenu = false; onDebugUnlockAll() },
+            { showDebugMenu = false; onDebugPreviewAll() },
+            { showDebugMenu = false; onDebugRegenerateWallpaper() },
+            { showDebugMenu = false; onDebugRunDailyRenewal() },
+            { showDebugMenu = false; onDebugRestore() },
+            { showDebugMenu = false; showClearCollectionConfirmation = true }
+        )
+        DeveloperTools.ClearCollectionDialog(
+            showClearCollectionConfirmation,
+            { showClearCollectionConfirmation = false },
+            { showClearCollectionConfirmation = false; onDebugClearCollection() }
+        )
         Text("Ma collection", Modifier.padding(horizontal = 24.dp, vertical = 6.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         Text("${cards.size} carte${if (cards.size == 1) "" else "s"}", Modifier.padding(horizontal = 24.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyMedium)
         Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Découvrir 5 nouvelles cartes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text("Regarder une publicité pour agrandir sa collection.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Regardez une publicité pour agrandir votre collection.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("${boosterProgress.discovered} / ${boosterProgress.total} anecdotes découvertes", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
                 val canOpenBooster = BoosterPolicy.canOfferRewardedAd(boosterProgress.total, boosterProgress.discovered)
                 Button(onClick = onOpenBooster, enabled = canOpenBooster, modifier = Modifier.fillMaxWidth()) {
@@ -458,12 +482,10 @@ class MainActivity : ComponentActivity() {
                         BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             val requestedWidth = measuredHomeSize?.width ?: (maxWidth - 44.dp).coerceAtLeast(0.dp)
                             val requestedHeight = measuredHomeSize?.height ?: maxHeight
-                            val fitScale = if (requestedWidth > 0.dp && requestedHeight > 0.dp) {
-                                minOf(1f, maxWidth / requestedWidth, maxHeight / requestedHeight)
-                            } else 1f
+                            val fittedSize = fitCardSize(requestedWidth, requestedHeight, maxWidth, maxHeight)
                             FlipCard(
                                 fact = fact,
-                                modifier = Modifier.size(requestedWidth * fitScale, requestedHeight * fitScale),
+                                modifier = Modifier.size(fittedSize.width, fittedSize.height),
                                 resetKey = pagerState.currentPage,
                                 onLoadReference = onLoadReference,
                                 onOpenExplanation = { currentCardId = fact.id; onOpenExplanation(fact) }
@@ -483,9 +505,17 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private fun fitCardSize(requestedWidth: Dp, requestedHeight: Dp, maxWidth: Dp, maxHeight: Dp): DpSize {
+    val scale = if (requestedWidth > 0.dp && requestedHeight > 0.dp) {
+        minOf(1f, maxWidth / requestedWidth, maxHeight / requestedHeight)
+    } else 1f
+    return DpSize(requestedWidth * scale, requestedHeight * scale)
+}
+
 @Composable private fun BoosterScreen(
     progress: BoosterProgress,
     collection: List<AnecdoteWithCategory>,
+    homeCardSize: IntSize,
     consent: AdsConsentState,
     awards: Flow<BoosterAwardResult>,
     onBack: () -> Unit,
@@ -508,11 +538,10 @@ class MainActivity : ComponentActivity() {
     val revealedIds = remember(revealedIdsEncoded) { revealedIdsEncoded.split('|').filter(String::isNotBlank).toSet() }
     var packOpened by rememberSaveable { mutableStateOf(false) }
     var packFullyOpened by rememberSaveable { mutableStateOf(false) }
-    var skipPackAnimation by remember { mutableStateOf(false) }
     val animationsEnabled = ValueAnimator.areAnimatorsEnabled()
     val openingProgress by animateFloatAsState(
         targetValue = if (packOpened) 1f else 0f,
-        animationSpec = if (animationsEnabled && !skipPackAnimation && !packFullyOpened) tween(620, easing = FastOutSlowInEasing) else snap(),
+        animationSpec = if (animationsEnabled && !packFullyOpened) tween(620, easing = FastOutSlowInEasing) else snap(),
         label = "booster-pack-opening"
     )
     val pagerState = rememberPagerState(pageCount = { displayCards.size })
@@ -532,7 +561,6 @@ class MainActivity : ComponentActivity() {
                 revealedIdsEncoded = ""
                 packOpened = false
                 packFullyOpened = false
-                skipPackAnimation = false
                 errorMessage = null
                 pagerState.scrollToPage(0)
             } else {
@@ -542,8 +570,8 @@ class MainActivity : ComponentActivity() {
     }
 
     Column(Modifier.fillMaxSize()) {
-        TopLine("Ma collection", onBack)
-        Text("Booster", Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+        val pageCounter = if (packFullyOpened && displayCards.isNotEmpty()) "${pagerState.settledPage + 1} / ${displayCards.size}" else null
+        TopLine("Ma collection", onBack, trailingText = pageCounter)
         if (displayCards.isEmpty()) {
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 24.dp),
@@ -600,61 +628,60 @@ class MainActivity : ComponentActivity() {
                 }
                 errorMessage?.let { Text(it, Modifier.padding(top = 14.dp), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
             }
-        } else if (!packFullyOpened) {
-            Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text("Ton paquet est prêt", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                Text("Tes cartes sont déjà enregistrées dans ta collection.", Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                BoosterPack(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp, max = 430.dp).padding(top = 8.dp),
-                    openingProgress = openingProgress,
-                    gestureEnabled = !packOpened,
-                    onOpen = { packOpened = true }
-                )
-                Text(
-                    if (packOpened) "Le paquet s’ouvre…" else "Glisser pour ouvrir →",
-                    Modifier.padding(top = 2.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Button(
-                    onClick = { packOpened = true },
-                    enabled = !packOpened,
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
-                ) {
-                    Text(if (packOpened) "Ouverture en cours" else "Ouvrir le paquet")
-                }
-                TextButton(
-                    onClick = { skipPackAnimation = true; packOpened = true; packFullyOpened = true },
-                    enabled = openingProgress < 0.999f,
-                    modifier = Modifier.padding(top = 2.dp)
-                ) { Text("Passer l’animation") }
-            }
         } else {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("${displayCards.size} nouvelle${if (displayCards.size == 1) " carte" else "s cartes"}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                TextButton(onClick = { revealedIdsEncoded = displayCards.joinToString("|") { it.id } }) { Text("Tout révéler") }
-            }
-            HorizontalPager(state = pagerState, modifier = Modifier.weight(1f).fillMaxWidth(), key = { displayCards[it].id }) { page ->
-                val fact = displayCards[page]
-                BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    val cardWidth = minOf(maxWidth - 32.dp, (maxHeight - 24.dp) * 0.68f)
-                    val cardHeight = minOf(maxHeight - 24.dp, cardWidth / 0.68f)
-                    RewardRevealCard(
-                        fact = fact,
-                        revealed = fact.id in revealedIds,
-                        modifier = Modifier.size(cardWidth, cardHeight),
-                        onReveal = { revealedIdsEncoded = (revealedIds + fact.id).joinToString("|") },
-                        onLoadReference = onLoadReference,
-                        onOpenExplanation = { onOpenExplanation(fact) }
-                    )
+            Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    val density = LocalDensity.current
+                    val referenceSize = with(density) {
+                        if (homeCardSize.width > 0 && homeCardSize.height > 0) {
+                            DpSize(homeCardSize.width.toDp(), homeCardSize.height.toDp())
+                        } else null
+                    }
+                    val referenceWidth = referenceSize?.width ?: (maxWidth - 44.dp).coerceAtLeast(0.dp)
+                    val previousCardAreaHeight = (maxHeight - 48.dp).coerceAtLeast(0.dp)
+                    val referenceHeight = referenceSize?.height ?: previousCardAreaHeight
+                    val fittedSize = fitCardSize(referenceWidth, referenceHeight, maxWidth, previousCardAreaHeight)
+                    val preservedTopSpace = ((previousCardAreaHeight - fittedSize.height) / 2).coerceAtLeast(0.dp)
+                    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(Modifier.height(preservedTopSpace))
+                        Box(Modifier.fillMaxWidth().height(fittedSize.height), contentAlignment = Alignment.Center) {
+                            if (!packFullyOpened) {
+                                BoosterPack(
+                                    modifier = Modifier
+                                        .size(fittedSize.width, fittedSize.height)
+                                        .semantics {
+                                            customActions = listOf(
+                                                CustomAccessibilityAction("Ouvrir le paquet en faisant glisser") {
+                                                    if (!packOpened) {
+                                                        packOpened = true
+                                                        true
+                                                    } else false
+                                                }
+                                            )
+                                        },
+                                    openingProgress = openingProgress,
+                                    gestureEnabled = !packOpened,
+                                    onOpen = { packOpened = true }
+                                )
+                            } else {
+                                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { displayCards[it].id }) { page ->
+                                    val fact = displayCards[page]
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        RewardRevealCard(
+                                            fact = fact,
+                                            revealed = fact.id in revealedIds,
+                                            modifier = Modifier.size(fittedSize.width, fittedSize.height),
+                                            onReveal = { revealedIdsEncoded = (revealedIds + fact.id).joinToString("|") },
+                                            onLoadReference = onLoadReference,
+                                            onOpenExplanation = { onOpenExplanation(fact) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            Text("${pagerState.settledPage + 1} / ${displayCards.size}", Modifier.fillMaxWidth().padding(vertical = 8.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-            Button(onClick = onBack, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) { Text("Retour à ma collection") }
         }
     }
 }
@@ -664,6 +691,23 @@ internal fun boosterPackSwipeOpens(progress: Float): Boolean = progress.coerceIn
 private val BoosterIvory = Color(0xFFF7F3E8)
 private val BoosterCoral = Color(0xFFFF6347)
 private val BoosterTurquoise = Color(0xFF00A995)
+
+private fun tornEdgeOffset(xFraction: Float, amplitudePx: Float): Float {
+    val t = xFraction.coerceIn(0f, 1f)
+    val envelope = sin(t * PI).toFloat()
+    val waviness = sin(t * PI * 13.0).toFloat() * 0.58f + sin(t * PI * 27.0).toFloat() * 0.24f
+    return envelope * waviness * amplitudePx
+}
+
+private fun Path.appendTornEdge(endX: Float, width: Float, baseY: Float, stepPx: Float, amplitudePx: Float) {
+    if (endX <= 0f) return
+    var x = 0f
+    while (x < endX) {
+        lineTo(x, baseY + tornEdgeOffset(x / width, amplitudePx))
+        x += stepPx
+    }
+    lineTo(endX, baseY + tornEdgeOffset(endX / width, amplitudePx))
+}
 
 @Composable private fun BoosterPack(
     modifier: Modifier = Modifier,
@@ -675,15 +719,62 @@ private val BoosterTurquoise = Color(0xFF00A995)
     val animationScope = rememberCoroutineScope()
     val animationsEnabled = ValueAnimator.areAnimatorsEnabled()
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-        val packWidth = minOf(maxWidth * 0.91f, maxHeight * 0.76f)
-        val packHeight = minOf(packWidth * 1.3f, maxHeight * 0.98f)
+        val packWidth = maxWidth
+        val packHeight = maxHeight
+        val emblemSize = minOf(packWidth * 0.22f, packHeight * 0.12f)
+        val density = LocalDensity.current
+        val tearShapeProgress = maxOf(tearProgress, openingProgress).coerceIn(0f, 1f)
+        val tearBandHeight = with(density) { 42.dp.toPx() }
+        val tearAmplitude = with(density) { 2.8.dp.toPx() }
+        val tearStep = with(density) { 5.dp.toPx() }
+        val cornerRadius = with(density) { 24.dp.toPx() }
+        val pouchShape = remember(tearShapeProgress, tearBandHeight, tearAmplitude, tearStep) {
+            GenericShape { size, _ ->
+                val cutX = size.width * tearShapeProgress
+                if (cutX > 0f) {
+                    moveTo(0f, 0f)
+                    lineTo(0f, tearBandHeight + tornEdgeOffset(0f, tearAmplitude))
+                    appendTornEdge(cutX, size.width, tearBandHeight, tearStep, tearAmplitude)
+                    lineTo(cutX, 0f)
+                    lineTo(size.width - cornerRadius, 0f)
+                    quadraticTo(size.width, 0f, size.width, cornerRadius)
+                } else {
+                    moveTo(cornerRadius, 0f)
+                    lineTo(size.width - cornerRadius, 0f)
+                    quadraticTo(size.width, 0f, size.width, cornerRadius)
+                }
+                lineTo(size.width, size.height - cornerRadius)
+                quadraticTo(size.width, size.height, size.width - cornerRadius, size.height)
+                lineTo(cornerRadius, size.height)
+                quadraticTo(0f, size.height, 0f, size.height - cornerRadius)
+                if (cutX == 0f) {
+                    lineTo(0f, cornerRadius)
+                    quadraticTo(0f, 0f, cornerRadius, 0f)
+                }
+                close()
+            }
+        }
+        val detachedStripShape = remember(tearShapeProgress, tearBandHeight, tearAmplitude, tearStep) {
+            GenericShape { size, _ ->
+                val cutX = size.width * tearShapeProgress
+                moveTo(0f, 0f)
+                lineTo(cutX, 0f)
+                lineTo(cutX, tearBandHeight + tornEdgeOffset(tearShapeProgress, tearAmplitude))
+                var x = cutX
+                while (x > 0f) {
+                    lineTo(x, tearBandHeight + tornEdgeOffset(x / size.width, tearAmplitude))
+                    x -= tearStep
+                }
+                lineTo(0f, tearBandHeight + tornEdgeOffset(0f, tearAmplitude))
+                close()
+            }
+        }
         Box(Modifier.width(packWidth).height(packHeight), contentAlignment = Alignment.TopCenter) {
             // Cards peek out from behind the pouch as its front panel opens.
             listOf(-7f, 0f, 7f).forEachIndexed { index, rotation ->
                 BoosterCardSleeve(
                     Modifier
-                        .width(packWidth * 0.76f)
-                        .aspectRatio(0.68f)
+                        .size(packWidth, packHeight)
                         .align(Alignment.TopCenter)
                         .offset(y = packHeight * (0.13f - openingProgress * 0.47f))
                         .rotate(rotation)
@@ -691,24 +782,31 @@ private val BoosterTurquoise = Color(0xFF00A995)
                 )
             }
 
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.88f + (1f - openingProgress) * 0.12f)
-                    .align(Alignment.BottomCenter)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(BoosterCoral)
-                    .border(1.dp, Color(0xFFCF513E), RoundedCornerShape(24.dp))
-            ) {
+            // The turquoise inner lining is only visible where the front face has torn away.
+            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).background(BoosterTurquoise))
+
+            Box(Modifier.fillMaxSize().clip(pouchShape).background(BoosterCoral).border(1.dp, Color(0xFFCF513E), pouchShape)) {
                 Canvas(Modifier.fillMaxSize()) {
                     drawCircle(BoosterTurquoise.copy(alpha = 0.25f), radius = size.width * 0.3f, center = Offset(size.width * 0.78f, size.height * 0.63f))
                     drawCircle(BoosterIvory.copy(alpha = 0.18f), radius = size.width * 0.43f, center = Offset(size.width * 0.12f, size.height * 0.84f))
                     drawLine(BoosterIvory.copy(alpha = 0.36f), Offset(size.width * 0.08f, size.height * 0.84f), Offset(size.width * 0.92f, size.height * 0.84f), strokeWidth = 1.dp.toPx())
                 }
-                Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.fillMaxWidth().height(42.dp).align(Alignment.TopCenter).background(BoosterIvory)) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val y = size.height - 1.5.dp.toPx()
+                        drawLine(BoosterCoral.copy(alpha = 0.7f), Offset(8.dp.toPx(), y), Offset(size.width - 8.dp.toPx(), y), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())))
+                        val grip = Path().apply {
+                            moveTo(17.dp.toPx(), 13.dp.toPx())
+                            lineTo(23.dp.toPx(), size.height / 2f)
+                            lineTo(17.dp.toPx(), size.height - 13.dp.toPx())
+                        }
+                        drawPath(grip, BoosterTurquoise, style = Stroke(width = 2.dp.toPx()))
+                    }
+                }
+                Column(Modifier.fillMaxSize().padding(horizontal = 18.dp).padding(top = 54.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("IN ILLUSIO", style = MaterialTheme.typography.labelMedium, letterSpacing = 2.2.sp, color = BoosterIvory, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
-                    Box(Modifier.size(68.dp).clip(RoundedCornerShape(20.dp)).background(BoosterIvory), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(emblemSize).clip(RoundedCornerShape(20.dp)).background(BoosterIvory), contentAlignment = Alignment.Center) {
                         Image(painterResource(R.drawable.illusio_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                     }
                     Spacer(Modifier.weight(1f))
@@ -716,23 +814,36 @@ private val BoosterTurquoise = Color(0xFF00A995)
                 }
             }
 
-            // The perforated tear strip follows the finger horizontally.
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(42.dp)
-                    .align(Alignment.TopCenter)
-                    .graphicsLayer {
-                        translationX = maxOf(tearProgress, openingProgress).coerceIn(0f, 1f) * size.width * 0.82f
-                        translationY = -openingProgress * size.height * 0.13f
-                        rotationZ = openingProgress * 13f
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
-                        alpha = (1f - openingProgress * 0.25f).coerceIn(0f, 1f)
+            if (tearShapeProgress > 0f) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(detachedStripShape)
+                        .graphicsLayer {
+                            translationX = tearShapeProgress * 5.dp.toPx()
+                            translationY = -tearProgress * 4.dp.toPx() - openingProgress * 34.dp.toPx()
+                            rotationZ = tearProgress * 2f + openingProgress * 10f
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                        }
+                        .shadow((1f + tearProgress * 2f + openingProgress * 2f).dp, detachedStripShape)
+                        .clip(detachedStripShape)
+                        .background(BoosterIvory)
+                        .border(1.dp, BoosterCoral.copy(alpha = 0.72f), detachedStripShape)
+                ) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val y = size.height - 1.5.dp.toPx()
+                        drawLine(BoosterCoral.copy(alpha = 0.7f), Offset(8.dp.toPx(), y), Offset(size.width - 8.dp.toPx(), y), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())))
                     }
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 10.dp, bottomEnd = 10.dp))
-                    .background(BoosterIvory)
-                    .then(
-                        if (gestureEnabled) Modifier.pointerInput(gestureEnabled) {
+                }
+            }
+            if (gestureEnabled) {
+                // Keep the touch target fixed to the package's tear strip even as the torn piece lifts away.
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                        .align(Alignment.TopCenter)
+                        .pointerInput(gestureEnabled) {
                             var dragFraction = 0f
                             detectDragGestures(
                                 onDragStart = { dragFraction = 0f; tearProgress = 0f },
@@ -758,20 +869,9 @@ private val BoosterTurquoise = Color(0xFF00A995)
                                 dragFraction = (dragFraction + dragAmount.x / size.width.coerceAtLeast(1)).coerceIn(0f, 1f)
                                 tearProgress = dragFraction
                             }
-                        } else Modifier
-                    )
-            ) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val y = size.height - 1.5.dp.toPx()
-                    drawLine(BoosterCoral.copy(alpha = 0.58f), Offset(12.dp.toPx(), y), Offset(size.width - 12.dp.toPx(), y), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())) )
-                    for (x in 14.dp.toPx().toInt()..(size.width - 14.dp.toPx()).toInt() step 12.dp.toPx().toInt().coerceAtLeast(1)) {
-                        drawCircle(BoosterTurquoise.copy(alpha = 0.65f), radius = 1.5.dp.toPx(), center = Offset(x.toFloat(), size.height * 0.48f))
-                    }
-                }
-                Text("DÉCHIRER", Modifier.align(Alignment.Center), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.3.sp, color = BoosterCoral, fontWeight = FontWeight.Bold)
+                        }
+                )
             }
-
-            Text("GLISSER →", Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 10.dp), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = BoosterIvory.copy(alpha = 0.92f), fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -813,11 +913,6 @@ private val BoosterTurquoise = Color(0xFF00A995)
         Canvas(Modifier.fillMaxSize()) {
             val inset = 12.dp.toPx()
             drawRoundRect(BoosterCoral.copy(alpha = 0.7f), topLeft = Offset(inset, inset), size = androidx.compose.ui.geometry.Size(size.width - inset * 2f, size.height - inset * 2f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.dp.toPx()), style = Stroke(1.dp.toPx()))
-            val step = 12.dp.toPx()
-            for (x in 20.dp.toPx().toInt()..(size.width - 20.dp.toPx()).toInt() step step.toInt().coerceAtLeast(1)) {
-                drawCircle(BoosterTurquoise.copy(alpha = 0.22f), radius = 1.25.dp.toPx(), center = Offset(x.toFloat(), 22.dp.toPx()))
-                drawCircle(BoosterCoral.copy(alpha = 0.2f), radius = 1.25.dp.toPx(), center = Offset(x.toFloat(), size.height - 22.dp.toPx()))
-            }
             drawCircle(BoosterTurquoise.copy(alpha = 0.16f), radius = size.width * 0.19f, center = Offset(size.width * 0.82f, size.height * 0.24f))
             drawCircle(BoosterCoral.copy(alpha = 0.12f), radius = size.width * 0.15f, center = Offset(size.width * 0.18f, size.height * 0.76f))
         }

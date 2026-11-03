@@ -1,6 +1,7 @@
 package fr.inillusio.data
 
 import androidx.room.Room
+import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.inillusio.data.importer.CatalogImporter
@@ -8,6 +9,7 @@ import fr.inillusio.data.local.InIllusioDatabase
 import fr.inillusio.data.local.dao.AnecdoteWithCategory
 import fr.inillusio.data.local.dao.BoosterProgress
 import fr.inillusio.data.local.entities.CollectionEntity
+import fr.inillusio.data.local.entities.DeliveryEntity
 import fr.inillusio.data.preferences.UserPreferences
 import fr.inillusio.data.repository.CatalogRepository
 import kotlinx.coroutines.flow.first
@@ -124,6 +126,36 @@ class BoosterRepositoryTest {
         val nextDay = repository.dailyAnecdote(firstDay.plusDays(1))
 
         assertEquals("fiction-8", nextDay?.id)
+    }
+
+    @Test fun clearingCollectionPreservesCatalogDeliveryAndRedemptionsAndAllowsNewBoosterCards() = runBlocking {
+        importer().importJson(catalog((1..7).map { fact("fiction-$it") }))
+        val firstReward = repository.redeemBooster("reward-before-reset", 800L)
+        dao.putDelivery(DeliveryEntity(anecdoteId = "fiction-1", attemptedAt = 801L, succeeded = true))
+        val catalogIdsBeforeReset = dao.allAnecdotes().map { it.id }.toSet()
+
+        database.withTransaction { dao.clearCollection() }
+
+        assertEquals(5, firstReward.cards.size)
+        assertTrue(dao.observeCollection().first().isEmpty())
+        assertEquals(BoosterProgress(0, 7), repository.boosterProgress.first())
+        assertEquals(catalogIdsBeforeReset, dao.allAnecdotes().map { it.id }.toSet())
+        assertTrue(dao.hasSuccessfulDelivery("fiction-1"))
+        assertEquals(7, dao.uncollectedValidatedAnecdotes().size)
+        assertTrue(repository.redeemBooster("reward-before-reset", 802L).duplicateRedemption)
+        val nextReward = repository.redeemBooster("reward-after-reset", 803L)
+        assertEquals(5, nextReward.cards.size)
+        assertEquals(5, dao.observeCollection().first().size)
+    }
+
+    @Test fun clearingAnAlreadyEmptyCollectionIsIdempotent() = runBlocking {
+        importer().importJson(catalog(listOf(fact("fiction-empty"))))
+
+        database.withTransaction { dao.clearCollection() }
+        database.withTransaction { dao.clearCollection() }
+
+        assertTrue(dao.observeCollection().first().isEmpty())
+        assertEquals(BoosterProgress(0, 1), repository.boosterProgress.first())
     }
 
     private fun importer() = CatalogImporter(ApplicationProvider.getApplicationContext(), database)

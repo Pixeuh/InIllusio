@@ -11,6 +11,7 @@ In Illusio est une application Android qui propose une anecdote quotidienne de s
 - Renouvellement quotidien facultatif, activé uniquement avec le consentement de l’utilisateur.
 - Éditeur graphique local pour consulter et modifier le catalogue JSON.
 - Boosters facultatifs : une publicité récompensée confirmée peut ajouter jusqu’à cinq anecdotes validées à la collection.
+- Menu développeur réservé à DEBUG, avec réinitialisation confirmée de la collection pour les tests ; la diffusion quotidienne et ses historiques restent préservés.
 
 L’application fonctionne sans compte ni serveur. Le renouvellement quotidien dépend de WorkManager et peut être retardé par Android. Les fonds d’écran sont appliqués exclusivement à l’écran de verrouillage.
 

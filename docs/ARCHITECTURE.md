@@ -27,6 +27,8 @@ Les positions du texte principal et du bloc des sources sont persistées indépe
 
 Dans les builds debug, sept appuis rapides sur le titre de la collection ouvrent le menu développeur. Le déblocage enregistre une seule fois l’état complet des lignes de collection dans un DataStore séparé, puis utilise l’insertion Room idempotente. La restauration remplace atomiquement la collection par cette sauvegarde et efface celle-ci après succès. La prévisualisation lit le catalogue et n’écrit rien dans Room. « Régénérer et appliquer » appelle à nouveau le renderer sans cache, puis `WallpaperManager.setBitmap` avec `FLAG_LOCK` seulement ; cette action de diagnostic ne crée pas d’entrée d’historique et ne change pas le fond d’accueil.
 
+Le menu DEBUG permet aussi de vider la collection après confirmation. L’opération supprime uniquement les lignes `collection` dans une transaction Room ; catalogue, préférences, sélections quotidiennes, `delivery_history` et clés `booster_redemptions` restent intacts. Un verrou sérialise l’effacement avec l’attribution d’une récompense ; l’effacement invalide les récompenses en attente pour éviter qu’elles ne repeuplent silencieusement la collection.
+
 ## Boosters et consentement publicitaire
 
 Le bouton de la collection ouvre un écran dédié. AdMob Rewarded est chargé à la suite d’une action utilisateur, seulement si UMP autorise les demandes (`canRequestAds()`). Le gestionnaire n’émet une récompense qu’au callback `onUserEarnedReward`; fermeture sans récompense, échec de chargement ou d’affichage n’appelle pas le repository. `InIllusioApplication` exécute ensuite l’attribution dans son scope applicatif afin qu’un départ de l’écran d’animation n’annule pas la sauvegarde.

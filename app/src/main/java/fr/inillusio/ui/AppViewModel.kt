@@ -209,6 +209,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun debugClearCollection() {
+        if (!BuildConfig.DEBUG) return
+        viewModelScope.launch {
+            runCatching { DeveloperTools.clearCollection(app) }
+                .onSuccess { _message.value = "Collection vidée." }
+                .onFailure { error -> _message.value = error.message ?: "Échec de la réinitialisation de la collection." }
+        }
+    }
+
     fun debugRegenerateAndApplyWallpaper(darkTheme: Boolean) {
         if (!BuildConfig.DEBUG) return
         val fact = _daily.value ?: run {

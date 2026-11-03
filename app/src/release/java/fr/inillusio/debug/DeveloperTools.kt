@@ -16,11 +16,13 @@ object DeveloperTools {
     suspend fun allAnecdotes(application: InIllusioApplication): List<AnecdoteWithCategory> = emptyList()
     suspend fun unlockAll(application: InIllusioApplication): Int = error("Outils développeur indisponibles.")
     suspend fun restoreCollection(application: InIllusioApplication): Int = error("Outils développeur indisponibles.")
+    suspend fun clearCollection(application: InIllusioApplication): Unit = error("Outils développeur indisponibles.")
 
     @Composable fun CollectionTitle(onOpenMenu: () -> Unit) {
         Text("SCIENCES HUMAINES", Modifier, style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.secondary)
     }
 
-    @Composable fun MenuDialog(open: Boolean, canRestore: Boolean, onDismiss: () -> Unit, onUnlockAll: () -> Unit, onPreviewAll: () -> Unit, onRegenerateWallpaper: () -> Unit, onRunDailyRenewal: () -> Unit, onRestore: () -> Unit) = Unit
+    @Composable fun MenuDialog(open: Boolean, canRestore: Boolean, onDismiss: () -> Unit, onUnlockAll: () -> Unit, onPreviewAll: () -> Unit, onRegenerateWallpaper: () -> Unit, onRunDailyRenewal: () -> Unit, onRestore: () -> Unit, onClearCollection: () -> Unit) = Unit
+    @Composable fun ClearCollectionDialog(open: Boolean, onDismiss: () -> Unit, onConfirm: () -> Unit) = Unit
     @Composable fun PreviewScreen(cards: List<AnecdoteWithCategory>, onBack: () -> Unit) = Unit
 }

@@ -15,6 +15,7 @@
 - Palettes principale/secondaire centralisées par discipline et partagées entre l’application, le renderer du fond verrouillé et l’éditeur graphique.
 - Suppression de tous les numéros individuels visibles, avec conservation des identifiants techniques.
 - Menu développeur uniquement en debug (7 appuis rapides sur le titre de collection), déblocage idempotent des 24 anecdotes avec sauvegarde persistante, restauration exacte, prévisualisation sans mutation et régénération/application de l’affiche sur le verrouillage uniquement ; build release sans interface ni code de mutation développeur.
+- Réinitialisation de collection disponible dans le menu DEBUG, avec confirmation, effacement transactionnel des seules acquisitions Room et invalidation des attributions de booster en attente ; le catalogue et les historiques de diffusion sont conservés.
 - 8 tests unitaires et 8 tests Android ciblés exécutés : sélection/consentement/collection, idempotence des imports, archivage, JSON invalide, proportions d’illustration, décalage et textes courts/longs dans les deux thèmes à 1080 × 2400.
 - Documentation produit, architecture, données et consignes agent.
 - Boosters facultatifs avec UMP/AdMob Rewarded, progression de collection, IDs de test réservés à DEBUG, attribution Room transactionnelle et idempotente, migration non destructive 2→3 et écran de révélation réutilisant les cartes officielles.
