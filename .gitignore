@@ -1,0 +1,58 @@
+# Gradle, Kotlin and Android build output
+.gradle/
+**/.gradle/
+.kotlin/
+**/.kotlin/
+build/
+**/build/
+out/
+
+# Local IDE state
+.idea/
+*.iml
+.vscode/.ropeproject/
+
+# Local SDK configuration and machine-specific files
+local.properties
+*.local.properties
+
+# Generated Android packages and signing material
+*.apk
+*.aab
+*.ap_
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+*.cer
+*.crt
+
+# Credentials and environment-specific secrets
+.env
+.env.*
+!.env.example
+**/secrets.*
+**/credentials.*
+google-services.json
+key.properties
+keystore.properties
+
+# Generated packages and temporary editor files
+dist/
+editor/.cache/
+editor/.tmp/
+editor/tmp/
+editor/temp/
+editor/*.tmp
+editor/*.bak
+editor/*.backup
+*~
+*.swp
+*.swo
+
+# Operating system files
+Thumbs.db
+Desktop.ini
+.DS_Store
