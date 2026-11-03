@@ -96,6 +96,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun showSources(id: String) = viewModelScope.launch { _sources.value = repository.sources(id) }
+    suspend fun cardCitation(id: String): String? =
+        repository.sources(id).firstOrNull()?.shortCitation()?.takeIf(String::isNotBlank)
     fun setTheme(theme: AppTheme) = viewModelScope.launch { app.preferences.setTheme(theme) }
     fun setRefreshEnabled(enabled: Boolean) = viewModelScope.launch {
         app.preferences.setWallpaperRefresh(enabled)

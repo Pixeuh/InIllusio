@@ -28,4 +28,26 @@ class BibliographicCitationTest {
         assertEquals("Dehasque et al. · Temporal dynamics of woolly… · 2024", citation)
         assertTrue(citation.length < 55)
     }
+
+    @Test fun cardCitationUsesTheExistingPrimaryAuthorTitleAndYearFormat() {
+        val citation = SourceDetails(
+            type = "article",
+            title = "Anatomie du goût — Actes de la recherche en sciences sociales",
+            year = 1976,
+            author = "Pierre Bourdieu et Monique de Saint Martin"
+        ).shortCitation()
+
+        assertEquals("Bourdieu · Anatomie du goût · 1976", citation)
+    }
+
+    @Test fun optionalBibliographicFieldsAreOmitted() {
+        val citation = SourceDetails(
+            type = "rapport",
+            title = "Rapport de recherche",
+            year = null,
+            author = null
+        ).shortCitation()
+
+        assertEquals("Rapport de recherche", citation)
+    }
 }
