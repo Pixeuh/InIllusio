@@ -9,6 +9,7 @@ import fr.horscadre.BuildConfig
 import fr.horscadre.data.local.dao.AnecdoteWithCategory
 import fr.horscadre.data.local.dao.SourceDetails
 import fr.horscadre.data.preferences.AppTheme
+import fr.horscadre.data.preferences.CollectionDisplayMode
 import fr.horscadre.data.preferences.PreferencesState
 import fr.horscadre.data.repository.CatalogRepository
 import fr.horscadre.domain.shortCitation
@@ -105,6 +106,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun repositoryWasDelivered(id: String) = app.database.catalogDao().hasSuccessfulDelivery(id)
     fun showSources(id: String) = viewModelScope.launch { _sources.value = repository.sources(id) }
     fun setTheme(theme: AppTheme) = viewModelScope.launch { app.preferences.setTheme(theme) }
+    fun setCollectionDisplayMode(mode: CollectionDisplayMode) = viewModelScope.launch { app.preferences.setCollectionDisplayMode(mode) }
     fun setRefreshEnabled(enabled: Boolean) = viewModelScope.launch {
         app.preferences.setWallpaperRefresh(enabled)
         DailyWallpaperScheduler.setEnabled(app, enabled)

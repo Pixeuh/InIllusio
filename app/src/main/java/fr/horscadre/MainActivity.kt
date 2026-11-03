@@ -10,6 +10,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,6 +20,8 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.launch
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
@@ -36,6 +40,7 @@ import fr.horscadre.data.local.dao.AnecdoteWithCategory
 import fr.horscadre.BuildConfig
 import fr.horscadre.debug.DeveloperTools
 import fr.horscadre.data.preferences.AppTheme
+import fr.horscadre.data.preferences.CollectionDisplayMode
 import fr.horscadre.CatalogImportState
 import fr.horscadre.ui.AppViewModel
 import fr.horscadre.ui.illustration.CategoryIllustration
@@ -81,7 +86,7 @@ class MainActivity : ComponentActivity() {
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
                         composable("home") { HomeScreen(daily, dailyLoaded, daily?.let { it.id in savedIds } == true, daily?.let { it.id in deliveredIds } == true, { daily?.let { model.save(it.id) } }, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
                         composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true, selected?.let { it.id in deliveredIds } == true) }
-                        composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { selected = it; model.showSources(it.id); navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
+                        composable("collection") { CollectionScreen(collection, prefs.collectionDisplayMode, selected?.id, model::setCollectionDisplayMode, { navController.popBackStack() }, { selected = it; model.showSources(it.id); navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
                         composable("card") { CardScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") { SettingsScreen(prefs.theme, dark, prefs.wallpaperRefreshEnabled, prefs.wallpaperTextOffset, daily, reference, wallpaperPreview, { model.setTheme(it) }, { model.setRefreshEnabled(it) }, { model.scheduleWallpaperTextOffsetSave(it) }, { model.persistWallpaperTextOffset(it) }, { model.resetWallpaperTextOffset() }, { fact, source, darkTheme, offset -> model.prepareWallpaperPreview(fact, source, darkTheme, offset) }, { fact, source, darkTheme, offset -> model.applyWallpaper(fact, source, darkTheme, offset) }, { navController.popBackStack() }) }
@@ -203,22 +208,61 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit) {
+@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, displayMode: CollectionDisplayMode, selectedCardId: String?, onDisplayMode: (CollectionDisplayMode) -> Unit, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit) {
     var showDebugMenu by remember { mutableStateOf(false) }
+    var currentCardId by rememberSaveable { mutableStateOf(selectedCardId) }
+    val cardIds = remember(cards) { cards.map { it.id } }
+    val pagerScope = rememberCoroutineScope()
+    val initialPage = cardIds.indexOf(currentCardId ?: selectedCardId).coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { cards.size })
+    LaunchedEffect(pagerState.currentPage) {
+        cards.getOrNull(pagerState.currentPage)?.let { currentCardId = it.id }
+    }
+    LaunchedEffect(displayMode, selectedCardId, currentCardId) {
+        if (displayMode == CollectionDisplayMode.CAROUSEL && cards.isNotEmpty()) {
+            val target = cardIds.indexOf(currentCardId ?: selectedCardId).takeIf { it >= 0 } ?: pagerState.currentPage.coerceIn(cards.indices)
+            if (target != pagerState.currentPage) pagerState.animateScrollToPage(target)
+        }
+    }
+    LaunchedEffect(cardIds) {
+        if (cards.isNotEmpty()) {
+            val selectedPage = cardIds.indexOf(currentCardId)
+            val target = if (selectedPage >= 0) selectedPage else pagerState.currentPage.coerceIn(cards.indices)
+            if (target != pagerState.currentPage) pagerState.scrollToPage(target)
+            currentCardId = cards[target].id
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         TopLine("Accueil", onBack)
         DeveloperTools.CollectionTitle { showDebugMenu = true }
         DeveloperTools.MenuDialog(showDebugMenu, debugCanRestore, { showDebugMenu = false }, { showDebugMenu = false; onDebugUnlockAll() }, { showDebugMenu = false; onDebugPreviewAll() }, { showDebugMenu = false; onDebugRegenerateWallpaper() }, { showDebugMenu = false; onDebugRunDailyRenewal() }, { showDebugMenu = false; onDebugRestore() })
         Text("Ma collection", Modifier.padding(horizontal = 24.dp, vertical = 6.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         Text("${cards.size} carte${if (cards.size == 1) "" else "s"}", Modifier.padding(horizontal = 24.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyMedium)
-        if (cards.isEmpty()) Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center) }
-        else LazyVerticalGrid(columns = GridCells.Fixed(2), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.Center) {
+            FilterChip(selected = displayMode == CollectionDisplayMode.GRID, onClick = { onDisplayMode(CollectionDisplayMode.GRID) }, label = { Text("Grille") })
+            Spacer(Modifier.width(8.dp))
+            FilterChip(selected = displayMode == CollectionDisplayMode.CAROUSEL, onClick = { onDisplayMode(CollectionDisplayMode.CAROUSEL) }, label = { Text("Carrousel") })
+        }
+        if (cards.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center) }
+        else if (displayMode == CollectionDisplayMode.GRID) LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(cards, key = { it.id }) { fact ->
-                Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { currentCardId = fact.id; onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = MaterialTheme.colorScheme.secondary)
                     CategoryIllustration(fact.categoryId, Modifier.fillMaxWidth().height(94.dp))
                     Text(fact.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 3)
                 }
+            }
+        }
+        else {
+            HorizontalPager(state = pagerState, modifier = Modifier.weight(1f).fillMaxWidth(), key = { cards[it].id }) { page ->
+                cards.getOrNull(page)?.let { fact ->
+                    EditorialCard(fact, Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp).clickable { currentCardId = fact.id; onSelect(fact) })
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { pagerScope.launch { pagerState.animateScrollToPage((pagerState.currentPage - 1).coerceAtLeast(0)) } }, enabled = pagerState.currentPage > 0) { Text("‹") }
+                Text("${(pagerState.currentPage + 1).coerceIn(1, cards.size)} / ${cards.size}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { pagerScope.launch { pagerState.animateScrollToPage((pagerState.currentPage + 1).coerceAtMost(cards.lastIndex)) } }, enabled = pagerState.currentPage < cards.lastIndex) { Text("›") }
             }
         }
     }

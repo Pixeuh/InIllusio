@@ -5,7 +5,7 @@ Le projet est un module Android unique. Les responsabilités sont séparées par
 - `data/local/entities` : tables Room et relations normalisées.
 - `data/local/dao` : requêtes, flux de collection et opérations du catalogue.
 - `data/importer` : lecture du JSON embarqué et import idempotent.
-- `data/preferences` : thème, consentement et sélection quotidienne persistés dans DataStore.
+- `data/preferences` : thème, consentement, sélection quotidienne et mode d’affichage de la collection persistés dans DataStore.
 - `data/repository` : accès du domaine au catalogue, historique de diffusion et sauvegarde protégée.
 - `domain` : règles pures de sélection et d’éligibilité à la collection.
 - `ui/theme`, `ui/AppViewModel.kt`, `MainActivity.kt` : thème, états d’écran et parcours Compose initial.
