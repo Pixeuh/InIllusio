@@ -117,36 +117,44 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun completeOnboarding() = viewModelScope.launch { app.preferences.completeOnboarding() }
-    fun prepareWallpaperPreview(fact: AnecdoteWithCategory, reference: String?, darkTheme: Boolean, textVerticalOffset: Float) {
+    fun prepareWallpaperPreview(fact: AnecdoteWithCategory, reference: String?, darkTheme: Boolean, textVerticalOffset: Float, sourceVerticalOffset: Float) {
         wallpaperPreviewJob?.cancel()
-        _wallpaperPreview.value = null
         wallpaperPreviewJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(35)
             val artwork = withContext(Dispatchers.Default) {
-                WallpaperService(getApplication()).renderForCurrentDisplay(fact, reference, darkTheme, textVerticalOffset)
+                WallpaperService(getApplication()).renderForCurrentDisplay(fact, reference, darkTheme, textVerticalOffset, sourceVerticalOffset)
             }
-            if (_daily.value?.id == fact.id) _wallpaperPreview.value = artwork
+            if (isActive && _daily.value?.id == fact.id) _wallpaperPreview.value = artwork
         }
     }
-    fun scheduleWallpaperTextOffsetSave(offset: Float) {
+    fun scheduleWallpaperOffsetSave(textOffset: Float, sourceOffset: Float) {
         wallpaperOffsetSaveJob?.cancel()
         wallpaperOffsetSaveJob = viewModelScope.launch {
             kotlinx.coroutines.delay(350)
-            app.preferences.setWallpaperTextOffset(offset)
+            app.preferences.setWallpaperOffsets(textOffset, sourceOffset)
         }
     }
-    fun persistWallpaperTextOffset(offset: Float) {
+    fun persistWallpaperOffsets(textOffset: Float, sourceOffset: Float) {
         wallpaperOffsetSaveJob?.cancel()
-        wallpaperOffsetSaveJob = viewModelScope.launch { app.preferences.setWallpaperTextOffset(offset) }
+        wallpaperOffsetSaveJob = viewModelScope.launch { app.preferences.setWallpaperOffsets(textOffset, sourceOffset) }
     }
-    fun resetWallpaperTextOffset() {
+    fun resetWallpaperTextOffset(sourceOffset: Float) {
         wallpaperOffsetSaveJob?.cancel()
-        wallpaperOffsetSaveJob = viewModelScope.launch { app.preferences.resetWallpaperTextOffset() }
+        wallpaperOffsetSaveJob = viewModelScope.launch { app.preferences.setWallpaperOffsets(0f, sourceOffset) }
     }
-    fun applyWallpaper(fact: AnecdoteWithCategory, reference: String?, darkTheme: Boolean, textVerticalOffset: Float) = viewModelScope.launch {
+    fun resetWallpaperSourceOffset(textOffset: Float) {
+        wallpaperOffsetSaveJob?.cancel()
+        wallpaperOffsetSaveJob = viewModelScope.launch { app.preferences.setWallpaperOffsets(textOffset, 0f) }
+    }
+    fun resetWallpaperOffsets() {
+        wallpaperOffsetSaveJob?.cancel()
+        wallpaperOffsetSaveJob = viewModelScope.launch { app.preferences.resetWallpaperOffsets() }
+    }
+    fun applyWallpaper(fact: AnecdoteWithCategory, reference: String?, darkTheme: Boolean, textVerticalOffset: Float, sourceVerticalOffset: Float) = viewModelScope.launch {
         runCatching {
             val wallpaperService = WallpaperService(getApplication())
             val freshArtwork = withContext(Dispatchers.Default) {
-                wallpaperService.renderForCurrentDisplay(fact, reference, darkTheme, textVerticalOffset)
+                wallpaperService.renderForCurrentDisplay(fact, reference, darkTheme, textVerticalOffset, sourceVerticalOffset)
             }
             withContext(Dispatchers.IO) { wallpaperService.applyToLockScreen(freshArtwork) }
             repository.recordSuccessfulLockScreenApplication(fact.id)
@@ -195,7 +203,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 val wallpaperService = WallpaperService(app)
                 val freshArtwork = withContext(Dispatchers.Default) {
                     val currentPreferences = app.preferences.state.first()
-                    wallpaperService.renderForCurrentDisplay(fact, _reference.value, darkTheme, currentPreferences.wallpaperTextOffset)
+                    wallpaperService.renderForCurrentDisplay(fact, _reference.value, darkTheme, currentPreferences.wallpaperTextOffset, currentPreferences.wallpaperSourceOffset)
                 }
                 withContext(Dispatchers.IO) { wallpaperService.applyToLockScreen(freshArtwork) }
                 repository.recordSuccessfulLockScreenApplication(fact.id)

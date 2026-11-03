@@ -66,7 +66,11 @@ class DailyWallpaperUpdater(private val app: InIllusioApplication) {
                 }
                 val wallpaper = WallpaperService(app)
                 val artwork = withContext(Dispatchers.Default) {
-                    wallpaper.renderForCurrentDisplay(fact, reference, dark, settings.wallpaperTextOffset)
+                    wallpaper.renderForCurrentDisplay(
+                        fact, reference, dark,
+                        settings.wallpaperTextOffset,
+                        settings.wallpaperSourceOffset
+                    )
                 }
                 withContext(Dispatchers.IO) { wallpaper.applyToLockScreen(artwork) }
             } catch (cancelled: CancellationException) {

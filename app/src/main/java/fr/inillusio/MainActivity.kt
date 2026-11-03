@@ -93,7 +93,22 @@ class MainActivity : ComponentActivity() {
                         composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
                         composable("card") { CardScreen(collection, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { id -> model.cardCitation(id) }) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
-                        composable("settings") { SettingsScreen(prefs.theme, dark, prefs.wallpaperRefreshEnabled, prefs.wallpaperTextOffset, daily, reference, wallpaperPreview, { model.setTheme(it) }, { model.setRefreshEnabled(it) }, { model.scheduleWallpaperTextOffsetSave(it) }, { model.persistWallpaperTextOffset(it) }, { model.resetWallpaperTextOffset() }, { fact, source, darkTheme, offset -> model.prepareWallpaperPreview(fact, source, darkTheme, offset) }, { fact, source, darkTheme, offset -> model.applyWallpaper(fact, source, darkTheme, offset) }, { navController.popBackStack() }) }
+                        composable("settings") {
+                            SettingsScreen(
+                                prefs.theme, dark, prefs.wallpaperRefreshEnabled,
+                                prefs.wallpaperTextOffset, prefs.wallpaperSourceOffset,
+                                daily, reference, wallpaperPreview,
+                                { model.setTheme(it) }, { model.setRefreshEnabled(it) },
+                                { text, sources -> model.scheduleWallpaperOffsetSave(text, sources) },
+                                { text, sources -> model.persistWallpaperOffsets(text, sources) },
+                                { sources -> model.resetWallpaperTextOffset(sources) },
+                                { text -> model.resetWallpaperSourceOffset(text) },
+                                { model.resetWallpaperOffsets() },
+                                { fact, source, darkTheme, text, sources -> model.prepareWallpaperPreview(fact, source, darkTheme, text, sources) },
+                                { fact, source, darkTheme, text, sources -> model.applyWallpaper(fact, source, darkTheme, text, sources) },
+                                { navController.popBackStack() }
+                            )
+                        }
                     }
                 }
                 message?.let { text -> LaunchedEffect(text) { kotlinx.coroutines.delay(3500); model.clearMessage() }; Snackbar(Modifier.align(Alignment.BottomCenter).padding(16.dp)) { Text(text) } }
@@ -416,10 +431,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun SettingsScreen(theme: AppTheme, darkTheme: Boolean, refresh: Boolean, savedTextOffset: Float, daily: AnecdoteWithCategory?, reference: String?, wallpaperPreview: WallpaperArtwork?, onTheme: (AppTheme) -> Unit, onRefresh: (Boolean) -> Unit, onScheduleOffsetSave: (Float) -> Unit, onPersistOffset: (Float) -> Unit, onResetOffset: () -> Unit, onPreparePreview: (AnecdoteWithCategory, String?, Boolean, Float) -> Unit, onApply: (AnecdoteWithCategory, String?, Boolean, Float) -> Unit, onBack: () -> Unit) {
+@Composable private fun SettingsScreen(theme: AppTheme, darkTheme: Boolean, refresh: Boolean, savedTextOffset: Float, savedSourceOffset: Float, daily: AnecdoteWithCategory?, reference: String?, wallpaperPreview: WallpaperArtwork?, onTheme: (AppTheme) -> Unit, onRefresh: (Boolean) -> Unit, onScheduleOffsetSave: (Float, Float) -> Unit, onPersistOffsets: (Float, Float) -> Unit, onResetTextOffset: (Float) -> Unit, onResetSourceOffset: (Float) -> Unit, onResetOffsets: () -> Unit, onPreparePreview: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onApply: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onBack: () -> Unit) {
     var textOffset by remember(daily?.id) { mutableFloatStateOf(savedTextOffset) }
-    LaunchedEffect(savedTextOffset) { textOffset = savedTextOffset }
-    LaunchedEffect(daily?.id, reference, darkTheme, textOffset) { daily?.let { onPreparePreview(it, reference, darkTheme, textOffset) } }
+    var sourceOffset by remember(daily?.id) { mutableFloatStateOf(savedSourceOffset) }
+    LaunchedEffect(savedTextOffset, savedSourceOffset) {
+        textOffset = savedTextOffset
+        sourceOffset = savedSourceOffset
+    }
+    LaunchedEffect(daily?.id, reference, darkTheme, textOffset, sourceOffset) {
+        daily?.let { onPreparePreview(it, reference, darkTheme, textOffset, sourceOffset) }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
         TopLine("Accueil", onBack)
         Text("Paramètres", Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
@@ -434,29 +455,65 @@ class MainActivity : ComponentActivity() {
         daily?.let { fact ->
             HorizontalDivider(Modifier.padding(24.dp))
             Text("Disposition du fond d’écran", Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text("Position verticale du texte", Modifier.padding(start = 24.dp, top = 12.dp), style = MaterialTheme.typography.bodyMedium)
+            Text("Position du texte", Modifier.padding(start = 24.dp, top = 12.dp), style = MaterialTheme.typography.bodyMedium)
+            val unrestrictedRange = -0.15f..0.15f
+            val textRange = wallpaperPreview?.textOffsetRange ?: unrestrictedRange
+            val displayedTextOffset = textOffset.coerceIn(textRange.start, textRange.endInclusive)
             Slider(
-                value = textOffset,
+                value = displayedTextOffset,
                 onValueChange = { value ->
                     textOffset = value
-                    onScheduleOffsetSave(value)
+                    onScheduleOffsetSave(value, sourceOffset)
                 },
-                valueRange = -0.15f..0.15f,
-                onValueChangeFinished = { onPersistOffset(textOffset) },
+                valueRange = textRange,
+                onValueChangeFinished = { onPersistOffsets(textOffset, sourceOffset) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             )
             Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Plus haut", style = MaterialTheme.typography.labelSmall)
-                Text("${(textOffset * 100).toInt()} %", style = MaterialTheme.typography.labelMedium)
+                Text("${(displayedTextOffset * 100).toInt()} %", style = MaterialTheme.typography.labelMedium)
                 Text("Plus bas", style = MaterialTheme.typography.labelSmall)
             }
             OutlinedButton(
                 onClick = {
                     textOffset = 0f
-                    onResetOffset()
+                    onResetTextOffset(sourceOffset)
                 },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
-            ) { Text("Réinitialiser la position") }
+            ) { Text("Réinitialiser la position du texte") }
+            Text("Position des sources", Modifier.padding(start = 24.dp, top = 8.dp), style = MaterialTheme.typography.bodyMedium)
+            val sourceRange = wallpaperPreview?.sourceOffsetRange ?: unrestrictedRange
+            val displayedSourceOffset = sourceOffset.coerceIn(sourceRange.start, sourceRange.endInclusive)
+            Slider(
+                value = displayedSourceOffset,
+                onValueChange = { value ->
+                    sourceOffset = value
+                    onScheduleOffsetSave(textOffset, value)
+                },
+                valueRange = sourceRange,
+                onValueChangeFinished = { onPersistOffsets(textOffset, sourceOffset) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
+            Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Plus haut", style = MaterialTheme.typography.labelSmall)
+                Text("${(displayedSourceOffset * 100).toInt()} %", style = MaterialTheme.typography.labelMedium)
+                Text("Plus bas", style = MaterialTheme.typography.labelSmall)
+            }
+            OutlinedButton(
+                onClick = {
+                    sourceOffset = 0f
+                    onResetSourceOffset(textOffset)
+                },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
+            ) { Text("Réinitialiser la position des sources") }
+            TextButton(
+                onClick = {
+                    textOffset = 0f
+                    sourceOffset = 0f
+                    onResetOffsets()
+                },
+                modifier = Modifier.align(Alignment.End).padding(horizontal = 24.dp)
+            ) { Text("Réinitialiser la disposition") }
             Text("APERÇU DE L’AFFICHE · éléments système non simulés", Modifier.padding(horizontal = 24.dp, vertical = 12.dp), style = MaterialTheme.typography.labelMedium, letterSpacing = 1.1.sp)
             val matchingPreview = wallpaperPreview?.takeIf { it.anecdoteId == fact.id }
             Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(420.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
@@ -472,7 +529,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             Button(
-                onClick = { onApply(fact, reference, darkTheme, textOffset) },
+                onClick = { onApply(fact, reference, darkTheme, textOffset, sourceOffset) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp),
                 enabled = matchingPreview != null
             ) { Text("Appliquer le fond d’écran") }

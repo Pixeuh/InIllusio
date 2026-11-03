@@ -15,7 +15,9 @@ import android.text.TextPaint
 import android.view.Display
 import fr.inillusio.data.local.dao.AnecdoteWithCategory
 import fr.inillusio.data.preferences.MAX_WALLPAPER_TEXT_OFFSET
+import fr.inillusio.data.preferences.MAX_WALLPAPER_SOURCE_OFFSET
 import fr.inillusio.data.preferences.MIN_WALLPAPER_TEXT_OFFSET
+import fr.inillusio.data.preferences.MIN_WALLPAPER_SOURCE_OFFSET
 import fr.inillusio.ui.illustration.CategoryIllustrationRenderer
 import fr.inillusio.ui.illustration.DisciplinePalettes
 import kotlin.math.max
@@ -25,7 +27,15 @@ data class WallpaperArtwork(
     val anecdoteId: String,
     val bitmap: Bitmap,
     val screenWidthPx: Int,
-    val screenHeightPx: Int
+    val screenHeightPx: Int,
+    val textOffsetRange: ClosedFloatingPointRange<Float>,
+    val sourceOffsetRange: ClosedFloatingPointRange<Float>
+)
+
+private data class RenderedComposition(
+    val bitmap: Bitmap,
+    val textOffsetRange: ClosedFloatingPointRange<Float>,
+    val sourceOffsetRange: ClosedFloatingPointRange<Float>
 )
 
 class WallpaperService(context: Context) {
@@ -36,7 +46,8 @@ class WallpaperService(context: Context) {
         fact: AnecdoteWithCategory,
         reference: String? = null,
         darkTheme: Boolean = true,
-        textVerticalOffset: Float = 0f
+        textVerticalOffset: Float = 0f,
+        sourceVerticalOffset: Float = 0f
     ): WallpaperArtwork {
         val displayManager = appContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         val display = requireNotNull(displayManager.getDisplay(Display.DEFAULT_DISPLAY)) {
@@ -49,11 +60,14 @@ class WallpaperService(context: Context) {
         val height = if (rotated) mode.physicalWidth else mode.physicalHeight
         require(width > 0 && height > 0) { "La résolution réelle de l’écran est indisponible." }
 
+        val composition = renderComposition(fact, width, height, reference, darkTheme, textVerticalOffset, sourceVerticalOffset)
         return WallpaperArtwork(
             anecdoteId = fact.id,
-            bitmap = render(fact, width, height, reference, darkTheme, textVerticalOffset),
+            bitmap = composition.bitmap,
             screenWidthPx = width,
-            screenHeightPx = height
+            screenHeightPx = height,
+            textOffsetRange = composition.textOffsetRange,
+            sourceOffsetRange = composition.sourceOffsetRange
         )
     }
 
@@ -63,8 +77,19 @@ class WallpaperService(context: Context) {
         height: Int,
         reference: String? = null,
         darkTheme: Boolean = true,
-        textVerticalOffset: Float = 0f
-    ): Bitmap {
+        textVerticalOffset: Float = 0f,
+        sourceVerticalOffset: Float = 0f
+    ): Bitmap = renderComposition(fact, width, height, reference, darkTheme, textVerticalOffset, sourceVerticalOffset).bitmap
+
+    private fun renderComposition(
+        fact: AnecdoteWithCategory,
+        width: Int,
+        height: Int,
+        reference: String?,
+        darkTheme: Boolean,
+        textVerticalOffset: Float,
+        sourceVerticalOffset: Float
+    ): RenderedComposition {
         require(width > 0 && height > 0)
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -162,15 +187,54 @@ class WallpaperService(context: Context) {
             )
         }
 
-        // Move the whole editorial text group together. Clamp the user offset so
-        // no text or associated decoration can extend beyond the bitmap edges.
-        val textGroupTop = min(categoryBaseline + categoryPaint.ascent(), hookTop - height * .01f)
-        val textGroupBottom = referenceTop + referenceLayout.height
-        val requestedOffset = height * textVerticalOffset.coerceIn(
-            MIN_WALLPAPER_TEXT_OFFSET,
-            MAX_WALLPAPER_TEXT_OFFSET
+        // Keep the headline and source block independently adjustable. Their
+        // safe ranges use the measured layouts, the actual bitmap size and the
+        // other block's requested position, so the gap cannot collapse.
+        val requestedTextOffset = height * textVerticalOffset.coerceIn(
+            MIN_WALLPAPER_TEXT_OFFSET, MAX_WALLPAPER_TEXT_OFFSET
         )
-        val effectiveTextOffset = requestedOffset.coerceIn(-textGroupTop, height - textGroupBottom)
+        val requestedSourceOffset = height * sourceVerticalOffset.coerceIn(
+            MIN_WALLPAPER_SOURCE_OFFSET, MAX_WALLPAPER_SOURCE_OFFSET
+        )
+        val sourceBlockTop = sourceLabelTop
+        val sourceBlockBottom = referenceTop + referenceLayout.height
+        val hookBlockBottom = hookTop + hookLayout.height
+        val blockGap = height * .035f
+        val sourceScreenMin = height * .025f - sourceBlockTop
+        val sourceScreenMax = height * .975f - sourceBlockBottom
+        val sourceScreenOffset = requestedSourceOffset.coerceIn(sourceScreenMin, sourceScreenMax)
+        val textScreenMin = categoryRuleY + height * .025f - hookTop
+        val textScreenMax = height * .965f - hookBlockBottom
+
+        fun textRangeFor(sourceOffset: Float): ClosedFloatingPointRange<Float> {
+            val minPx = max(textScreenMin, -height * .15f)
+            val maxPx = min(textScreenMax, sourceBlockTop + sourceOffset - blockGap - hookBlockBottom)
+                .coerceAtMost(height * .15f)
+            return (minPx / height).coerceAtMost(maxPx / height)..(maxPx / height)
+        }
+
+        fun sourceRangeFor(textOffset: Float): ClosedFloatingPointRange<Float> {
+            val minPx = max(sourceScreenMin, hookBlockBottom + textOffset + blockGap - sourceBlockTop)
+                .coerceAtLeast(-height * .15f)
+            val maxPx = min(sourceScreenMax, height * .15f)
+            return (minPx / height).coerceAtMost(maxPx / height)..(maxPx / height)
+        }
+
+        val initialTextRange = textRangeFor(sourceScreenOffset)
+        val effectiveTextOffset = requestedTextOffset.coerceIn(
+            initialTextRange.start * height,
+            initialTextRange.endInclusive * height
+        )
+        val sourceRange = sourceRangeFor(effectiveTextOffset)
+        val effectiveSourceOffset = sourceScreenOffset.coerceIn(
+            sourceRange.start * height,
+            sourceRange.endInclusive * height
+        )
+        val textRange = textRangeFor(effectiveSourceOffset)
+        val finalTextOffset = requestedTextOffset.coerceIn(
+            textRange.start * height,
+            textRange.endInclusive * height
+        )
 
         val illustrationBounds = illustrationBounds(width, height, artworkScale)
         CategoryIllustrationRenderer.draw(
@@ -186,28 +250,28 @@ class WallpaperService(context: Context) {
             preserveAspectRatio = true
         )
 
-        drawTrackedText(canvas, fact.categoryName.uppercase(), margin, categoryBaseline + effectiveTextOffset, categoryPaint, 1.8f * scale)
-        canvas.drawLine(margin, categoryRuleY + effectiveTextOffset, margin + 38f * scale, categoryRuleY + effectiveTextOffset, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        drawTrackedText(canvas, fact.categoryName.uppercase(), margin, categoryBaseline, categoryPaint, 1.8f * scale)
+        canvas.drawLine(margin, categoryRuleY, margin + 38f * scale, categoryRuleY, Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = disciplinePalette.primary
             strokeWidth = 2.2f * scale
             strokeCap = Paint.Cap.ROUND
         })
 
         // A short editorial rule leads into the headline without constraining copy width.
-        canvas.drawLine(margin - 11f * scale, hookTop + effectiveTextOffset, margin - 11f * scale, hookTop + effectiveTextOffset + min(hookLayout.height.toFloat(), height * .09f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        canvas.drawLine(margin - 11f * scale, hookTop + finalTextOffset, margin - 11f * scale, hookTop + finalTextOffset + min(hookLayout.height.toFloat(), height * .09f), Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = disciplinePalette.secondary
             strokeWidth = 2.4f * scale
             strokeCap = Paint.Cap.ROUND
         })
-        drawTextLayout(canvas, hookLayout, margin, hookTop + effectiveTextOffset)
+        drawTextLayout(canvas, hookLayout, margin, hookTop + finalTextOffset)
 
-        drawTrackedText(canvas, "SOURCE SCIENTIFIQUE", margin, sourceLabelBaseline + effectiveTextOffset, sourceLabelPaint, 1.25f * scale)
-        canvas.drawLine(margin, dividerY + effectiveTextOffset, width - margin, dividerY + effectiveTextOffset, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        drawTrackedText(canvas, "SOURCE SCIENTIFIQUE", margin, sourceLabelBaseline + effectiveSourceOffset, sourceLabelPaint, 1.25f * scale)
+        canvas.drawLine(margin, dividerY + effectiveSourceOffset, width - margin, dividerY + effectiveSourceOffset, Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = if (darkTheme) android.graphics.Color.argb(100, 247, 243, 232) else android.graphics.Color.argb(85, 11, 20, 27)
             strokeWidth = max(1f, scale)
         })
-        drawTextLayout(canvas, referenceLayout, margin, referenceTop + effectiveTextOffset)
-        return bitmap
+        drawTextLayout(canvas, referenceLayout, margin, referenceTop + effectiveSourceOffset)
+        return RenderedComposition(bitmap, textRange, sourceRange)
     }
 
     fun applyToLockScreen(artwork: WallpaperArtwork) {

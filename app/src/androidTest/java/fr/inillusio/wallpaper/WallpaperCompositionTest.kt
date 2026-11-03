@@ -50,9 +50,33 @@ class WallpaperCompositionTest {
         val shiftedLower = IntArray(shifted.width * lowerHeight)
         default.getPixels(defaultLower, 0, default.width, 0, lowerTop, default.width, lowerHeight)
         shifted.getPixels(shiftedLower, 0, shifted.width, 0, lowerTop, shifted.width, lowerHeight)
-        assertTrue("The category, anecdote and reference should move with the slider", !defaultLower.contentEquals(shiftedLower))
+        assertTrue("The anecdote should move with its slider", !defaultLower.contentEquals(shiftedLower))
         val background = Color.rgb(11, 20, 27)
         assertTrue("Text and decoration must remain inside the bitmap", (0 until shifted.width).all { shifted.getPixel(it, 0) == background && shifted.getPixel(it, shifted.height - 1) == background })
+    }
+
+    @Test
+    fun textAndSourceOffsetsMoveOnlyTheirOwnBlocksAndKeepSafeRanges() {
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val service = WallpaperService(context)
+        val fact = AnecdoteWithCategory("independent-offset-test", "histoire", "Histoire", "Test", "Accroche courte de contrôle.", "")
+        val citation = "Auteur · Publication scientifique · 2024"
+        val base = service.render(fact, 1080, 2400, citation, darkTheme = true)
+        val textMoved = service.render(fact, 1080, 2400, citation, darkTheme = true, textVerticalOffset = .06f)
+        val sourceMoved = service.render(fact, 1080, 2400, citation, darkTheme = true, sourceVerticalOffset = -.06f)
+
+        assertRowsEqual(base, textMoved, 0f, .52f, "Text adjustment must leave the illustration unchanged")
+        assertRowsEqual(base, textMoved, .86f, .99f, "Text adjustment must leave the source block unchanged")
+        assertRowsEqual(base, sourceMoved, 0f, .69f, "Source adjustment must leave the illustration and anecdote unchanged")
+        assertRowsDiffer(base, sourceMoved, .72f, .98f, "Source label, divider and reference should move together")
+
+        val longFact = fact.copy(hook = "Une anecdote assez longue pour occuper plusieurs lignes et tester les limites de déplacement. ".repeat(3))
+        val longReference = "Auteur collectif · Publication scientifique avec une référence bibliographique longue · 2024. ".repeat(2)
+        val artwork = service.renderForCurrentDisplay(longFact, longReference, darkTheme = false, textVerticalOffset = .15f, sourceVerticalOffset = -.15f)
+        assertTrue("The valid text range should be ordered", artwork.textOffsetRange.start <= artwork.textOffsetRange.endInclusive)
+        assertTrue("The valid source range should be ordered", artwork.sourceOffsetRange.start <= artwork.sourceOffsetRange.endInclusive)
+        assertTrue("Text positions should remain inside the supported preference range", artwork.textOffsetRange.start >= -.15f && artwork.textOffsetRange.endInclusive <= .15f)
+        assertTrue("Source positions should remain inside the supported preference range", artwork.sourceOffsetRange.start >= -.15f && artwork.sourceOffsetRange.endInclusive <= .15f)
     }
 
     @Test
@@ -150,5 +174,25 @@ class WallpaperCompositionTest {
         val pixels = IntArray(bitmap.width * (bottom - top))
         bitmap.getPixels(pixels, 0, bitmap.width, 0, top, bitmap.width, bottom - top)
         return pixels.count { it != background }
+    }
+
+    private fun assertRowsEqual(first: Bitmap, second: Bitmap, topRatio: Float, bottomRatio: Float, message: String) {
+        val top = (first.height * topRatio).toInt()
+        val bottom = (first.height * bottomRatio).toInt()
+        val firstPixels = IntArray(first.width * (bottom - top))
+        val secondPixels = IntArray(first.width * (bottom - top))
+        first.getPixels(firstPixels, 0, first.width, 0, top, first.width, bottom - top)
+        second.getPixels(secondPixels, 0, second.width, 0, top, second.width, bottom - top)
+        assertTrue(message, firstPixels.contentEquals(secondPixels))
+    }
+
+    private fun assertRowsDiffer(first: Bitmap, second: Bitmap, topRatio: Float, bottomRatio: Float, message: String) {
+        val top = (first.height * topRatio).toInt()
+        val bottom = (first.height * bottomRatio).toInt()
+        val firstPixels = IntArray(first.width * (bottom - top))
+        val secondPixels = IntArray(first.width * (bottom - top))
+        first.getPixels(firstPixels, 0, first.width, 0, top, first.width, bottom - top)
+        second.getPixels(secondPixels, 0, second.width, 0, top, second.width, bottom - top)
+        assertTrue(message, !firstPixels.contentEquals(secondPixels))
     }
 }

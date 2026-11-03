@@ -12,18 +12,29 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class UserPreferencesTest {
     @Test
-    fun wallpaperTextOffsetIsPersistedAndResettable() = runBlocking {
+    fun wallpaperTextAndSourceOffsetsArePersistedIndependentlyAndResettable() = runBlocking {
         val preferences = UserPreferences(InstrumentationRegistry.getInstrumentation().targetContext)
-        val original = preferences.state.first().wallpaperTextOffset
+        val initial = preferences.state.first()
         try {
-            preferences.setWallpaperTextOffset(.12f)
+            preferences.setWallpaperOffsets(.12f, -.08f)
             assertEquals(.12f, preferences.state.first().wallpaperTextOffset, .001f)
+            assertEquals(-.08f, preferences.state.first().wallpaperSourceOffset, .001f)
             preferences.setWallpaperTextOffset(1f)
             assertEquals(.15f, preferences.state.first().wallpaperTextOffset, .001f)
+            assertEquals(-.08f, preferences.state.first().wallpaperSourceOffset, .001f)
+            preferences.setWallpaperSourceOffset(-1f)
+            assertEquals(-.15f, preferences.state.first().wallpaperSourceOffset, .001f)
             preferences.resetWallpaperTextOffset()
             assertEquals(0f, preferences.state.first().wallpaperTextOffset, .001f)
+            assertEquals(-.15f, preferences.state.first().wallpaperSourceOffset, .001f)
+            preferences.resetWallpaperSourceOffset()
+            assertEquals(0f, preferences.state.first().wallpaperSourceOffset, .001f)
+            preferences.setWallpaperOffsets(.1f, -.1f)
+            preferences.resetWallpaperOffsets()
+            assertEquals(0f, preferences.state.first().wallpaperTextOffset, .001f)
+            assertEquals(0f, preferences.state.first().wallpaperSourceOffset, .001f)
         } finally {
-            preferences.setWallpaperTextOffset(original)
+            preferences.setWallpaperOffsets(initial.wallpaperTextOffset, initial.wallpaperSourceOffset)
         }
     }
 }
