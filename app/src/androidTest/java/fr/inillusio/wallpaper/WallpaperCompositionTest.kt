@@ -21,13 +21,49 @@ class WallpaperCompositionTest {
         val service = WallpaperService(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext)
         val displays = listOf(1080 to 2400, 1080 to 2340, 1440 to 3200, 1080 to 1920)
         displays.forEach { (width, height) ->
-            val bounds = service.illustrationBounds(width, height, 1f)
+            val header = service.headerLayout(width, height, "Psychologie sociale")
+            val bounds = service.illustrationBounds(width, height, 1f, header.bottom + height * .037f)
+            assertTrue("Header keeps an adaptive top safety margin at ${width}x$height", header.top / height.toFloat() >= .08f)
             assertEquals("Native artwork proportions at ${width}x$height", 1000f / 700f, bounds.width() / bounds.height(), .001f)
             assertTrue("Artwork stays inside the screen width at ${width}x$height", bounds.left >= 0f && bounds.right <= width)
             assertEquals("Artwork remains horizontally centered at ${width}x$height", width / 2f, bounds.centerX(), .5f)
             assertTrue("Full illustration remains substantial at ${width}x$height", bounds.width() / width.toFloat() > .99f)
-            assertTrue("Illustration stays in the upper part at ${width}x$height", bounds.top / height.toFloat() < .04f)
+            assertTrue("Illustration starts below the measured header and separator at ${width}x$height", bounds.top > header.bottom)
             assertTrue("Artwork height adapts to the display ratio at ${width}x$height", bounds.height() / height.toFloat() in .30f.. .41f)
+        }
+    }
+
+    @Test
+    fun headerAndIllustrationHaveARealGapAcrossScreenRatios() {
+        val service = WallpaperService(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext)
+        val categories = listOf(
+            "Sociologie", "Anthropologie", "Psychologie sociale", "Histoire",
+            "Linguistique", "Économie", "Philosophie", "Géographie humaine"
+        )
+        listOf(1080 to 2400, 1080 to 2340, 1440 to 3200, 1080 to 1920).forEach { (width, height) ->
+            val background = Color.rgb(11, 20, 27)
+            categories.forEach { category ->
+                val fact = AnecdoteWithCategory("header-test", "psychologie_sociale", category, "Test", "Accroche courte.", "")
+                val header = service.headerLayout(width, height, category)
+                val bounds = service.illustrationBounds(width, height, 1f, header.bottom + height * .037f)
+                assertTrue("Header remains below the screen's safety area ($category, ${width}x$height)", header.top >= height * .08f)
+                assertTrue("Header columns must not collide ($category, ${width}x$height)", header.categoryEnd + width * .025f <= header.brandLeft)
+                assertTrue("Measured header must end before the artwork ($category, ${width}x$height)", bounds.top > header.bottom)
+
+                val bitmap = service.render(fact, width, height, darkTheme = true)
+                val headerTop = (height * .015f).toInt()
+                val headerBottom = (header.bottom + height * .01f).toInt()
+                val headerPixels = IntArray(width * (headerBottom - headerTop))
+                bitmap.getPixels(headerPixels, 0, width, 0, headerTop, width, headerBottom - headerTop)
+                assertTrue("Discipline and brand header should be drawn ($category, ${width}x$height)", headerPixels.any { it != background })
+
+                val gapY = (header.bottom + height * .02f).toInt()
+                val gapPixels = IntArray(width)
+                bitmap.getPixels(gapPixels, 0, width, 0, gapY, width, 1)
+                assertTrue("A clear band must separate header from artwork ($category, ${width}x$height)", gapPixels.all { it == background })
+                assertTrue("The artwork remains fully within the bitmap ($category, ${width}x$height)", bounds.top >= 0 && bounds.bottom < height)
+                bitmap.recycle()
+            }
         }
     }
 
