@@ -38,6 +38,7 @@ local.properties
 google-services.json
 key.properties
 keystore.properties
+beta-signing.properties
 
 # Generated packages and temporary editor files
 dist/

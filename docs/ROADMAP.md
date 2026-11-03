@@ -18,8 +18,10 @@
 - Réinitialisation de collection disponible dans le menu DEBUG, avec confirmation, effacement transactionnel des seules acquisitions Room et invalidation des attributions de booster en attente ; le catalogue et les historiques de diffusion sont conservés.
 - 8 tests unitaires et 8 tests Android ciblés exécutés : sélection/consentement/collection, idempotence des imports, archivage, JSON invalide, proportions d’illustration, décalage et textes courts/longs dans les deux thèmes à 1080 × 2400.
 - Documentation produit, architecture, données et consignes agent.
-- Boosters facultatifs avec UMP/AdMob Rewarded, progression de collection, IDs de test réservés à DEBUG, attribution Room transactionnelle et idempotente, migration non destructive 2→3 et écran de révélation réutilisant les cartes officielles.
+- Boosters facultatifs avec UMP/AdMob Rewarded, lancement direct depuis le bouton de collection, bloc Booster intégré au défilement de la grille, paquet de révélation affiché uniquement après confirmation et sauvegarde Room transactionnelle/idempotente, IDs de test réservés à DEBUG, migration non destructive 2→3.
+- Une flèche turquoise discrète indique le balayage horizontal des cartes du booster jusqu’au premier changement de page, puis disparaît.
 - Tests instrumentés du repository booster : lot normal, dernières cartes disponibles, collection complète, statuts individuels, archivage préservé, callback répété et stabilité de la sélection quotidienne.
+- Variante de distribution `beta` distincte (`fr.inillusio.beta`), non débogable, avec façade développeur RELEASE, annonces AdMob de démonstration, signature locale dédiée obligatoire et copie APK dans `dist/` ; procédure documentée dans `docs/BETA.md`.
 
 ## En cours / à valider
 

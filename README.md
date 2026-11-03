@@ -10,7 +10,8 @@ In Illusio est une application Android qui propose une anecdote quotidienne de s
 - Carte du jour et cartes de collection recto-verso avec retournement 3D et accès à l’explication complète.
 - Renouvellement quotidien facultatif, activé uniquement avec le consentement de l’utilisateur.
 - Éditeur graphique local pour consulter et modifier le catalogue JSON.
-- Boosters facultatifs : une publicité récompensée confirmée peut ajouter jusqu’à cinq anecdotes validées à la collection.
+- Boosters facultatifs : une publicité récompensée confirmée peut ajouter jusqu’à cinq anecdotes validées à la collection ; le bloc Booster défile avec la grille de collection.
+- Après ouverture d’un booster, une flèche animée indique le balayage horizontal jusqu’au premier changement de carte.
 - Menu développeur réservé à DEBUG, avec réinitialisation confirmée de la collection pour les tests ; la diffusion quotidienne et ses historiques restent préservés.
 
 L’application fonctionne sans compte ni serveur. Le renouvellement quotidien dépend de WorkManager et peut être retardé par Android. Les fonds d’écran sont appliqués exclusivement à l’écran de verrouillage.
@@ -49,6 +50,8 @@ Les tests unitaires existants se lancent avec :
 ```powershell
 gradle --offline :app:testDebugUnitTest
 ```
+
+La variante externe **BÊTA** est non débogable, utilise les IDs de démonstration AdMob et un identifiant Android séparé. Elle nécessite une clé de signature bêta persistante, conservée hors de Git. La procédure de création, compilation, vérification et distribution est décrite dans [docs/BETA.md](docs/BETA.md).
 
 L’APK DEBUG est généré dans `app/build/outputs/apk/debug/`.
 

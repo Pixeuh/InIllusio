@@ -26,8 +26,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import java.time.ZoneId
 
@@ -40,8 +38,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val dailyLoaded = _dailyLoaded.asStateFlow()
     val collection = repository.collection
     val boosterProgress = repository.boosterProgress
-    private val _boosterAwards = MutableSharedFlow<BoosterAwardResult>(extraBufferCapacity = 1)
-    val boosterAwards = _boosterAwards.asSharedFlow()
     val preferences = app.preferences.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PreferencesState())
     val catalogImportState = app.catalogImportState
     private val _sources = MutableStateFlow<List<SourceDetails>>(emptyList())
@@ -169,16 +165,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun clearMessage() { _message.value = null }
 
-    fun redeemBoosterAfterReward(redemptionId: String) {
-        app.redeemBoosterAfterReward(redemptionId) { result -> _boosterAwards.tryEmit(result) }
+    fun redeemBoosterAfterReward(redemptionId: String, onComplete: (BoosterAwardResult) -> Unit) {
+        app.redeemBoosterAfterReward(redemptionId, onComplete)
     }
 
-    fun debugSimulateBoosterReward() {
+    fun debugSimulateBoosterReward(onComplete: (BoosterAwardResult) -> Unit) {
         if (!BuildConfig.DEBUG) return
         app.redeemBoosterAfterReward("debug-${java.util.UUID.randomUUID()}") { result ->
-            _boosterAwards.tryEmit(result)
             _message.value = if (result.cards.isEmpty()) "Aucune nouvelle carte disponible pour le test."
                 else "Récompense de test enregistrée : ${result.cards.size} carte${if (result.cards.size == 1) "" else "s"}."
+            onComplete(result)
         }
     }
 

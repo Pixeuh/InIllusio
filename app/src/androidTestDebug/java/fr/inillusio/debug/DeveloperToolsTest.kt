@@ -29,6 +29,7 @@ class DeveloperToolsTest {
         assertEquals(24, DeveloperTools.unlockAll(application))
         assertEquals(24, dao.allCollectionEntries().map { it.anecdoteId }.distinct().size)
 
+        assertTrue(DeveloperTools.hasSnapshot(application).first())
         assertEquals(before.size, DeveloperTools.restoreCollection(application))
         assertEquals(before, dao.allCollectionEntries().sortedBy { it.anecdoteId })
         assertFalse(DeveloperTools.hasSnapshot(application).first())

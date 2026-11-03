@@ -7,7 +7,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
@@ -43,6 +51,7 @@ import kotlin.math.PI
 import kotlin.math.sin
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalDensity
@@ -68,10 +77,9 @@ import fr.inillusio.wallpaper.WallpaperArtwork
 import fr.inillusio.data.local.dao.BoosterProgress
 import fr.inillusio.data.repository.BoosterAwardResult
 import fr.inillusio.domain.BoosterPolicy
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : ComponentActivity() {
     private val model by viewModels<AppViewModel> { object : ViewModelProvider.AndroidViewModelFactory(application) { @Suppress("UNCHECKED_CAST") override fun <T : ViewModel> create(modelClass: Class<T>): T = AppViewModel(application) as T } }
@@ -90,7 +98,6 @@ class MainActivity : ComponentActivity() {
     val dailyLoaded by model.dailyLoaded.collectAsStateWithLifecycle()
     val collection by model.collection.collectAsStateWithLifecycle(initialValue = emptyList())
     val boosterProgress by model.boosterProgress.collectAsStateWithLifecycle(initialValue = BoosterProgress(0, 0))
-    val boosterAwards = model.boosterAwards
     val activity = LocalContext.current as Activity
     val app = LocalApp(applicationContext = androidx.compose.ui.platform.LocalContext.current.applicationContext)
     val adsConsent by app.adsConsent.state.collectAsStateWithLifecycle()
@@ -102,6 +109,7 @@ class MainActivity : ComponentActivity() {
     val debugCanRestore by model.debugCanRestore.collectAsStateWithLifecycle()
     var selected by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
     var homeCardSize by remember { mutableStateOf(IntSize.Zero) }
+    var pendingBoosterAward by remember { mutableStateOf<BoosterAwardResult?>(null) }
     val navController = rememberNavController()
     var acceptedConsent by remember { mutableStateOf(false) }
     val dark = when (prefs.theme) { AppTheme.DARK -> true; AppTheme.LIGHT -> false; AppTheme.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme() }
@@ -120,20 +128,39 @@ class MainActivity : ComponentActivity() {
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
                         composable("home") { HomeScreen(daily, dailyLoaded, reference, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { id -> model.cardCitation(id) }, { navController.navigate("collection") }, { navController.navigate("settings") }, { homeCardSize = it }) }
                         composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }) }
-                        composable("collection") { CollectionScreen(collection, boosterProgress, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, { navController.navigate("booster") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection, model::debugClearCollection) }
-                        composable("booster") {
-                            BoosterScreen(
-                                progress = boosterProgress,
-                                collection = collection,
-                                homeCardSize = homeCardSize,
+                        composable("collection") {
+                            CollectionScreen(
+                                cards = collection,
+                                boosterProgress = boosterProgress,
                                 consent = adsConsent,
-                                awards = boosterAwards,
                                 onBack = { navController.popBackStack() },
-                                onRewardConfirmed = model::redeemBoosterAfterReward,
+                                onSelect = { fact -> selected = fact; navController.navigate("card") },
+                                onRedeemBooster = model::redeemBoosterAfterReward,
                                 onDebugReward = model::debugSimulateBoosterReward,
-                                onLoadReference = { id -> model.cardCitation(id) },
-                                onOpenExplanation = { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }
+                                onAwarded = { result ->
+                                    pendingBoosterAward = result
+                                    navController.navigate("booster") { launchSingleTop = true }
+                                },
+                                debugCanRestore = debugCanRestore,
+                                onDebugUnlockAll = model::debugUnlockAll,
+                                onDebugPreviewAll = { model.loadDeveloperPreview(); navController.navigate("developer-preview") },
+                                onDebugRegenerateWallpaper = { model.debugRegenerateAndApplyWallpaper(dark) },
+                                onDebugRunDailyRenewal = model::debugRunDailyRenewal,
+                                onDebugRestore = model::debugRestoreCollection,
+                                onDebugClearCollection = model::debugClearCollection
                             )
+                        }
+                        composable("booster") {
+                            pendingBoosterAward?.let { award ->
+                                BoosterScreen(
+                                    award = award,
+                                    collection = collection,
+                                    homeCardSize = homeCardSize,
+                                    onBack = { navController.popBackStack() },
+                                    onLoadReference = { id -> model.cardCitation(id) },
+                                    onOpenExplanation = { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }
+                                )
+                            } ?: LaunchedEffect(Unit) { navController.popBackStack() }
                         }
                         composable("card") { CardScreen(collection, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { id -> model.cardCitation(id) }) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
@@ -396,7 +423,69 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, boosterProgress: BoosterProgress, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, onOpenBooster: () -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit, onDebugClearCollection: () -> Unit) {
+@Composable private fun CollectionScreen(
+    cards: List<AnecdoteWithCategory>,
+    boosterProgress: BoosterProgress,
+    consent: AdsConsentState,
+    onBack: () -> Unit,
+    onSelect: (AnecdoteWithCategory) -> Unit,
+    onRedeemBooster: (String, (BoosterAwardResult) -> Unit) -> Unit,
+    onDebugReward: ((BoosterAwardResult) -> Unit) -> Unit,
+    onAwarded: (BoosterAwardResult) -> Unit,
+    debugCanRestore: Boolean,
+    onDebugUnlockAll: () -> Unit,
+    onDebugPreviewAll: () -> Unit,
+    onDebugRegenerateWallpaper: () -> Unit,
+    onDebugRunDailyRenewal: () -> Unit,
+    onDebugRestore: () -> Unit,
+    onDebugClearCollection: () -> Unit
+) {
+    val activity = LocalContext.current as Activity
+    val adController = remember(activity) { RewardedBoosterAd(activity) }
+    val screenActive = remember { AtomicBoolean(true) }
+    var isBusy by remember { mutableStateOf(false) }
+    var boosterError by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(adController) {
+        screenActive.set(true)
+        onDispose {
+            screenActive.set(false)
+            adController.cancelPendingLoad()
+        }
+    }
+    val handleAward: (BoosterAwardResult) -> Unit = { result ->
+        if (screenActive.get()) {
+            isBusy = false
+            when {
+                result.duplicateRedemption -> boosterError = "Cette récompense a déjà été enregistrée."
+                result.cards.isEmpty() -> boosterError = "Aucune nouvelle anecdote n’est disponible : ta collection est complète."
+                else -> onAwarded(result)
+            }
+        }
+    }
+    val requestBooster = {
+        if (!isBusy) {
+            boosterError = null
+            when {
+                !BuildConfig.ADS_ENABLED -> boosterError = "Les publicités ne sont pas configurées pour cette version."
+                !consent.canRequestAds && consent.updateFinished -> boosterError = "Aucune publicité ne peut être demandée selon les choix de confidentialité actuels."
+                !consent.canRequestAds -> boosterError = "Vérification des choix de confidentialité…"
+                else -> {
+                    isBusy = true
+                    val redemptionId = UUID.randomUUID().toString()
+                    adController.loadAndShow(
+                        BuildConfig.ADMOB_REWARDED_UNIT_ID,
+                        onReward = { onRedeemBooster(redemptionId, handleAward) },
+                        onFailure = { message ->
+                            if (screenActive.get()) {
+                                isBusy = false
+                                boosterError = message
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
     var showDebugMenu by remember { mutableStateOf(false) }
     var showClearCollectionConfirmation by remember { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
@@ -421,20 +510,47 @@ class MainActivity : ComponentActivity() {
         )
         Text("Ma collection", Modifier.padding(horizontal = 24.dp, vertical = 6.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         Text("${cards.size} carte${if (cards.size == 1) "" else "s"}", Modifier.padding(horizontal = 24.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyMedium)
-        Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
-            Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Découvrir 5 nouvelles cartes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text("Regardez une publicité pour agrandir votre collection.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("${boosterProgress.discovered} / ${boosterProgress.total} anecdotes découvertes", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-                val canOpenBooster = BoosterPolicy.canOfferRewardedAd(boosterProgress.total, boosterProgress.discovered)
-                Button(onClick = onOpenBooster, enabled = canOpenBooster, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (canOpenBooster) "Ouvrir un booster" else "Collection complète")
+        LazyVerticalGrid(state = gridState, columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(start = 16.dp, top = 10.dp, end = 16.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Card(Modifier.fillMaxWidth().padding(bottom = 14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
+                    Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Découvrir 5 nouvelles cartes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Regardez une publicité pour agrandir votre collection.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val canOpenBooster = BoosterPolicy.canOfferRewardedAd(boosterProgress.total, boosterProgress.discovered)
+                        Button(onClick = requestBooster, enabled = canOpenBooster && !isBusy, modifier = Modifier.fillMaxWidth()) {
+                            if (isBusy) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                    Text("Ouvrir un booster")
+                                }
+                            } else {
+                                Text(if (canOpenBooster) "Ouvrir un booster" else "Collection complète")
+                            }
+                        }
+                        if (BuildConfig.DEBUG) {
+                            OutlinedButton(
+                                onClick = {
+                                    if (!isBusy) {
+                                        boosterError = null
+                                        isBusy = true
+                                        onDebugReward(handleAward)
+                                    }
+                                },
+                                enabled = !isBusy,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("DEBUG · Simuler une récompense") }
+                        }
+                        boosterError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                    }
                 }
             }
-        }
-        if (cards.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center) }
-        else LazyVerticalGrid(state = gridState, columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(cards, key = { it.id }) { fact ->
+            if (cards.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Box(Modifier.fillMaxWidth().height(200.dp).padding(24.dp), contentAlignment = Alignment.Center) {
+                        Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center)
+                    }
+                }
+            } else items(cards, key = { it.id }) { fact ->
                 Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     val context = androidx.compose.ui.platform.LocalContext.current
                     val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
@@ -512,32 +628,30 @@ private fun fitCardSize(requestedWidth: Dp, requestedHeight: Dp, maxWidth: Dp, m
     return DpSize(requestedWidth * scale, requestedHeight * scale)
 }
 
+private fun fitBoosterDisplaySize(referenceSize: DpSize?, maxWidth: Dp, availableHeight: Dp): DpSize {
+    val referenceWidth = referenceSize?.width ?: (maxWidth - 44.dp).coerceAtLeast(0.dp)
+    val referenceHeight = referenceSize?.height ?: availableHeight
+    return fitCardSize(referenceWidth, referenceHeight, maxWidth, availableHeight)
+}
+
 @Composable private fun BoosterScreen(
-    progress: BoosterProgress,
+    award: BoosterAwardResult,
     collection: List<AnecdoteWithCategory>,
     homeCardSize: IntSize,
-    consent: AdsConsentState,
-    awards: Flow<BoosterAwardResult>,
     onBack: () -> Unit,
-    onRewardConfirmed: (String) -> Unit,
-    onDebugReward: () -> Unit,
     onLoadReference: suspend (String) -> String?,
     onOpenExplanation: (AnecdoteWithCategory) -> Unit
 ) {
-    val activity = LocalContext.current as Activity
-    val adController = remember(activity) { RewardedBoosterAd(activity) }
-    var isBusy by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var newCards by remember { mutableStateOf<List<AnecdoteWithCategory>>(emptyList()) }
-    var awardIdsEncoded by rememberSaveable { mutableStateOf("") }
+    var newCards by remember { mutableStateOf(award.cards) }
+    var awardIdsEncoded by rememberSaveable { mutableStateOf(award.cards.joinToString("|") { it.id }) }
     val awardIds = remember(awardIdsEncoded) { awardIdsEncoded.split('|').filter(String::isNotBlank) }
     val restoredAwardCards = remember(awardIds, collection) { awardIds.mapNotNull { id -> collection.firstOrNull { it.id == id } } }
-    val isRestoringAward = awardIds.isNotEmpty() && restoredAwardCards.size != awardIds.size && newCards.isEmpty()
     val displayCards = if (restoredAwardCards.size == awardIds.size && awardIds.isNotEmpty()) restoredAwardCards else newCards
     var revealedIdsEncoded by rememberSaveable { mutableStateOf("") }
     val revealedIds = remember(revealedIdsEncoded) { revealedIdsEncoded.split('|').filter(String::isNotBlank).toSet() }
     var packOpened by rememberSaveable { mutableStateOf(false) }
     var packFullyOpened by rememberSaveable { mutableStateOf(false) }
+    var swipeHintDismissed by rememberSaveable(awardIdsEncoded) { mutableStateOf(false) }
     val animationsEnabled = ValueAnimator.areAnimatorsEnabled()
     val openingProgress by animateFloatAsState(
         targetValue = if (packOpened) 1f else 0f,
@@ -550,83 +664,21 @@ private fun fitCardSize(requestedWidth: Dp, requestedHeight: Dp, maxWidth: Dp, m
         if (packOpened && openingProgress >= 0.999f) packFullyOpened = true
     }
 
-    LaunchedEffect(awards) {
-        awards.collect { result ->
-            isBusy = false
-            if (result.duplicateRedemption) {
-                errorMessage = "Cette récompense a déjà été enregistrée."
-            } else if (result.cards.isNotEmpty()) {
-                newCards = result.cards
-                awardIdsEncoded = result.cards.joinToString("|") { it.id }
-                revealedIdsEncoded = ""
-                packOpened = false
-                packFullyOpened = false
-                errorMessage = null
-                pagerState.scrollToPage(0)
-            } else {
-                errorMessage = "Aucune nouvelle anecdote n’est disponible : ta collection est complète."
-            }
-        }
+    LaunchedEffect(award, pagerState) {
+        newCards = award.cards
+        awardIdsEncoded = award.cards.joinToString("|") { it.id }
+        revealedIdsEncoded = ""
+        packOpened = false
+        packFullyOpened = false
+        pagerState.scrollToPage(0)
     }
 
     Column(Modifier.fillMaxSize()) {
         val pageCounter = if (packFullyOpened && displayCards.isNotEmpty()) "${pagerState.settledPage + 1} / ${displayCards.size}" else null
         TopLine("Ma collection", onBack, trailingText = pageCounter)
         if (displayCards.isEmpty()) {
-            Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 26.dp, vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                BoosterPack(
-                    modifier = Modifier.fillMaxWidth().height(250.dp),
-                    openingProgress = openingProgress,
-                    gestureEnabled = false,
-                    onOpen = {}
-                )
-                Spacer(Modifier.height(20.dp))
-                Text("Jusqu’à 5 nouvelles anecdotes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                Text("Les cartes seront ajoutées à ta collection dès que la récompense est confirmée.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                Text(
-                    if (isRestoringAward) "Récupération des cartes sauvegardées…" else "${progress.discovered} / ${progress.total} anecdotes découvertes",
-                    Modifier.padding(top = 16.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                if (isRestoringAward) {
-                    CircularProgressIndicator(Modifier.padding(top = 12.dp).size(22.dp), strokeWidth = 2.dp)
-                } else if (!BoosterPolicy.canOfferRewardedAd(progress.total, progress.discovered)) {
-                    Text("Ta collection est complète.", Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
-                } else {
-                    Button(
-                        onClick = {
-                            errorMessage = null
-                            isBusy = true
-                            val redemptionId = UUID.randomUUID().toString()
-                            adController.loadAndShow(
-                                BuildConfig.ADMOB_REWARDED_UNIT_ID,
-                                onReward = { onRewardConfirmed(redemptionId) },
-                                onFailure = { message -> isBusy = false; errorMessage = message }
-                            )
-                        },
-                        enabled = BuildConfig.ADS_ENABLED && consent.canRequestAds && !isBusy,
-                        modifier = Modifier.fillMaxWidth().padding(top = 18.dp)
-                    ) {
-                        if (isBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        else Text("Regarder une publicité récompensée")
-                    }
-                    when {
-                        !BuildConfig.ADS_ENABLED && !BuildConfig.DEBUG -> Text("Les publicités ne sont pas configurées pour cette version.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                        !consent.canRequestAds && consent.updateFinished -> Text("Aucune publicité ne peut être demandée selon les choix de confidentialité actuels.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                        !consent.canRequestAds -> Text("Vérification des choix de confidentialité…", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                    }
-                    if (BuildConfig.DEBUG) {
-                        OutlinedButton(onClick = { isBusy = true; onDebugReward() }, enabled = !isBusy, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
-                            Text("DEBUG · Simuler une récompense")
-                        }
-                    }
-                }
-                errorMessage?.let { Text(it, Modifier.padding(top = 14.dp), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
         } else {
             Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -637,10 +689,8 @@ private fun fitCardSize(requestedWidth: Dp, requestedHeight: Dp, maxWidth: Dp, m
                             DpSize(homeCardSize.width.toDp(), homeCardSize.height.toDp())
                         } else null
                     }
-                    val referenceWidth = referenceSize?.width ?: (maxWidth - 44.dp).coerceAtLeast(0.dp)
                     val previousCardAreaHeight = (maxHeight - 48.dp).coerceAtLeast(0.dp)
-                    val referenceHeight = referenceSize?.height ?: previousCardAreaHeight
-                    val fittedSize = fitCardSize(referenceWidth, referenceHeight, maxWidth, previousCardAreaHeight)
+                    val fittedSize = fitBoosterDisplaySize(referenceSize, maxWidth, previousCardAreaHeight)
                     val preservedTopSpace = ((previousCardAreaHeight - fittedSize.height) / 2).coerceAtLeast(0.dp)
                     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(Modifier.height(preservedTopSpace))
@@ -675,6 +725,52 @@ private fun fitCardSize(requestedWidth: Dp, requestedHeight: Dp, maxWidth: Dp, m
                                             onLoadReference = onLoadReference,
                                             onOpenExplanation = { onOpenExplanation(fact) }
                                         )
+                                    }
+                                }
+                                LaunchedEffect(pagerState.settledPage, awardIdsEncoded) {
+                                    if (pagerState.settledPage > 0) swipeHintDismissed = true
+                                }
+                                Box(
+                                    Modifier.align(Alignment.Center).size(fittedSize.width, fittedSize.height),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Column(
+                                        Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.Center,
+                                        horizontalAlignment = Alignment.End
+                                    ) {
+                                        AnimatedVisibility(
+                                            visible = displayCards.size > 1 && pagerState.settledPage == 0 && !swipeHintDismissed,
+                                            enter = if (animationsEnabled) fadeIn(tween(180)) else fadeIn(snap()),
+                                            exit = if (animationsEnabled) fadeOut(tween(180)) else fadeOut(snap()),
+                                            modifier = Modifier.offset(x = 8.dp)
+                                        ) {
+                                            val hintTransition = rememberInfiniteTransition(label = "booster-swipe-hint")
+                                            val hintAlpha by hintTransition.animateFloat(
+                                                initialValue = 0.4f,
+                                                targetValue = 1f,
+                                                animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Reverse),
+                                                label = "booster-swipe-hint-alpha"
+                                            )
+                                            val hintTranslation by hintTransition.animateFloat(
+                                                initialValue = 0f,
+                                                targetValue = 5f,
+                                                animationSpec = infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Reverse),
+                                                label = "booster-swipe-hint-position"
+                                            )
+                                            Text(
+                                                text = "\u2192",
+                                                modifier = Modifier
+                                                    .graphicsLayer {
+                                                        alpha = if (animationsEnabled) hintAlpha else 1f
+                                                        translationX = if (animationsEnabled) hintTranslation.dp.toPx() else 0f
+                                                    }
+                                                    .clearAndSetSemantics {},
+                                                color = BoosterTurquoise,
+                                                fontSize = 22.sp,
+                                                lineHeight = 24.sp
+                                            )
+                                        }
                                     }
                                 }
                             }
