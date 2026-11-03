@@ -1,4 +1,4 @@
-window.HorsCadrePalettes = (() => {
+window.InIllusioPalettes = (() => {
   const styles = getComputedStyle(document.documentElement);
 
   function forCategory(categoryId) {

@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 
 try {
     $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
@@ -180,7 +180,7 @@ try {
         Write-Host "Android est prêt sur $emulatorSerial."
     }
 
-    Write-Host 'Compilation et installation hors ligne de Hors Cadre...'
+    Write-Host 'Compilation et installation hors ligne de In Illusio...'
     $savedPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
@@ -194,20 +194,20 @@ try {
         throw "Échec de Gradle (code $gradleExitCode). L'application ne sera pas lancée."
     }
 
-    Write-Host 'Lancement de Hors Cadre...'
+    Write-Host 'Lancement de In Illusio...'
     $savedPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        & $adb -s $emulatorSerial shell am start -n 'fr.horscadre/.MainActivity'
+        & $adb -s $emulatorSerial shell am start -n 'fr.inillusio/.MainActivity'
         $launchExitCode = $LASTEXITCODE
     }
     finally {
         $ErrorActionPreference = $savedPreference
     }
     if ($launchExitCode -ne 0) {
-        throw "Impossible de lancer Hors Cadre sur $emulatorSerial (code $launchExitCode)."
+        throw "Impossible de lancer In Illusio sur $emulatorSerial (code $launchExitCode)."
     }
-    Write-Host 'Hors Cadre est installé et lancé.'
+    Write-Host 'In Illusio est installé et lancé.'
 }
 catch {
     Write-Error "run-android : $($_.Exception.Message)"

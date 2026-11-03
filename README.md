@@ -1,6 +1,6 @@
-# Hors Cadre
+# In Illusio
 
-Hors Cadre est une application Android qui propose une anecdote quotidienne de sciences humaines et peut l’afficher sur l’écran de verrouillage. Le projet est actuellement une **version bêta en développement**.
+In Illusio est une application Android qui propose une anecdote quotidienne de sciences humaines et peut l’afficher sur l’écran de verrouillage. Sa signature est « Parce que la connaissance libère. » Le projet est actuellement une **version bêta en développement**.
 
 ## Fonctionnalités
 
@@ -32,7 +32,7 @@ Les références complètes sont consultables sur la page d’explication; le fo
 
 Prérequis : JDK 17, Android SDK déjà configuré, Gradle 8.13 présent dans le cache utilisateur, et un appareil ou un AVD Android. Le projet n’inclut pas de Gradle Wrapper.
 
-Dans VS Code, `Ctrl + Shift + B` exécute la tâche **Compiler et lancer Hors Cadre**. Le script `.vscode/run-android.ps1` réutilise un émulateur connecté ou démarre l’AVD `Medium_Phone_API_37.0`, puis lance Gradle en mode hors ligne, installe la version DEBUG et ouvre l’application.
+Dans VS Code, `Ctrl + Shift + B` exécute la tâche **Compiler et lancer In Illusio**. Le script `.vscode/run-android.ps1` réutilise un émulateur connecté ou démarre l’AVD `Medium_Phone_API_37.0`, puis lance Gradle en mode hors ligne, installe la version DEBUG et ouvre l’application. Les identifiants techniques internes restent inchangés.
 
 La compilation DEBUG seule peut être lancée depuis PowerShell si `gradle` est accessible dans le `PATH` :
 

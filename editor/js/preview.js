@@ -14,7 +14,7 @@
     document.getElementById('preview-hook').textContent = safeFact.accroche || 'L’accroche de votre anecdote s’affichera ici au fil de votre saisie.';
     document.getElementById('preview-explanation').textContent = safeFact.explication || 'L’explication scientifique complète apparaîtra ici.';
     document.getElementById('preview-citation-text').textContent = window.EditorData.shortReference(safeFact.source);
-    const palette = window.HorsCadrePalettes.forCategory(safeCategory.id);
+    const palette = window.InIllusioPalettes.forCategory(safeCategory.id);
     document.getElementById('preview-shell').style.setProperty('--category-primary', palette.primary);
     document.getElementById('preview-shell').style.setProperty('--category-secondary', palette.secondary);
   }
