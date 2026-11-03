@@ -33,6 +33,7 @@
         <button id="add-button" class="icon-button add-button" type="button" aria-label="Ajouter une anecdote" title="Ajouter une anecdote" disabled>＋</button>
       </div>
       <div class="catalog-count"><strong id="fact-count">—</strong><span>dans le catalogue</span><span id="filtered-count" class="filtered-count"></span></div>
+      <div id="editorial-counts" class="editorial-counts" aria-live="polite">0 validées · 0 à valider</div>
       <label class="search-box"><span aria-hidden="true">⌕</span><input id="search-input" type="search" placeholder="Rechercher une anecdote…" autocomplete="off"><kbd>⌘ K</kbd></label>
       <div class="filter-row">
         <label class="sr-only" for="category-filter">Filtrer par catégorie</label>
@@ -66,7 +67,8 @@
               <label class="field full-field"><span>Titre <i>*</i></span><input id="fact-title" name="titre" required maxlength="160" placeholder="Le titre de l’anecdote"></label>
               <label class="field full-field"><span>Accroche <i>*</i><small id="hook-counter">0 caractères</small></span><textarea id="fact-hook" name="accroche" rows="3" required placeholder="La phrase qui donne envie d’en savoir plus"></textarea><small id="hook-warning" class="field-warning" hidden>Cette accroche est longue : vérifiez son rendu sur le téléphone.</small></label>
               <label class="field full-field"><span>Explication scientifique <i>*</i></span><textarea id="fact-explanation" name="explication" rows="6" required placeholder="Développez le contexte, les nuances et les limites du fait."></textarea></label>
-              <label class="field"><span>Statut éditorial du catalogue <i>*</i></span><input id="catalog-status-input" name="statut" list="status-options" required><datalist id="status-options"><option value="brouillon"><option value="en_revision"><option value="revision_editoriale_proposee_a_valider_avant_publication"><option value="valide"><option value="publie"><option value="a_revoir"></datalist><small class="field-help">Ce statut est stocké une seule fois à la racine du JSON et s’applique à toutes les anecdotes.</small></label>
+              <label class="field"><span>Statut éditorial du catalogue <i>*</i></span><input id="catalog-status-input" name="statut" list="status-options" required><datalist id="status-options"><option value="brouillon"><option value="en_revision"><option value="revision_editoriale_proposee_a_valider_avant_publication"><option value="valide"><option value="publie"><option value="a_revoir"></datalist><small class="field-help">Le statut global décrit le catalogue ; la validation se règle pour chaque anecdote.</small></label>
+              <label class="validation-checkbox full-field"><input id="fact-validated" type="checkbox"><span><strong>Anecdote validée</strong><small>Seules les anecdotes validées peuvent être diffusées dans l’application Android.</small></span></label>
               <div class="field id-field"><span>Identifiant technique</span><code id="fact-id">Attribué à l’enregistrement</code><small class="field-help">Conservé pour les cartes déjà collectionnées.</small></div>
               <label id="editorial-note-wrap" class="field full-field" hidden><span>Note éditoriale <small>champ facultatif existant</small></span><textarea id="editorial-note" rows="3" placeholder="Précautions ou remarques éditoriales"></textarea></label>
             </div>

@@ -19,3 +19,6 @@ L’import lit `faits_sciences_humaines_v1_16.json` depuis le dossier `data/`, c
 Toute modification de schéma doit incrémenter `@Database(version = ...)`, ajouter une migration Room explicite, conserver les entrées de collection et archiver le nouveau schéma sous `app/schemas/`. Ne pas utiliser `fallbackToDestructiveMigration`.
 
 L’import fourni résout les auteurs sous forme de chaîne unique telle que présente dans le JSON. Si le corpus évolue vers plusieurs auteurs structurés, migrer le format JSON au préalable plutôt que de deviner le découpage de noms.
+## Statut de validation éditoriale
+
+La colonne existante `anecdotes.editorialStatus` conserve le statut individuel `a_valider` ou `validee`. Le JSON porte ce statut sur chaque anecdote. Les entrées sans statut dans un ancien catalogue sont importées comme `a_valider` ; toute autre valeur inconnue est rejetée avant la transaction. La sélection quotidienne ne consulte que les lignes validées et non archivées. La requête de collection reste indépendante du statut : changer un statut ne supprime ni ne masque une carte déjà collectionnée. Le schéma reste en version 2, sans migration.

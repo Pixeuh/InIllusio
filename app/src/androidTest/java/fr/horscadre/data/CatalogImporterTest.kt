@@ -41,6 +41,42 @@ class CatalogImporterTest {
             .map { it.type }
             .toSet()
         assertEquals(setOf("livre", "article", "rapport", "autre"), importedTypes)
+        assertEquals(0, database.catalogDao().validatedAnecdotes().size)
+    }
+
+    @Test fun onlyValidatedFactsCanBeDistributedAndRevalidationKeepsCollectedCards() = runBlocking {
+        val dao = database.catalogDao()
+        importer.importBundledCatalog()
+        val catalog = JSONObject(readCatalog())
+        val facts = catalog.getJSONArray("faits")
+        facts.getJSONObject(0).put("statut_editorial", "validee")
+        importer.importJson(catalog.toString())
+
+        assertEquals(listOf("sociologie-01"), dao.validatedAnecdotes().map { it.id })
+        dao.putCollection(CollectionEntity("sociologie-01", 10L))
+
+        facts.getJSONObject(0).put("statut_editorial", "a_valider")
+        importer.importJson(catalog.toString())
+
+        assertEquals(0, dao.validatedAnecdotes().size)
+        assertNotNull(dao.getAnecdote("sociologie-01"))
+        assertEquals("sociologie-01", dao.observeCollection().first().single().id)
+    }
+
+    @Test fun missingIndividualStatusDefaultsToPendingAndInvalidStatusIsRejectedAtomically() = runBlocking {
+        val dao = database.catalogDao()
+        val catalog = JSONObject(readCatalog())
+        val facts = catalog.getJSONArray("faits")
+        facts.getJSONObject(0).remove("statut_editorial")
+        importer.importJson(catalog.toString())
+        assertEquals(0, dao.validatedAnecdotes().size)
+
+        val before = dao.anecdoteCount()
+        facts.getJSONObject(0).put("statut_editorial", "publie")
+        runCatching { importer.importJson(catalog.toString()) }
+            .onSuccess { throw AssertionError("Unknown editorial status should be rejected") }
+        assertEquals(before, dao.anecdoteCount())
+        assertEquals(0, dao.validatedAnecdotes().size)
     }
 
     @Test fun obsoleteSourceTypeIsRejectedWithoutChangingCollectionOrCatalog() = runBlocking {

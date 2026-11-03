@@ -33,6 +33,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: CatalogRepository = app.repository
     private val _daily = MutableStateFlow<AnecdoteWithCategory?>(null)
     val daily = _daily.asStateFlow()
+    private val _dailyLoaded = MutableStateFlow(false)
+    val dailyLoaded = _dailyLoaded.asStateFlow()
     val collection = repository.collection
     val preferences = app.preferences.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PreferencesState())
     val catalogImportState = app.catalogImportState
@@ -85,6 +87,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _daily.value = fact
         _reference.value = fact?.let { current -> repository.sources(current.id).firstOrNull()?.shortCitation() }
         if (fact != null && repositoryWasDelivered(fact.id)) _deliveredIds.value = _deliveredIds.value + fact.id
+        _dailyLoaded.value = true
     }
     fun onAppForeground() = viewModelScope.launch {
         foregroundCheckMutex.withLock {

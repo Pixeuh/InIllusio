@@ -20,6 +20,10 @@ interface CatalogDao {
     fun observeAnecdote(id: String): Flow<AnecdoteWithCategory?>
     @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.archived = 0 ORDER BY a.id")
     suspend fun allAnecdotes(): List<AnecdoteWithCategory>
+    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.archived = 0 AND a.editorialStatus = 'validee' ORDER BY a.id")
+    suspend fun validatedAnecdotes(): List<AnecdoteWithCategory>
+    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.id = :id AND a.archived = 0 AND a.editorialStatus = 'validee'")
+    suspend fun getValidatedAnecdote(id: String): AnecdoteWithCategory?
     @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM collection x JOIN anecdotes a ON a.id = x.anecdoteId JOIN categories c ON c.id = a.categoryId ORDER BY x.savedAt DESC")
     fun observeCollection(): Flow<List<AnecdoteWithCategory>>
     @Query("SELECT * FROM collection ORDER BY savedAt") suspend fun allCollectionEntries(): List<CollectionEntity>

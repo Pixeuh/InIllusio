@@ -18,7 +18,7 @@ Cliquez sur le bouton **+** au-dessus de la liste. Un identifiant technique disp
 
 Sélectionnez une anecdote dans la liste puis éditez les champs. L’aperçu smartphone et son compteur d’accroche suivent la saisie. Utilisez le sélecteur Clair/Sombre pour contrôler le contraste. La longue accroche déclenche un avertissement, sans bloquer l’enregistrement.
 
-Le format actuel accepte un objet `source` par anecdote. Le type de publication est choisi parmi `livre`, `article`, `rapport` et `autre`. Les auteurs, titres, années et propriétés bibliographiques complémentaires restent modifiables. Les anciennes URL sont supprimées au chargement et ne sont pas exportées ; l’ancien type `lien` est converti en `autre`. L’éditeur ne transforme pas la source en tableau, ce qui modifierait le contrat lu par l’importeur Android. Le champ de statut est stocké une seule fois dans `statut` à la racine du catalogue et s’applique au catalogue entier.
+Le format actuel accepte un objet `source` par anecdote. Le type de publication est choisi parmi `livre`, `article`, `rapport` et `autre`. Les auteurs, titres, années et propriétés bibliographiques complémentaires restent modifiables. Les anciennes URL sont supprimées au chargement et ne sont pas exportées ; l’ancien type `lien` est converti en `autre`. L’éditeur ne transforme pas la source en tableau, ce qui modifierait le contrat lu par l’importeur Android. Le champ racine `statut` décrit le catalogue dans son ensemble et ne valide pas les anecdotes individuellement.
 
 ## Enregistrer les modifications
 
@@ -31,3 +31,6 @@ La suppression demande une confirmation et ne touche au fichier qu’après **En
 Si le navigateur a téléchargé le JSON, vérifiez le résultat puis remplacez `data/faits_sciences_humaines_v1_16.json` par le fichier exporté. La configuration Gradle actuelle utilise déjà le dossier `data/` comme source d’assets Android. Recompilez et réinstallez l’application : le catalogue est embarqué dans l’application, qui l’importe au démarrage; elle ne lit pas directement le fichier éditorial de votre ordinateur.
 
 L’aperçu est une simulation graphique de téléphone et ne prétend pas reproduire exactement le rendu Compose natif.
+## Validation éditoriale individuelle
+
+Chaque anecdote possède une case **Anecdote validée**. Les nouvelles anecdotes commencent à `a_valider` ; une ancienne entrée sans statut est normalisée ainsi et doit être enregistrée dans le JSON. Le filtre de statut permet de consulter les anecdotes à valider ou validées. Le champ racine `statut` reste le statut général du catalogue et ne valide pas toutes les anecdotes. Android ne diffuse que les anecdotes marquées `validee` ; changer ce statut ne retire pas une carte déjà enregistrée dans la collection.

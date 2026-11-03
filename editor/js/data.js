@@ -22,6 +22,7 @@
       titre: '',
       accroche: '',
       explication: '',
+      statut_editorial: 'a_valider',
       source: { type: 'article', auteurs: '', titre: '', annee: null },
     };
   }
@@ -29,6 +30,9 @@
   function normalizeCatalog(catalog) {
     const normalized = copy(catalog);
     normalized.faits.forEach((fact) => {
+      if (!fact || typeof fact !== 'object') return;
+      // Legacy entries with no individual status are always marked pending.
+      if (!Object.prototype.hasOwnProperty.call(fact, 'statut_editorial')) fact.statut_editorial = 'a_valider';
       if (!fact?.source || typeof fact.source !== 'object') return;
       delete fact.source.url;
       // The former "lien" value described access, not the kind of publication.

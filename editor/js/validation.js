@@ -1,6 +1,7 @@
 (function () {
   const text = (value) => typeof value === 'string' && value.trim().length > 0;
   const sourceTypes = new Set(['livre', 'article', 'rapport', 'autre']);
+  const editorialStatuses = new Set(['a_valider', 'validee']);
 
   function validateCatalog(catalog) {
     const errors = [];
@@ -35,6 +36,7 @@
       if (!text(fact.titre)) errors.push(`${label} « ${fact.id || index + 1} » : titre obligatoire.`);
       if (!text(fact.accroche)) errors.push(`${label} « ${fact.id || index + 1} » : accroche obligatoire.`);
       if (!text(fact.explication)) errors.push(`${label} « ${fact.id || index + 1} » : explication obligatoire.`);
+      if (!editorialStatuses.has(fact.statut_editorial)) errors.push(`${label}: Statut individuel invalide (a_valider ou validee).`);
       if (!fact.source || typeof fact.source !== 'object' || Array.isArray(fact.source)) {
         errors.push(`${label} « ${fact.id || index + 1} » : la source doit être un objet.`);
         return;

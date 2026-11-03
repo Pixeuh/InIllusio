@@ -58,7 +58,8 @@
         "titre": "Dans quatre couples sur dix, les deux conjoints appartiennent au même groupe social",
         "annee": 2023
       },
-      "note_editoriale": "Chiffre concernant uniquement les couples cohabitants, à partir des classes d’emploi agrégées. Éviter de généraliser à tous les couples."
+      "note_editoriale": "Chiffre concernant uniquement les couples cohabitants, à partir des classes d’emploi agrégées. Éviter de généraliser à tous les couples.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "sociologie-02",
@@ -72,7 +73,8 @@
         "titre": "Anatomie du goût — Actes de la recherche en sciences sociales",
         "annee": 1976
       },
-      "note_editoriale": "Source liée : article de recherche de Bourdieu et Monique de Saint Martin (1976), précurseur de La Distinction (Bourdieu, 1979). Une relation statistique, pas une règle valable pour chaque individu."
+      "note_editoriale": "Source liée : article de recherche de Bourdieu et Monique de Saint Martin (1976), précurseur de La Distinction (Bourdieu, 1979). Une relation statistique, pas une règle valable pour chaque individu.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "sociologie-03",
@@ -86,7 +88,8 @@
         "titre": "Définir et analyser les réseaux sociaux : les enjeux de l’analyse structurale — Informations sociales, n° 147, p. 10-19",
         "annee": 2008
       },
-      "note_editoriale": "La source liée est l’article de Michel Forsé (2008), qui présente les réseaux sociaux et leurs mécanismes. Référence fondatrice complémentaire : McPherson, Smith-Lovin et Cook, « Birds of a Feather: Homophily in Social Networks », Annual Review of Sociology, 2001, DOI 10.1146/annurev.soc.27.1.415."
+      "note_editoriale": "La source liée est l’article de Michel Forsé (2008), qui présente les réseaux sociaux et leurs mécanismes. Référence fondatrice complémentaire : McPherson, Smith-Lovin et Cook, « Birds of a Feather: Homophily in Social Networks », Annual Review of Sociology, 2001, DOI 10.1146/annurev.soc.27.1.415.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "sociologie-04",
@@ -100,7 +103,8 @@
         "titre": "Le crime, phénomène normal — extrait des Règles de la méthode sociologique",
         "annee": 1895
       },
-      "note_editoriale": "Extrait du chapitre de l’ouvrage publié en 1895. Le texte de la page UQAM traite directement du caractère normal du crime et de son rôle possible dans l’évolution des normes."
+      "note_editoriale": "Extrait du chapitre de l’ouvrage publié en 1895. Le texte de la page UQAM traite directement du caractère normal du crime et de son rôle possible dans l’évolution des normes.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "sociologie-05",
@@ -113,7 +117,8 @@
         "auteurs": "Howard S. Becker",
         "titre": "Outsiders. Études de sociologie de la déviance (traduction française, éd. orig. 1963)",
         "annee": 1985
-      }
+      },
+      "statut_editorial": "a_valider"
     },
     {
       "id": "sociologie-06",
@@ -127,7 +132,8 @@
         "titre": "Les Héritiers de Pierre Bourdieu et Jean-Claude Passeron, 1964 — Les enquêtes sociologiques en France depuis 1945",
         "annee": 2017
       },
-      "note_editoriale": "La source liée est une analyse académique de Philippe Masson (2017). Source originale : Pierre Bourdieu et Jean-Claude Passeron, Les Héritiers. Les étudiants et la culture (1964)."
+      "note_editoriale": "La source liée est une analyse académique de Philippe Masson (2017). Source originale : Pierre Bourdieu et Jean-Claude Passeron, Les Héritiers. Les étudiants et la culture (1964).",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "sociologie-07",
@@ -141,7 +147,8 @@
         "titre": "Les grandes épidémies et la civilisation des mœurs — Actes de la recherche en sciences sociales",
         "annee": 1987
       },
-      "note_editoriale": "La source liée est une recherche de Johan Goudsblom (1987) qui examine notamment les changements historiques concernant le fait de cracher, dans le prolongement de Norbert Elias, La Civilisation des mœurs (1939)."
+      "note_editoriale": "La source liée est une recherche de Johan Goudsblom (1987) qui examine notamment les changements historiques concernant le fait de cracher, dans le prolongement de Norbert Elias, La Civilisation des mœurs (1939).",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "sociologie-08",
@@ -155,7 +162,8 @@
         "titre": "La représentation de soi dans le logement chez les familles immigrées d’origine maghrébine — VEI enjeux",
         "annee": 2003
       },
-      "note_editoriale": "La source liée est une étude sociologique de Atmane Aggoun (2003) mobilisant les concepts de scène et coulisses. Source originale : Erving Goffman, The Presentation of Self in Everyday Life (1959)."
+      "note_editoriale": "La source liée est une étude sociologique de Atmane Aggoun (2003) mobilisant les concepts de scène et coulisses. Source originale : Erving Goffman, The Presentation of Self in Everyday Life (1959).",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "sociologie-09",
@@ -169,7 +177,8 @@
         "titre": "Mondes de l’art et types sociaux — Sociologie du travail, vol. 25, n° 4",
         "annee": 1983
       },
-      "note_editoriale": "Le concept est également développé dans Art Worlds (1982), paru en français sous le titre Les Mondes de l’art."
+      "note_editoriale": "Le concept est également développé dans Art Worlds (1982), paru en français sous le titre Les Mondes de l’art.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "sociologie-10",
@@ -182,7 +191,8 @@
         "auteurs": "Émile Durkheim",
         "titre": "Le Suicide. Étude de sociologie (texte original)",
         "annee": 1897
-      }
+      },
+      "statut_editorial": "a_valider"
     },
     {
       "id": "anthropologie-01",
@@ -196,7 +206,8 @@
         "titre": "Essai sur le don. Forme et raison de l’échange dans les sociétés archaïques (texte original)",
         "annee": 1925
       },
-      "note_editoriale": "L’article paraît dans le volume de L’Année sociologique daté 1923-1924, couramment référencé sous l’année de publication 1925. Ne pas généraliser l’obligation de rendre à toutes les situations ou sociétés."
+      "note_editoriale": "L’article paraît dans le volume de L’Année sociologique daté 1923-1924, couramment référencé sous l’année de publication 1925. Ne pas généraliser l’obligation de rendre à toutes les situations ou sociétés.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "anthropologie-02",
@@ -210,7 +221,8 @@
         "titre": "Usages et fonctions de la photographie post mortem dans la communauté polonaise du Nord-Pas-de-Calais et en Pologne — Actes du CTHS",
         "annee": 2012
       },
-      "note_editoriale": "Il s’agit de photographies post-mortem (et non post-partum). Éviter les images explicites de corps sans avertissement ; préférer une illustration stylisée."
+      "note_editoriale": "Il s’agit de photographies post-mortem (et non post-partum). Éviter les images explicites de corps sans avertissement ; préférer une illustration stylisée.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "psychologie_sociale-01",
@@ -224,7 +236,8 @@
         "titre": "Studies of Independence and Conformity: I. A Minority of One Against a Unanimous Majority — Psychological Monographs, 70(9), 1-70",
         "annee": 1956
       },
-      "note_editoriale": "Étude primaire de Solomon Asch sur le jugement de lignes et la conformité, publiée en 1956. Résultat lié au protocole expérimental décrit, pas un taux universel de conformisme."
+      "note_editoriale": "Étude primaire de Solomon Asch sur le jugement de lignes et la conformité, publiée en 1956. Résultat lié au protocole expérimental décrit, pas un taux universel de conformisme.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "psychologie_sociale-02",
@@ -238,7 +251,8 @@
         "titre": "Behavioral Study of Obedience",
         "annee": 1963
       },
-      "note_editoriale": "Dispositif historiquement controversé sur le plan éthique ; ne pas généraliser le résultat."
+      "note_editoriale": "Dispositif historiquement controversé sur le plan éthique ; ne pas généraliser le résultat.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "histoire-01",
@@ -252,7 +266,8 @@
         "titre": "Temporal dynamics of woolly mammoth genome erosion prior to extinction — Cell",
         "annee": 2024
       },
-      "note_editoriale": "L’étude génomique établit la survie des mammouths de Wrangel jusque vers 4 000 ans avant le présent ; elle ne date pas les pyramides. La chronologie de Gizeh est distincte et s’appuie sur l’archéologie égyptienne (Khéops vers 2560 av. J.-C.). Ne pas laisser entendre que les mammouths vivaient en Égypte."
+      "note_editoriale": "L’étude génomique établit la survie des mammouths de Wrangel jusque vers 4 000 ans avant le présent ; elle ne date pas les pyramides. La chronologie de Gizeh est distincte et s’appuie sur l’archéologie égyptienne (Khéops vers 2560 av. J.-C.). Ne pas laisser entendre que les mammouths vivaient en Égypte.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "histoire-02",
@@ -266,7 +281,8 @@
         "titre": "Le thermopolium se livre — présentation des résultats des fouilles",
         "annee": 2020
       },
-      "note_editoriale": "Source française officielle du Parc archéologique de Pompéi présentant des résultats de fouilles ; ne pas confondre publication institutionnelle de recherche et article évalué par les pairs."
+      "note_editoriale": "Source française officielle du Parc archéologique de Pompéi présentant des résultats de fouilles ; ne pas confondre publication institutionnelle de recherche et article évalué par les pairs.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "linguistique-01",
@@ -279,7 +295,8 @@
         "auteurs": "Académie française",
         "titre": "Dictionnaire de l’Académie française, 9e édition — « alphabet »",
         "annee": 2024
-      }
+      },
+      "statut_editorial": "a_valider"
     },
     {
       "id": "linguistique-02",
@@ -293,7 +310,8 @@
         "titre": "II. The Noun — Turkish Grammar",
         "annee": 2000
       },
-      "note_editoriale": "Référence grammaticale de Geoffrey Lewis, en anglais ; elle indique explicitement l’absence de genre grammatical et l’usage de « o » pour he, she et it. La traduction reste déterminée par le contexte ; « o » peut aussi servir de démonstratif."
+      "note_editoriale": "Référence grammaticale de Geoffrey Lewis, en anglais ; elle indique explicitement l’absence de genre grammatical et l’usage de « o » pour he, she et it. La traduction reste déterminée par le contexte ; « o » peut aussi servir de démonstratif.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "economie-01",
@@ -307,7 +325,8 @@
         "titre": "La théorie économique néoclassique — « L’équilibre en concurrence parfaite »",
         "annee": 2008
       },
-      "note_editoriale": "Ne pas affirmer que seuls les marchés en CPP comportent des agents preneurs de prix."
+      "note_editoriale": "Ne pas affirmer que seuls les marchés en CPP comportent des agents preneurs de prix.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "economie-02",
@@ -321,7 +340,8 @@
         "titre": "Comment est créée la monnaie ?",
         "annee": 2024
       },
-      "note_editoriale": "Préciser que cela concerne la monnaie scripturale des banques commerciales et que le remboursement du capital détruit cette monnaie ; ne pas suggérer une création monétaire illimitée."
+      "note_editoriale": "Préciser que cela concerne la monnaie scripturale des banques commerciales et que le remboursement du capital détruit cette monnaie ; ne pas suggérer une création monétaire illimitée.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "philosophie-01",
@@ -335,7 +355,8 @@
         "titre": "Sur les Nuées d’Aristophane — Bulletin de l’Académie royale de Belgique",
         "annee": 1968
       },
-      "note_editoriale": "Absence d’écrits connus attribués à Socrate ; ne pas prétendre connaître ses idées exactes sans intermédiaire."
+      "note_editoriale": "Absence d’écrits connus attribués à Socrate ; ne pas prétendre connaître ses idées exactes sans intermédiaire.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "philosophie-02",
@@ -349,7 +370,8 @@
         "titre": "Le paradoxe du menteur : essai de résolution dans le cadre d’une approche dynamique — Intellectica",
         "annee": 1988
       },
-      "note_editoriale": "Présenter comme un paradoxe logique, pas comme une preuve que toute vérité est relative."
+      "note_editoriale": "Présenter comme un paradoxe logique, pas comme une preuve que toute vérité est relative.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "geographie_humaine-01",
@@ -363,7 +385,8 @@
         "titre": "Le pouvoir des cartes pour représenter le monde",
         "annee": 2026
       },
-      "note_editoriale": "Le centre du dessin est un choix cartographique ; ne pas généraliser mécaniquement des préférences à un pays entier."
+      "note_editoriale": "Le centre du dessin est un choix cartographique ; ne pas généraliser mécaniquement des préférences à un pays entier.",
+      "statut_editorial": "a_valider"
     },
     {
       "id": "geographie_humaine-02",
@@ -377,7 +400,8 @@
         "titre": "L’îlot de chaleur urbain à Caen : un phénomène d’intensité et de répartition géographique très variables — Atlas social de Caen, laboratoire ESO (CNRS)",
         "annee": 2024
       },
-      "note_editoriale": "Éviter un écart chiffré fixe : il dépend de la météo, de l’heure et du lieu."
+      "note_editoriale": "Éviter un écart chiffré fixe : il dépend de la météo, de l’heure et du lieu.",
+      "statut_editorial": "a_valider"
     }
   ]
 }

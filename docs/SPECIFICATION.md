@@ -31,6 +31,8 @@ Un renderer dédié produit une affiche adaptée aux dimensions du téléphone :
 
 Le catalogue source est `data/faits_sciences_humaines_v1_16.json`, en français, avec 24 anecdotes, dont dix en sociologie. Les sources conservent les informations bibliographiques disponibles (auteur, titre et année) sans champ URL. Il est fourni comme corpus de travail à vérifier avant publication. Ne pas inventer d’anecdotes ou de références pour compléter ce corpus. S’il manque, conserver l’importeur et signaler précisément l’absence.
 
+Chaque anecdote porte son propre champ `statut_editorial`, limité à `a_valider` ou `validee`. Seules les anecdotes `validee` sont éligibles à la sélection et à la diffusion quotidienne. Les anecdotes en attente restent dans le catalogue et les cartes déjà collectionnées restent visibles. Le statut racine `statut` décrit toujours l’état éditorial global du catalogue et ne valide pas individuellement ses anecdotes. Un statut manquant lors d’un import est traité comme `a_valider`.
+
 ## Contraintes produit
 
 Kotlin, Compose, Material 3, Room, DataStore, Navigation Compose, Coroutines/Flow, ViewModel, WorkManager et Gradle Kotlin DSL. Architecture lisible par responsabilités, sans module superflu. Pas de synchronisation distante dans cette première étape ; prévoir une séparation entre stockage, repository, logique métier et UI. Toute évolution doit maintenir le verrouillage exclusif, le consentement, la collection volontaire et le fonctionnement hors ligne.

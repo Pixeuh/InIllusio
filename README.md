@@ -52,3 +52,4 @@ L’APK DEBUG est généré dans `app/build/outputs/apk/debug/`.
 Ouvrez `editor/index.html` dans Chrome ou Edge, puis chargez `data/faits_sciences_humaines_v1_16.json`. L’éditeur valide les champs et les identifiants avant l’enregistrement. Il conserve le catalogue dans le navigateur jusqu’à export ou écriture autorisée; aucune synchronisation n’a lieu. Pour intégrer un export à l’application, placez le JSON validé dans `data/` puis recompilez. L’import Android est local et transactionnel.
 
 Consultez `editor/README.md` pour le mode d’emploi et `docs/` pour la documentation technique.
+Chaque anecdote a un statut éditorial individuel (`a_valider` ou `validee`). Seules les anecdotes validées sont proposées à la diffusion quotidienne ; les cartes déjà collectionnées restent conservées même si leur statut change.

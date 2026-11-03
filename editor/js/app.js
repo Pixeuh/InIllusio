@@ -33,6 +33,10 @@
   function updateCounts(filteredCount) {
     $('fact-count').textContent = state.catalog ? state.catalog.faits.length : '—';
     $('filtered-count').textContent = state.catalog && filteredCount !== state.catalog.faits.length ? `${filteredCount} affichée${filteredCount > 1 ? 's' : ''}` : '';
+    if (state.catalog) {
+      const validated = state.catalog.faits.filter((fact) => fact.statut_editorial === 'validee').length;
+      $('editorial-counts').textContent = `${validated} validées · ${state.catalog.faits.length - validated} à valider`;
+    }
   }
 
   function renderFilters() {
@@ -54,10 +58,8 @@
   function renderStatusFilter() {
     const status = $('status-filter');
     const selected = status.value;
-    status.innerHTML = '<option value="">Tous les statuts</option>';
-    const value = state.catalog.statut || '';
-    if (value) status.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(value)}">${escapeHtml(value.replaceAll('_', ' '))}</option>`);
-    status.value = selected === value ? selected : '';
+    status.innerHTML = '<option value="">Toutes les anecdotes</option><option value="a_valider">À valider</option><option value="validee">Validées</option>';
+    status.value = ['a_valider', 'validee'].includes(selected) ? selected : '';
   }
 
   function visibleFactIndices() {
@@ -67,7 +69,7 @@
     return state.catalog.faits.map((fact, index) => ({ fact, index })).filter(({ fact }) => {
       const category = categoryFor(fact);
       const searchable = normalize([fact.titre, fact.accroche, fact.explication, fact.source?.auteurs, fact.source?.titre, category?.nom].join(' '));
-      return (!query || searchable.includes(query)) && (!categoryId || fact.categorie === categoryId) && (!status || state.catalog.statut === status);
+      return (!query || searchable.includes(query)) && (!categoryId || fact.categorie === categoryId) && (!status || fact.statut_editorial === status);
     });
   }
 
@@ -80,7 +82,8 @@
       const category = categoryFor(fact);
       const color = /^#[\da-f]{6}$/i.test(category?.couleur || '') ? category.couleur : '#00bfae';
       const selected = index === state.selectedIndex;
-      return `<button class="fact-row${selected ? ' selected' : ''}" type="button" role="option" aria-selected="${selected}" data-index="${index}"><span class="fact-row-top"><i class="category-dot" style="background:${color}"></i><span class="fact-category">${escapeHtml(category?.nom || 'Catégorie inconnue')}</span></span><span class="fact-row-title">${escapeHtml(fact.titre || 'Sans titre')}</span><span class="fact-row-status">${escapeHtml(state.catalog.statut || 'statut manquant').replaceAll('_', ' ')}</span></button>`;
+      const validated = fact.statut_editorial === 'validee';
+      return `<button class="fact-row${selected ? ' selected' : ''}" type="button" role="option" aria-selected="${selected}" data-index="${index}"><span class="fact-row-top"><i class="category-dot" style="background:${color}"></i><span class="fact-category">${escapeHtml(category?.nom || 'Catégorie inconnue')}</span></span><span class="fact-row-title">${escapeHtml(fact.titre || 'Sans titre')}</span><span class="fact-row-status ${validated ? 'status-validated' : 'status-pending'}">${validated ? 'Validée' : 'À valider'}</span></button>`;
     }).join('');
     $('load-more').hidden = matches.length <= state.pageSize;
     $('load-more').textContent = `Afficher les ${Math.min(100, matches.length - state.pageSize)} suivantes`;
@@ -115,6 +118,7 @@
     fieldValue('fact-title', fact.titre);
     fieldValue('fact-hook', fact.accroche);
     fieldValue('fact-explanation', fact.explication);
+    $('fact-validated').checked = fact.statut_editorial === 'validee';
     fieldValue('catalog-status-input', state.catalog.statut);
     fieldValue('editorial-note', fact.note_editoriale);
     $('editorial-note-wrap').hidden = !Object.prototype.hasOwnProperty.call(fact, 'note_editoriale') && state.selectedIndex >= 0;
@@ -149,6 +153,7 @@
       throw new Error('Structure JSON non reconnue : les tableaux « categories » et « faits » sont nécessaires.');
     }
     const originalCatalog = JSON.stringify(catalog);
+    const missingEditorialStatuses = catalog.faits.filter((fact) => fact && typeof fact === 'object' && !Object.prototype.hasOwnProperty.call(fact, 'statut_editorial')).length;
     catalog = window.EditorData.normalizeCatalog(catalog);
     state.catalog = catalog;
     state.selectedIndex = catalog.faits.length ? 0 : -1;
@@ -159,7 +164,8 @@
     state.pageSize = 100;
     refreshAll();
     const errors = window.EditorValidation.validateCatalog(catalog);
-    if (errors.length) notify(`Base chargée (${catalog.faits.length} anecdotes). ${errors.length} point(s) à corriger avant l’enregistrement.`, 'error');
+    if (missingEditorialStatuses) notify(`${missingEditorialStatuses} anecdote(s) sans statut ont été marquées « À valider ». Enregistrez la migration.`);
+    else if (errors.length) notify(`Base chargée (${catalog.faits.length} anecdotes). ${errors.length} point(s) à corriger avant l’enregistrement.`, 'error');
     else notify(`${catalog.faits.length} anecdotes et ${catalog.categories.length} catégories chargées.`);
   }
 
@@ -243,6 +249,7 @@
         'source-title': ['source.titre', target.value],
       };
       if (target.id === 'catalog-status-input') { state.catalog.statut = target.value; renderStatusFilter(); }
+      else if (target.id === 'fact-validated') fact.statut_editorial = target.checked ? 'validee' : 'a_valider';
       else if (target.id === 'source-year') {
         if (!fact.source) fact.source = {};
         if (target.value === '') {
@@ -263,7 +270,7 @@
     $('hook-counter').textContent = `${(fact.accroche || '').length} caractères`;
     $('hook-warning').hidden = (fact.accroche || '').length < 150;
     updatePreview();
-    if (target.id === 'fact-title' || target.id === 'fact-category' || target.id === 'catalog-status-input' || target.dataset.extraSource) renderList();
+    if (target.id === 'fact-title' || target.id === 'fact-category' || target.id === 'catalog-status-input' || target.id === 'fact-validated' || target.dataset.extraSource) renderList();
     updateSaveState();
   }
 

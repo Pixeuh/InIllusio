@@ -36,3 +36,4 @@
 
 - Comptes, backend, publicité, analyse comportementale et achats intégrés : hors périmètre.
 - Historique de cartes manquées accessible à l’utilisateur : exclu par la spécification.
+- Statut éditorial individuel `a_valider` / `validee` dans le catalogue et l’éditeur local ; seuls les faits validés sont diffusés. Les statuts absents sont importés en attente et les cartes collectionnées restent accessibles.

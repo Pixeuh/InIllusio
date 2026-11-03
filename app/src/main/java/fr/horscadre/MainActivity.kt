@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
     val prefs by model.preferences.collectAsStateWithLifecycle()
     val catalogImportState by model.catalogImportState.collectAsStateWithLifecycle()
     val daily by model.daily.collectAsStateWithLifecycle()
+    val dailyLoaded by model.dailyLoaded.collectAsStateWithLifecycle()
     val collection by model.collection.collectAsStateWithLifecycle(initialValue = emptyList())
     val savedIds by model.savedIds.collectAsStateWithLifecycle()
     val deliveredIds by model.deliveredIds.collectAsStateWithLifecycle()
@@ -78,7 +79,7 @@ class MainActivity : ComponentActivity() {
                         model.setRefreshEnabled(acceptedConsent); model.completeOnboarding()
                     }
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
-                        composable("home") { HomeScreen(daily, daily?.let { it.id in savedIds } == true, daily?.let { it.id in deliveredIds } == true, { daily?.let { model.save(it.id) } }, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
+                        composable("home") { HomeScreen(daily, dailyLoaded, daily?.let { it.id in savedIds } == true, daily?.let { it.id in deliveredIds } == true, { daily?.let { model.save(it.id) } }, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { navController.navigate("collection") }, { navController.navigate("settings") }) }
                         composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true, selected?.let { it.id in deliveredIds } == true) }
                         composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { selected = it; model.showSources(it.id); navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
                         composable("card") { CardScreen(selected, sources, { navController.popBackStack() }, { selected?.let { model.save(it.id) } }, selected?.let { it.id in savedIds } == true) }
@@ -115,13 +116,21 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, saved: Boolean, delivered: Boolean, onSave: () -> Unit, onExplain: () -> Unit, onCollection: () -> Unit, onSettings: () -> Unit) {
+@Composable private fun HomeScreen(fact: AnecdoteWithCategory?, dailyLoaded: Boolean, saved: Boolean, delivered: Boolean, onSave: () -> Unit, onExplain: () -> Unit, onCollection: () -> Unit, onSettings: () -> Unit) {
     val heartScale by animateFloatAsState(if (saved) 1.12f else 1f, label = "heart-scale")
     val heartColor by animateColorAsState(if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, label = "heart-color")
     Column(Modifier.fillMaxSize().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         TopLine(onSettings = onSettings)
         Spacer(Modifier.height(8.dp))
-        if (fact == null) { CircularProgressIndicator(); Text("Préparation de la carte du jour…", Modifier.padding(20.dp)) }
+        if (fact == null && !dailyLoaded) { CircularProgressIndicator(); Text("Préparation de la carte du jour…", Modifier.padding(20.dp)) }
+        else if (fact == null) {
+            Column(Modifier.weight(1f).fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Aucune anecdote validée", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                Text("Le catalogue ne contient pas encore d’anecdote disponible pour la diffusion.", Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            }
+            TextButton(onClick = onSettings, modifier = Modifier.align(Alignment.End)) { Icon(Icons.Default.Settings, null); Text(" Paramètres") }
+            TextButton(onClick = onCollection, modifier = Modifier.align(Alignment.End)) { Text("Ma collection") }
+        }
         else {
             EditorialCard(fact, Modifier.weight(1f).fillMaxWidth(), showSourceReference = false)
             Spacer(Modifier.height(14.dp))

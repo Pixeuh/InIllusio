@@ -14,11 +14,11 @@ class CatalogRepository(private val db: HorsCadreDatabase, private val preferenc
     val collection: Flow<List<AnecdoteWithCategory>> = db.catalogDao().observeCollection()
     suspend fun dailyAnecdote(today: LocalDate = LocalDate.now()): AnecdoteWithCategory? {
         val dao = db.catalogDao()
-        val all = dao.allAnecdotes()
+        val all = dao.validatedAnecdotes()
         val delivered = dao.successfullyDeliveredIds().toSet()
         val eligible = all.filterNot { it.id in delivered }.ifEmpty { all }
         val id = preferences.dailySelection(today, all.map { it.id }, eligible.map { it.id }) ?: return null
-        return dao.getAnecdote(id)
+        return dao.getValidatedAnecdote(id)
     }
     suspend fun hasSuccessfulDeliveryOn(id: String, date: LocalDate): Boolean {
         val zone = java.time.ZoneId.systemDefault()
