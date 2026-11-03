@@ -47,7 +47,6 @@ import fr.inillusio.debug.DeveloperTools
 import fr.inillusio.data.preferences.AppTheme
 import fr.inillusio.CatalogImportState
 import fr.inillusio.ui.AppViewModel
-import fr.inillusio.ui.explanationExcerpt
 import fr.inillusio.ui.illustration.CategoryIllustration
 import fr.inillusio.ui.illustration.DisciplinePalettes
 import fr.inillusio.ui.theme.InIllusioTheme
@@ -257,12 +256,12 @@ class MainActivity : ComponentActivity() {
             HorizontalDivider(Modifier.padding(top = 14.dp), color = Color(palette.secondary), thickness = 2.dp)
         }
         Text(
-            text = explanationExcerpt(fact.explanation),
+            text = fact.explanation,
             modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 18.dp),
             style = MaterialTheme.typography.bodyLarge,
             lineHeight = 25.sp,
-            maxLines = 9,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            maxLines = Int.MAX_VALUE,
+            overflow = TextOverflow.Ellipsis
         )
         OutlinedButton(onClick = onOpenExplanation, modifier = Modifier.fillMaxWidth()) { Text("Lire l’explication complète") }
     }
