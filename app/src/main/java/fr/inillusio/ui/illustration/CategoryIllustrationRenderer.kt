@@ -153,7 +153,7 @@ object CategoryIllustrationRenderer {
         fun sociology() {
             val nodes = listOf(220f to 250f, 380f to 150f, 560f to 245f, 755f to 155f, 790f to 340f, 555f to 390f, 330f to 385f)
             val edges = listOf(0 to 1, 0 to 2, 0 to 6, 1 to 2, 1 to 3, 2 to 3, 2 to 4, 2 to 5, 4 to 5, 5 to 6, 0 to 5)
-            val centralConnections = edges.indices.filter { edges[it] == (0 to 2) || edges[it] == (2 to 4) }.toSet()
+            val centralConnections = edges.indices.filter { edges[it] == (0 to 2) || edges[it] == (1 to 2) || edges[it] == (2 to 3) || edges[it] == (2 to 4) }.toSet()
             val lowerConnections = edges.indices.filter { edges[it] == (4 to 5) || edges[it] == (5 to 6) }.toSet()
             val redrawnConnections = centralConnections + lowerConnections
             edges.forEachIndexed { index, (a, b) ->
@@ -163,10 +163,10 @@ object CategoryIllustrationRenderer {
             }
             nodes.forEachIndexed { index, (x, y) -> person(x, y, if (index == 2) 1.15f else .82f, if (index == 2 || index == 5) colors.primary else colors.ink) }
             halftone(220f, 250f, 48f, colors.secondary, 12f)
-            // Draw the two existing middle edges last so they visibly meet the central neck marker.
+            // Draw the four existing middle edges last so they visibly meet the central neck marker.
             // Clip only the neighboring figures; their short overlap onto node 2 is intentional.
             val centralSave = canvas.save()
-            listOf(0, 4).forEach { index ->
+            listOf(0, 1, 3, 4).forEach { index ->
                 val (cx, cy) = nodes[index]
                 val scale = .82f
                 val head = Path().apply { addCircle(cx, cy, 27f * scale, Path.Direction.CW) }
@@ -184,7 +184,7 @@ object CategoryIllustrationRenderer {
                 val endAY = nodes[a].second + if (a == 2) 35.5f else 25f
                 val endBY = nodes[b].second + if (b == 2) 35.5f else 25f
                 val lineColor = if (index % 3 == 0) colors.primary else colors.secondary
-                if (edges[index] == (2 to 4)) {
+                if (edges[index] == (1 to 2) || edges[index] == (2 to 4)) {
                     // A subtle darker-red under-stroke keeps the red edge distinct on the orange torso.
                     val (cx, cy) = nodes[2]
                     val silhouette = Path().apply {
