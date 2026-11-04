@@ -30,17 +30,6 @@ L’import fourni résout les auteurs sous forme de chaîne unique telle que pr�
 
 La colonne existante `anecdotes.editorialStatus` conserve le statut individuel `a_valider` ou `validee`. Le JSON porte ce statut sur chaque anecdote. Les entrées sans statut dans un ancien catalogue sont importées comme `a_valider` ; toute autre valeur inconnue est rejetée avant la transaction. La sélection quotidienne et les boosters ne consultent que les lignes validées et non archivées. La requête de collection reste indépendante du statut : changer un statut ne supprime ni ne masque une carte déjà collectionnée. La version 3 ajoute `booster_redemptions` par migration non destructive 2→3.
 
-## Migration des noms de stockage
+## Stockages actifs
 
-| Ancien identifiant, conservé uniquement pour compatibilité | Identifiant actif |
-|---|---|
-| `hors-cadre.db` | `inillusio.db` |
-| `hors_cadre_preferences` | `inillusio_preferences` |
-| `hors_cadre_developer` (DEBUG) | `inillusio_developer` |
-| `hors-cadre-daily-lock-wallpaper` | `inillusio_daily_lock_wallpaper` |
-
-`DatabaseFileMigration.prepare` intervient au démarrage, avant l’ouverture de Room ou l’import. Quand seule l’ancienne base existe, elle effectue un checkpoint WAL complet, copie le fichier dans le même répertoire, synchronise l’écriture et vérifie `PRAGMA quick_check` avant de publier la copie par renommage. L’original reste disponible. Un checkpoint occupé, une copie incomplète ou une corruption interrompt la migration sans créer une base vide ; le gestionnaire SQLite de cette opération ne supprime jamais le fichier corrompu. Une copie temporaire interrompue est remplacée au prochain essai. Une base canonique déjà présente n’est jamais écrasée. Room applique ensuite normalement les migrations de schéma 1→2→3 ; aucun schéma ni ID d’anecdote ne change.
-
-`PreferencesFileMigration` importe les valeurs de l’ancien DataStore dans le nouveau via l’API `DataMigration`. Toutes les clés sont conservées, y compris l’onboarding, le consentement, la carte du jour, les deux positions et la sauvegarde développeur. Les valeurs déjà présentes dans le nouveau fichier ont priorité. DataStore écrit atomiquement le résultat et son marqueur de migration ; ce marqueur évite de réimporter une sauvegarde développeur déjà restaurée et consommée. L’ancien fichier n’est pas supprimé. Une corruption remonte en erreur et ne provoque aucun remplacement silencieux par des valeurs par défaut.
-
-WorkManager ne propose pas d’API publique pour renommer un travail unique. Le scheduler attend donc l’annulation du nom historique avant de créer le nouveau ; `KEEP` conserve le même nouveau travail aux appels suivants. La désactivation annule les deux noms. L’échéance technique peut être recalculée lors de cette première reprise ; l’historique et la sélection du jour restent conservés et `DailyWallpaperUpdater` protège toujours contre une deuxième diffusion réussie à la même date. Ces références historiques restent lisibles dans le code et les fixtures de migration, sans concaténation destinée à les masquer.
+Les préférences de l’application sont enregistrées dans le DataStore `inillusio_preferences`. Les outils DEBUG stockent leur sauvegarde de collection dans `inillusio_developer`. WorkManager identifie le renouvellement quotidien avec `inillusio_daily_lock_wallpaper`. Les migrations Room restent non destructives et conservent les entrées de collection.

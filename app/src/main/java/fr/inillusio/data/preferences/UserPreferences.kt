@@ -3,18 +3,12 @@ package fr.inillusio.data.preferences
 import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.datastore.preferences.preferencesDataStoreFile
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import fr.inillusio.domain.DailySelectionPolicy
 import java.time.LocalDate
 
-private val Context.preferences by preferencesDataStore(
-    name = "inillusio_preferences",
-    produceMigrations = { context ->
-        listOf(PreferencesFileMigration(context.preferencesDataStoreFile("hors_cadre_preferences")))
-    }
-)
+private val Context.preferences by preferencesDataStore(name = "inillusio_preferences")
 enum class AppTheme { SYSTEM, LIGHT, DARK }
 const val MIN_WALLPAPER_TEXT_OFFSET = -0.15f
 const val MAX_WALLPAPER_TEXT_OFFSET = 0.15f

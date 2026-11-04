@@ -5,7 +5,6 @@ import androidx.room.Room
 import androidx.room.withTransaction
 import fr.inillusio.data.importer.CatalogImporter
 import fr.inillusio.data.local.InIllusioDatabase
-import fr.inillusio.data.local.DatabaseFileMigration
 import fr.inillusio.data.preferences.UserPreferences
 import fr.inillusio.data.repository.CatalogRepository
 import fr.inillusio.data.repository.BoosterAwardResult
@@ -44,7 +43,7 @@ class InIllusioApplication : Application() {
     private val collectionResetGeneration = AtomicLong(0L)
     override fun onCreate() {
         super.onCreate()
-        database = Room.databaseBuilder(this, InIllusioDatabase::class.java, DatabaseFileMigration.prepare(this))
+        database = Room.databaseBuilder(this, InIllusioDatabase::class.java, "inillusio.db")
             .addMigrations(InIllusioDatabase.MIGRATION_1_2)
             .addMigrations(InIllusioDatabase.MIGRATION_2_3)
             .build()

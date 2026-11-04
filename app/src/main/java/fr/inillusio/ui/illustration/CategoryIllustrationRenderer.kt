@@ -300,7 +300,7 @@ object CategoryIllustrationRenderer {
             listOf(180f to 255f, 455f to 270f, 750f to 252f).forEachIndexed { index, (x, y) ->
                 canvas.drawCircle(x, y, 62f, paint(if (index == 1) colors.primary else colors.neutral))
                 canvas.drawCircle(x, y, 49f, paint(if (index == 1) colors.secondary else colors.ink, 3f, Paint.Style.STROKE))
-                canvas.drawText("â†”", x - 30f, y + 15f, paint(colors.ink).apply { textSize = 48f; typeface = Typeface.DEFAULT_BOLD })
+                canvas.drawText("↔", x - 30f, y + 15f, paint(colors.ink).apply { textSize = 48f; typeface = Typeface.DEFAULT_BOLD })
             }
             line(145f, 500f, 850f, 500f, colors.ink, 3f)
             line(145f, 500f, 145f, 400f, colors.ink, 3f)
