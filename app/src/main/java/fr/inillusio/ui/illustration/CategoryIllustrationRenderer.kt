@@ -1,6 +1,7 @@
-package fr.inillusio.ui.illustration
+﻿package fr.inillusio.ui.illustration
 
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
@@ -43,7 +44,10 @@ object CategoryIllustrationRenderer {
             canvas.scale(bounds.width() / 1000f, bounds.height() / 700f)
         }
         val art = Art(canvas, palette)
-        art.commonTexture()
+        art.commonTexture(
+            includeBottomRule = categoryId != ARCHAEOLOGY,
+            bottomDotRows = if (categoryId == ARCHAEOLOGY) 0 else 5
+        )
         val categoryScale = when (categoryId) {
             SOCIOLOGY -> 1.08f
             ANTHROPOLOGY -> 1.12f
@@ -63,6 +67,7 @@ object CategoryIllustrationRenderer {
         }
         // Normalize the visual weight of categories whose central motif is
         // naturally compact. The uniform scale preserves geometry proportions.
+        val artworkSave = canvas.save()
         canvas.translate(500f, 350f)
         canvas.scale(categoryScale, categoryScale)
         canvas.translate(-500f, -350f)
@@ -83,6 +88,8 @@ object CategoryIllustrationRenderer {
             ART_HISTORY -> art.artHistory()
             else -> art.sociology()
         }
+        canvas.restoreToCount(artworkSave)
+        if (categoryId == ARCHAEOLOGY) art.bottomDotMotif(5)
         canvas.restoreToCount(save)
     }
 
@@ -131,22 +138,100 @@ object CategoryIllustrationRenderer {
                 line(cx + 7f * scale, cy + 8f * scale, cx + 15f * scale, cy + 7f * scale, colors.ink, 2f * scale)
             }
         }
-        fun commonTexture() {
+        fun commonTexture(includeBottomRule: Boolean = true, bottomDotRows: Int = 5) {
             canvas.drawArc(RectF(735f, -120f, 1130f, 275f), 30f, 265f, false, paint(colors.secondary, 2.5f, Paint.Style.STROKE))
             canvas.drawArc(RectF(770f, -85f, 1095f, 240f), 30f, 265f, false, paint(colors.primary, 2f, Paint.Style.STROKE))
-            for (row in 0..4) for (column in 0..5) {
+            if (bottomDotRows > 0) bottomDotMotif(bottomDotRows)
+            line(54f, 90f, 54f, 480f, colors.neutral, 1.6f)
+            if (includeBottomRule) line(54f, 480f, 945f, 480f, colors.neutral, 1.6f)
+        }
+        fun bottomDotMotif(rows: Int) {
+            for (row in 0 until rows) for (column in 0..5) {
                 dot(65f + column * 17f, 580f + row * 17f, 2.1f, if ((row + column) % 2 == 0) colors.primary else colors.secondary)
             }
-            line(54f, 90f, 54f, 480f, colors.neutral, 1.6f)
-            line(54f, 480f, 945f, 480f, colors.neutral, 1.6f)
         }
         fun sociology() {
             val nodes = listOf(220f to 250f, 380f to 150f, 560f to 245f, 755f to 155f, 790f to 340f, 555f to 390f, 330f to 385f)
             val edges = listOf(0 to 1, 0 to 2, 0 to 6, 1 to 2, 1 to 3, 2 to 3, 2 to 4, 2 to 5, 4 to 5, 5 to 6, 0 to 5)
-            edges.forEachIndexed { index, (a, b) -> line(nodes[a].first, nodes[a].second + 25f, nodes[b].first, nodes[b].second + 25f, if (index % 3 == 0) colors.primary else colors.secondary, 3f) }
-            nodes.forEachIndexed { index, (x, y) -> person(x, y, if (index == 2) 1.15f else .82f, if (index == 2 || index == 5) colors.primary else colors.ink, true) }
+            val centralConnections = edges.indices.filter { edges[it] == (0 to 2) || edges[it] == (2 to 4) }.toSet()
+            val lowerConnections = edges.indices.filter { edges[it] == (4 to 5) || edges[it] == (5 to 6) }.toSet()
+            val redrawnConnections = centralConnections + lowerConnections
+            edges.forEachIndexed { index, (a, b) ->
+                if (index !in redrawnConnections) {
+                    line(nodes[a].first, nodes[a].second + 25f, nodes[b].first, nodes[b].second + 25f, if (index % 3 == 0) colors.primary else colors.secondary, 3f)
+                }
+            }
+            nodes.forEachIndexed { index, (x, y) -> person(x, y, if (index == 2) 1.15f else .82f, if (index == 2 || index == 5) colors.primary else colors.ink) }
             halftone(220f, 250f, 48f, colors.secondary, 12f)
-            nodes.forEach { (x, y) -> dot(x, y + 25f, 5f, colors.neutral) }
+            // Draw the two existing middle edges last so they visibly meet the central neck marker.
+            // Clip only the neighboring figures; their short overlap onto node 2 is intentional.
+            val centralSave = canvas.save()
+            listOf(0, 4).forEach { index ->
+                val (cx, cy) = nodes[index]
+                val scale = .82f
+                val head = Path().apply { addCircle(cx, cy, 27f * scale, Path.Direction.CW) }
+                val body = Path().apply {
+                    moveTo(cx - 52f * scale, cy + 103f * scale)
+                    cubicTo(cx - 48f * scale, cy + 45f * scale, cx - 28f * scale, cy + 35f * scale, cx, cy + 35f * scale)
+                    cubicTo(cx + 28f * scale, cy + 35f * scale, cx + 48f * scale, cy + 45f * scale, cx + 52f * scale, cy + 103f * scale)
+                    close()
+                }
+                canvas.clipOutPath(head)
+                canvas.clipOutPath(body)
+            }
+            centralConnections.forEach { index ->
+                val (a, b) = edges[index]
+                val endAY = nodes[a].second + if (a == 2) 35.5f else 25f
+                val endBY = nodes[b].second + if (b == 2) 35.5f else 25f
+                val lineColor = if (index % 3 == 0) colors.primary else colors.secondary
+                if (edges[index] == (2 to 4)) {
+                    // A subtle darker-red under-stroke keeps the red edge distinct on the orange torso.
+                    val (cx, cy) = nodes[2]
+                    val silhouette = Path().apply {
+                        addCircle(cx, cy, 27f * 1.15f, Path.Direction.CW)
+                        moveTo(cx - 52f * 1.15f, cy + 103f * 1.15f)
+                        cubicTo(cx - 48f * 1.15f, cy + 45f * 1.15f, cx - 28f * 1.15f, cy + 35f * 1.15f, cx, cy + 35f * 1.15f)
+                        cubicTo(cx + 28f * 1.15f, cy + 35f * 1.15f, cx + 48f * 1.15f, cy + 45f * 1.15f, cx + 52f * 1.15f, cy + 103f * 1.15f)
+                        close()
+                    }
+                    val silhouetteSave = canvas.save()
+                    canvas.clipPath(silhouette)
+                    val darkerRed = Color.rgb(
+                        (Color.red(lineColor) * .68f).toInt(),
+                        (Color.green(lineColor) * .68f).toInt(),
+                        (Color.blue(lineColor) * .68f).toInt()
+                    )
+                    line(nodes[a].first, endAY, nodes[b].first, endBY, darkerRed, 5f)
+                    canvas.restoreToCount(silhouetteSave)
+                }
+                line(nodes[a].first, endAY, nodes[b].first, endBY, lineColor, 3f)
+            }
+            canvas.restoreToCount(centralSave)
+
+            // Keep the lower connections masked by all three lower portraits as before.
+            val lowerSave = canvas.save()
+            listOf(4, 5, 6).forEach { index ->
+                val (cx, cy) = nodes[index]
+                val scale = .82f
+                val head = Path().apply { addCircle(cx, cy, 27f * scale, Path.Direction.CW) }
+                val body = Path().apply {
+                    moveTo(cx - 52f * scale, cy + 103f * scale)
+                    cubicTo(cx - 48f * scale, cy + 45f * scale, cx - 28f * scale, cy + 35f * scale, cx, cy + 35f * scale)
+                    cubicTo(cx + 28f * scale, cy + 35f * scale, cx + 48f * scale, cy + 45f * scale, cx + 52f * scale, cy + 103f * scale)
+                    close()
+                }
+                canvas.clipOutPath(head)
+                canvas.clipOutPath(body)
+            }
+            lowerConnections.forEach { index ->
+                val (a, b) = edges[index]
+                line(nodes[a].first, nodes[a].second + 25f, nodes[b].first, nodes[b].second + 25f, if (index % 3 == 0) colors.primary else colors.secondary, 3f)
+            }
+            canvas.restoreToCount(lowerSave)
+            nodes.forEachIndexed { index, (x, y) ->
+                val pointY = y + if (index == 2) 35.5f else 25f
+                dot(x, pointY, 5f, colors.neutral)
+            }
         }
         fun anthropology() {
             // A field notebook, a vessel and an abstract human portrait form a non-specific cultural collage.
@@ -164,7 +249,7 @@ object CategoryIllustrationRenderer {
         }
         fun socialPsychology() {
             val centers = listOf(205f, 345f, 485f, 625f, 765f)
-            centers.forEachIndexed { index, x -> person(x, if (index == 2) 205f else 235f, if (index == 2) 1.24f else .82f, if (index == 2) colors.primary else colors.ink, true) }
+            centers.forEachIndexed { index, x -> person(x, if (index == 2) 205f else 235f, if (index == 2) 1.24f else .82f, if (index == 2) colors.primary else colors.ink, face = index != 2) }
             centers.forEachIndexed { index, x ->
                 if (index != 2) {
                     val direction = if (index < 2) 1f else -1f
@@ -172,8 +257,7 @@ object CategoryIllustrationRenderer {
                     canvas.drawCircle(x, 385f, 5f, paint(colors.primary))
                 }
             }
-            halftone(485f, 205f, 53f, colors.secondary, 12f)
-            canvas.drawCircle(485f, 205f, 8f, paint(colors.ink))
+
             path(colors.primary, 4f, Paint.Style.STROKE) { moveTo(175f, 450f); cubicTo(340f, 505f, 650f, 505f, 820f, 450f) }
             line(820f, 450f, 785f, 446f, colors.primary, 4f); line(820f, 450f, 802f, 477f, colors.primary, 4f)
         }
@@ -198,7 +282,7 @@ object CategoryIllustrationRenderer {
         }
         fun linguistics() {
             val type = Typeface.create("serif", Typeface.BOLD)
-            val glyphs = listOf("A" to 210f, "α" to 365f, "ع" to 520f, "漢" to 680f, "अ" to 830f)
+            val glyphs = listOf("A" to 210f, "Î±" to 365f, "Ø¹" to 520f, "æ¼¢" to 680f, "à¤…" to 830f)
             glyphs.forEachIndexed { index, (glyph, x) ->
                 val size = if (index == 2) 150f else 130f
                 canvas.drawText(glyph, x, 350f + if (index % 2 == 0) 0f else 35f, paint(if (index % 2 == 0) colors.ink else colors.primary).apply { textSize = size; this.typeface = type })
@@ -206,8 +290,8 @@ object CategoryIllustrationRenderer {
             }
             path(colors.secondary, 4f, Paint.Style.STROKE) { moveTo(120f, 450f); cubicTo(230f, 390f, 310f, 530f, 420f, 455f); cubicTo(535f, 380f, 620f, 530f, 740f, 450f); cubicTo(800f, 410f, 845f, 430f, 890f, 455f) }
             halftone(515f, 230f, 66f, colors.primary, 13f)
-            canvas.drawText("“", 130f, 220f, paint(colors.secondary).apply { textSize = 120f; this.typeface = Typeface.SERIF })
-            canvas.drawText("”", 830f, 500f, paint(colors.primary).apply { textSize = 120f; this.typeface = Typeface.SERIF })
+            canvas.drawText("â€œ", 130f, 220f, paint(colors.secondary).apply { textSize = 120f; this.typeface = Typeface.SERIF })
+            canvas.drawText("â€", 830f, 500f, paint(colors.primary).apply { textSize = 120f; this.typeface = Typeface.SERIF })
         }
         fun economics() {
             // Interlocking exchange loops connect coins, a ledger and a changing market curve.
@@ -216,7 +300,7 @@ object CategoryIllustrationRenderer {
             listOf(180f to 255f, 455f to 270f, 750f to 252f).forEachIndexed { index, (x, y) ->
                 canvas.drawCircle(x, y, 62f, paint(if (index == 1) colors.primary else colors.neutral))
                 canvas.drawCircle(x, y, 49f, paint(if (index == 1) colors.secondary else colors.ink, 3f, Paint.Style.STROKE))
-                canvas.drawText("↔", x - 30f, y + 15f, paint(colors.ink).apply { textSize = 48f; typeface = Typeface.DEFAULT_BOLD })
+                canvas.drawText("â†”", x - 30f, y + 15f, paint(colors.ink).apply { textSize = 48f; typeface = Typeface.DEFAULT_BOLD })
             }
             line(145f, 500f, 850f, 500f, colors.ink, 3f)
             line(145f, 500f, 145f, 400f, colors.ink, 3f)
@@ -241,8 +325,6 @@ object CategoryIllustrationRenderer {
             line(540f, 300f, 573f, 307f, colors.secondary, 4f)
             line(585f, 348f, 609f, 343f, colors.primary, 3f)
             for (i in 0..7) line(464f + i * 12f, 180f, 425f + i * 12f, 248f, colors.neutral, 2f)
-            halftone(700f, 165f, 72f, colors.primary, 12f)
-            canvas.drawCircle(700f, 165f, 7f, paint(colors.ink))
             line(330f, 535f, 710f, 535f, colors.primary, 4f)
         }
         fun geography() {
@@ -267,40 +349,44 @@ object CategoryIllustrationRenderer {
         }
 
         fun ethology() {
-            // Human and dog profiles face one another across a shared, quiet gaze path.
+            // A restrained human profile faces a mouse represented by its head alone.
             path(colors.primary) {
-                moveTo(235f, 170f); cubicTo(165f, 180f, 140f, 250f, 160f, 315f)
-                lineTo(145f, 345f); lineTo(190f, 354f); cubicTo(202f, 390f, 220f, 415f, 245f, 425f)
-                lineTo(245f, 485f); lineTo(425f, 485f); cubicTo(415f, 425f, 385f, 405f, 325f, 390f)
-                lineTo(320f, 350f); cubicTo(345f, 330f, 360f, 300f, 360f, 258f)
-                cubicTo(360f, 202f, 310f, 164f, 235f, 170f); close()
+                moveTo(200f, 188f); cubicTo(235f, 157f, 302f, 150f, 342f, 179f)
+                cubicTo(373f, 201f, 381f, 239f, 372f, 270f)
+                lineTo(390f, 296f); cubicTo(395f, 303f, 388f, 310f, 375f, 313f)
+                lineTo(368f, 329f); cubicTo(362f, 353f, 342f, 370f, 317f, 378f)
+                lineTo(318f, 418f); cubicTo(365f, 426f, 415f, 449f, 433f, 497f)
+                lineTo(160f, 497f); cubicTo(169f, 449f, 201f, 420f, 247f, 408f)
+                lineTo(247f, 374f); cubicTo(210f, 359f, 184f, 327f, 177f, 286f)
+                cubicTo(168f, 244f, 174f, 210f, 200f, 188f); close()
             }
-            path(colors.neutral) {
-                moveTo(280f, 278f); cubicTo(299f, 271f, 312f, 271f, 328f, 278f)
-            }
-            line(296f, 277f, 310f, 278f, colors.ink, 5f)
-            line(314f, 319f, 337f, 314f, colors.secondary, 4f)
+            dot(345f, 263f, 4.5f, colors.secondary)
+
+            canvas.drawOval(RectF(724f, 178f, 780f, 250f), paint(colors.primary))
+            canvas.drawOval(RectF(779f, 183f, 829f, 250f), paint(colors.primary))
+            canvas.drawOval(RectF(735f, 190f, 770f, 239f), paint(colors.secondary))
+            canvas.drawOval(RectF(789f, 194f, 820f, 240f), paint(colors.secondary))
             path(colors.secondary) {
-                moveTo(675f, 233f); cubicTo(698f, 190f, 744f, 174f, 786f, 199f)
-                lineTo(825f, 244f); lineTo(873f, 268f); cubicTo(893f, 282f, 880f, 300f, 860f, 300f)
-                lineTo(820f, 296f); cubicTo(805f, 337f, 774f, 359f, 726f, 356f)
-                lineTo(700f, 397f); lineTo(633f, 397f); cubicTo(652f, 354f, 659f, 306f, 675f, 233f); close()
+                moveTo(777f, 218f); cubicTo(814f, 226f, 833f, 257f, 824f, 293f)
+                cubicTo(817f, 327f, 791f, 350f, 757f, 356f)
+                cubicTo(731f, 361f, 711f, 349f, 696f, 335f)
+                cubicTo(680f, 322f, 664f, 315f, 646f, 310f)
+                lineTo(608f, 302f); cubicTo(596f, 300f, 589f, 295f, 594f, 288f)
+                cubicTo(609f, 278f, 630f, 274f, 653f, 267f)
+                lineTo(685f, 255f); cubicTo(701f, 229f, 737f, 213f, 777f, 218f); close()
             }
-            path(colors.primary) { moveTo(716f, 216f); lineTo(697f, 154f); cubicTo(752f, 160f, 777f, 183f, 789f, 216f); close() }
-            path(colors.primary) { moveTo(770f, 215f); lineTo(811f, 172f); cubicTo(840f, 217f, 838f, 244f, 817f, 267f); close() }
-            dot(685f, 270f, 7f, colors.ink)
-            path(colors.ink, 3f, Paint.Style.STROKE) { moveTo(673f, 320f); cubicTo(705f, 331f, 729f, 330f, 750f, 321f) }
-            path(colors.secondary, 4f, Paint.Style.STROKE) { moveTo(365f, 225f); cubicTo(445f, 170f, 540f, 170f, 615f, 225f) }
-            path(colors.primary, 3f, Paint.Style.STROKE) { moveTo(375f, 275f); cubicTo(450f, 245f, 535f, 245f, 610f, 275f) }
-            dot(485f, 212f, 7f, colors.secondary); dot(500f, 264f, 5f, colors.primary)
+            dot(678f, 274f, 4.5f, colors.primary)
+            dot(594f, 294f, 6f, colors.primary)
+            line(606f, 291f, 550f, 274f, colors.primary, 2.5f)
+            line(605f, 297f, 545f, 297f, colors.primary, 2.5f)
+            line(606f, 303f, 552f, 321f, colors.primary, 2.5f)
             line(210f, 520f, 800f, 520f, colors.secondary, 4f)
         }
 
         fun archaeology() {
-            // A recognizable amphora rises from layered soil with pottery and a field tool.
-            path(colors.secondary) { moveTo(90f, 378f); cubicTo(230f, 350f, 340f, 405f, 485f, 376f); cubicTo(650f, 344f, 750f, 397f, 920f, 367f); lineTo(920f, 585f); lineTo(90f, 585f); close() }
-            path(colors.primary) { moveTo(90f, 445f); cubicTo(250f, 420f, 345f, 467f, 500f, 438f); cubicTo(665f, 410f, 790f, 463f, 920f, 432f); lineTo(920f, 585f); lineTo(90f, 585f); close() }
-            path(colors.ink) { moveTo(90f, 505f); cubicTo(235f, 483f, 382f, 528f, 510f, 501f); cubicTo(654f, 470f, 780f, 519f, 920f, 493f); lineTo(920f, 585f); lineTo(90f, 585f); close() }
+            // Two shallow soil bands leave the lower artboard open and transparent.
+            path(colors.secondary) { moveTo(90f, 378f); cubicTo(230f, 350f, 340f, 405f, 485f, 376f); cubicTo(650f, 344f, 750f, 397f, 920f, 367f); lineTo(920f, 411f); cubicTo(750f, 441f, 650f, 388f, 485f, 420f); cubicTo(340f, 449f, 230f, 394f, 90f, 422f); close() }
+            path(colors.primary) { moveTo(90f, 445f); cubicTo(250f, 420f, 345f, 467f, 500f, 438f); cubicTo(665f, 410f, 790f, 463f, 920f, 432f); lineTo(920f, 476f); cubicTo(790f, 507f, 665f, 454f, 500f, 482f); cubicTo(345f, 511f, 250f, 464f, 90f, 489f); close() }
             // Amphora body and neck.
             path(colors.neutral) { moveTo(440f, 192f); lineTo(560f, 192f); lineTo(552f, 252f); cubicTo(552f, 287f, 630f, 320f, 625f, 385f); cubicTo(619f, 463f, 570f, 500f, 500f, 500f); cubicTo(430f, 500f, 381f, 463f, 375f, 385f); cubicTo(370f, 320f, 448f, 287f, 448f, 252f); close() }
             path(colors.primary) { moveTo(458f, 218f); lineTo(542f, 218f); lineTo(538f, 255f); cubicTo(540f, 293f, 598f, 322f, 596f, 381f); cubicTo(592f, 435f, 557f, 466f, 500f, 468f); cubicTo(443f, 466f, 408f, 435f, 404f, 381f); cubicTo(402f, 322f, 460f, 293f, 462f, 255f); close() }
@@ -309,14 +395,10 @@ object CategoryIllustrationRenderer {
             path(colors.secondary, 18f, Paint.Style.STROKE) { moveTo(443f, 273f); cubicTo(360f, 255f, 365f, 344f, 395f, 348f) }
             path(colors.secondary, 18f, Paint.Style.STROKE) { moveTo(557f, 273f); cubicTo(640f, 255f, 635f, 344f, 605f, 348f) }
             path(colors.ink, 3f, Paint.Style.STROKE) { moveTo(450f, 350f); cubicTo(480f, 370f, 520f, 370f, 550f, 350f) }
-            // Soil covers the foot of the vessel to make its burial legible.
+            // Keep the upper soil contour over the vessel while leaving the base visible.
             path(colors.secondary) { moveTo(90f, 378f); cubicTo(230f, 350f, 340f, 405f, 485f, 376f); cubicTo(650f, 344f, 750f, 397f, 920f, 367f); lineTo(920f, 402f); cubicTo(750f, 432f, 650f, 379f, 485f, 411f); cubicTo(340f, 440f, 230f, 385f, 90f, 413f); close() }
             path(colors.primary) { moveTo(220f, 434f); lineTo(290f, 425f); lineTo(318f, 451f); lineTo(266f, 475f); close() }
             path(colors.neutral) { moveTo(715f, 416f); lineTo(770f, 407f); lineTo(797f, 430f); lineTo(744f, 450f); close() }
-            line(790f, 218f, 866f, 291f, colors.ink, 11f)
-            path(colors.secondary) { moveTo(778f, 204f); lineTo(820f, 218f); lineTo(793f, 248f); close() }
-            line(777f, 219f, 790f, 234f, colors.neutral, 4f)
-            for (i in 0..5) dot(170f + i * 24f, 474f + (i % 2) * 12f, 3.5f, colors.neutral)
         }
 
         fun politicalScience() {
@@ -359,35 +441,43 @@ object CategoryIllustrationRenderer {
             line(618f, 296f, 644f, 300f, colors.ink, 5f)
             path(colors.neutral) { moveTo(407f, 336f); cubicTo(452f, 287f, 548f, 287f, 593f, 336f); cubicTo(548f, 384f, 452f, 384f, 407f, 336f); close() }
             canvas.drawOval(RectF(463f, 305f, 537f, 367f), paint(colors.primary))
-            dot(500f, 336f, 19f, colors.ink); dot(506f, 329f, 5f, colors.neutral)
+            // Leave the central perception motif unmarked for a neutral expression.
             path(colors.secondary, 4f, Paint.Style.STROKE) { moveTo(270f, 240f); cubicTo(340f, 190f, 410f, 205f, 450f, 250f) }
             path(colors.primary, 4f, Paint.Style.STROKE) { moveTo(550f, 250f); cubicTo(600f, 204f, 670f, 190f, 730f, 240f) }
             listOf(215f to 260f, 785f to 260f, 276f to 495f, 724f to 495f).forEachIndexed { i, (x, y) ->
                 canvas.drawCircle(x, y, if (i < 2) 19f else 13f, paint(if (i % 2 == 0) colors.secondary else colors.primary))
             }
-            path(colors.neutral, 4f, Paint.Style.STROKE) { moveTo(360f, 562f); cubicTo(435f, 585f, 565f, 585f, 640f, 562f) }
         }
 
         fun demography() {
             // Abstract generations arranged as an age pyramid, without chart labels or figures.
             val rows = listOf(
-                Triple(500f, 205f, 0.92f),
-                Triple(395f, 300f, 0.82f),
-                Triple(290f, 395f, 0.72f),
-                Triple(185f, 490f, 0.62f)
+                Triple(437.5f, 135f, 0.92f),
+                Triple(312.5f, 290f, 0.82f),
+                Triple(187.5f, 445f, 0.72f)
             )
             rows.forEachIndexed { row, (left, y, scale) ->
                 val count = 2 + row * 2
                 for (i in 0 until count) {
-                    val x = left + i * 100f
+                    val x = left + i * 125f
                     val color = if ((i + row) % 2 == 0) colors.primary else colors.secondary
                     person(x, y, scale, color)
-                    if ((i + row) % 3 == 0) line(x - 13f * scale, y + 4f * scale, x - 4f * scale, y + 7f * scale, colors.neutral, 2f * scale)
+
                 }
             }
             path(colors.secondary, 3f, Paint.Style.STROKE) { moveTo(140f, 520f); cubicTo(275f, 595f, 710f, 595f, 860f, 520f) }
             dot(140f, 520f, 7f, colors.primary); dot(860f, 520f, 7f, colors.secondary)
             path(colors.primary, 3f, Paint.Style.STROKE) { moveTo(235f, 180f); cubicTo(330f, 115f, 670f, 115f, 765f, 180f) }
+            // Repaint the heads last so later figures and pyramid contours cannot cover them.
+            rows.forEachIndexed { row, (left, y, scale) ->
+                val count = 2 + row * 2
+                for (i in 0 until count) {
+                    val x = left + i * 125f
+                    val color = if ((i + row) % 2 == 0) colors.primary else colors.secondary
+                    canvas.drawCircle(x, y, 27f * scale, paint(color))
+
+                }
+            }
         }
 
         fun artHistory() {
