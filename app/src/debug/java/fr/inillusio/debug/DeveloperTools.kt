@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.preferencesDataStoreFile
+import fr.inillusio.data.preferences.PreferencesFileMigration
 import androidx.room.withTransaction
 import fr.inillusio.BuildConfig
 import fr.inillusio.InIllusioApplication
@@ -34,7 +36,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 
-private val android.content.Context.developerPreferences by preferencesDataStore("hors_cadre_developer")
+private val android.content.Context.developerPreferences by preferencesDataStore(
+    name = "inillusio_developer",
+    produceMigrations = { context ->
+        listOf(PreferencesFileMigration(context.preferencesDataStoreFile("hors_cadre_developer")))
+    }
+)
 
 object DeveloperTools {
     private val snapshotKey = stringPreferencesKey("collection_snapshot_v1")

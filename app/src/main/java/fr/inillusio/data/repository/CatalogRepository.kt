@@ -49,7 +49,6 @@ class CatalogRepository(private val db: InIllusioDatabase, private val preferenc
     }
     fun observeAnecdote(id: String) = db.catalogDao().observeAnecdote(id)
     suspend fun sources(id: String): List<SourceDetails> = db.catalogDao().sourcesFor(id)
-    suspend fun isCollected(id: String) = db.catalogDao().isCollected(id)
     suspend fun recordDelivery(id: String, succeeded: Boolean, error: String? = null) {
         db.catalogDao().putDelivery(DeliveryEntity(anecdoteId = id, attemptedAt = System.currentTimeMillis(), succeeded = succeeded, error = error))
     }

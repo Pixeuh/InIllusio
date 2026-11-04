@@ -68,10 +68,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    fun refreshDaily() = viewModelScope.launch {
-        if (app.catalogImportState.value != CatalogImportState.Ready) return@launch
-        loadDaily()
-    }
     fun retryCatalogImport() {
         app.retryCatalogImport()
         viewModelScope.launch {

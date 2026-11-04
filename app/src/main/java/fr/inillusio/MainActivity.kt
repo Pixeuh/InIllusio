@@ -2,7 +2,7 @@ package fr.inillusio
 
 import android.os.Bundle
 import android.animation.ValueAnimator
-import android.app.Activity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -67,10 +67,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import fr.inillusio.data.local.dao.AnecdoteWithCategory
-import fr.inillusio.BuildConfig
 import fr.inillusio.debug.DeveloperTools
 import fr.inillusio.data.preferences.AppTheme
-import fr.inillusio.CatalogImportState
 import fr.inillusio.ui.AppViewModel
 import fr.inillusio.ui.illustration.CategoryIllustration
 import fr.inillusio.ui.illustration.DisciplinePalettes
@@ -100,8 +98,8 @@ class MainActivity : ComponentActivity() {
     val dailyLoaded by model.dailyLoaded.collectAsStateWithLifecycle()
     val collection by model.collection.collectAsStateWithLifecycle(initialValue = emptyList())
     val boosterProgress by model.boosterProgress.collectAsStateWithLifecycle(initialValue = BoosterProgress(0, 0))
-    val activity = LocalContext.current as Activity
-    val app = LocalApp(applicationContext = androidx.compose.ui.platform.LocalContext.current.applicationContext)
+    val activity = requireNotNull(LocalActivity.current)
+    val app = LocalContext.current.applicationContext as InIllusioApplication
     val adsConsent by app.adsConsent.state.collectAsStateWithLifecycle()
     val sources by model.sources.collectAsStateWithLifecycle()
     val message by model.message.collectAsStateWithLifecycle()
@@ -190,9 +188,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-@Composable private fun LocalApp(applicationContext: android.content.Context): InIllusioApplication =
-    applicationContext.applicationContext as InIllusioApplication
 
 @Composable private fun CatalogLoadingScreen() {
     Column(Modifier.fillMaxSize().padding(28.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -442,7 +437,7 @@ class MainActivity : ComponentActivity() {
     onDebugRestore: () -> Unit,
     onDebugClearCollection: () -> Unit
 ) {
-    val activity = LocalContext.current as Activity
+    val activity = requireNotNull(LocalActivity.current)
     val adController = remember(activity) { RewardedBoosterAd(activity) }
     val screenActive = remember { AtomicBoolean(true) }
     var isBusy by remember { mutableStateOf(false) }

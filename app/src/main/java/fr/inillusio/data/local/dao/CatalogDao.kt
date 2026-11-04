@@ -43,8 +43,6 @@ interface CatalogDao {
     @Query("SELECT COUNT(*) FROM sources") suspend fun sourceCount(): Int
     @Query("SELECT COUNT(*) FROM authors") suspend fun authorCount(): Int
     @Query("SELECT COUNT(*) FROM source_authors") suspend fun sourceAuthorCount(): Int
-    @Query("SELECT EXISTS(SELECT 1 FROM collection WHERE anecdoteId = :id)")
-    suspend fun isCollected(id: String): Boolean
     @Upsert suspend fun putCategory(value: CategoryEntity)
     @Upsert suspend fun putAnecdote(value: AnecdoteEntity)
     @Upsert suspend fun putSource(value: SourceEntity)
