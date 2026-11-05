@@ -10,6 +10,7 @@ import fr.inillusio.data.local.dao.AnecdoteWithCategory
 import fr.inillusio.data.local.dao.SourceDetails
 import fr.inillusio.data.preferences.AppTheme
 import fr.inillusio.data.preferences.PreferencesState
+import fr.inillusio.data.preferences.WallpaperDisplayMode
 import fr.inillusio.data.repository.CatalogRepository
 import fr.inillusio.data.repository.BoosterAwardResult
 import fr.inillusio.domain.shortCitation
@@ -87,7 +88,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             if (app.catalogImportState.value != CatalogImportState.Ready) return@withLock
             loadDaily()
             val settings = app.preferences.state.first()
-            if (settings.wallpaperRefreshEnabled) {
+            if (settings.wallpaperRefreshEnabled || settings.wallpaperDisplayMode == WallpaperDisplayMode.PINNED) {
                 val result = DailyWallpaperUpdater(app).update()
                 if (result == DailyUpdateResult.FAILED) _message.value = "Le renouvellement du fond verrouillé a échoué. Il sera réessayé plus tard."
             }
@@ -99,14 +100,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun setTheme(theme: AppTheme) = viewModelScope.launch { app.preferences.setTheme(theme) }
     fun setRefreshEnabled(enabled: Boolean) = viewModelScope.launch {
         app.preferences.setWallpaperRefresh(enabled)
-        DailyWallpaperScheduler.setEnabled(app, enabled)
-        if (enabled) onAppForeground().join()
+        val settings = app.preferences.state.first()
+        DailyWallpaperScheduler.setEnabled(app, enabled || settings.wallpaperDisplayMode == WallpaperDisplayMode.PINNED)
+        if (enabled || settings.wallpaperDisplayMode == WallpaperDisplayMode.PINNED) onAppForeground().join()
+    }
+    fun setCollectionWallpaper(fact: AnecdoteWithCategory, mode: WallpaperDisplayMode) = viewModelScope.launch {
+        when (DailyWallpaperUpdater(app).applyManual(fact, mode)) {
+            DailyUpdateResult.APPLIED -> _message.value = if (mode == WallpaperDisplayMode.PINNED) "Carte épinglée sur l’écran de verrouillage." else "Carte affichée jusqu’au prochain renouvellement."
+            DailyUpdateResult.FAILED -> _message.value = "Échec de l’application du fond d’écran. Le réglage précédent est conservé."
+            else -> _message.value = "Impossible de définir cette carte comme fond d’écran."
+        }
+    }
+    fun resumeDailyWallpaper() = viewModelScope.launch {
+        when (DailyWallpaperUpdater(app).resumeAutomatic()) {
+            DailyUpdateResult.APPLIED -> _message.value = "Renouvellement quotidien repris."
+            DailyUpdateResult.NO_ANECDOTE -> _message.value = "Aucune anecdote quotidienne n’est disponible. La carte épinglée reste active."
+            else -> _message.value = "Impossible de reprendre le renouvellement. La carte épinglée reste active."
+        }
     }
     fun debugRunDailyRenewal() {
         if (!BuildConfig.DEBUG) return
         viewModelScope.launch {
             when (DailyWallpaperUpdater(app).update(forceApply = true)) {
                 DailyUpdateResult.APPLIED -> _message.value = "Test du renouvellement appliqué au fond verrouillé et carte ajoutée à la collection."
+                DailyUpdateResult.ACQUIRED_ONLY -> _message.value = "Anecdote quotidienne débloquée ; la carte épinglée est conservée."
                 DailyUpdateResult.DISABLED -> _message.value = "Activez d’abord le renouvellement quotidien pour tester le Worker."
                 DailyUpdateResult.ALREADY_APPLIED -> _message.value = "L’affiche du jour est déjà à jour."
                 DailyUpdateResult.NO_ANECDOTE -> _message.value = "Aucune anecdote disponible pour le test."

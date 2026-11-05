@@ -69,6 +69,20 @@ class BoosterRepositoryTest {
         assertEquals(BoosterProgress(5, 5), repository.boosterProgress.first())
     }
 
+    @Test fun pinnedDailyAcquisitionIsIdempotentAndDoesNotCreateDeliveryHistory() = runBlocking {
+        importer().importJson(catalog(listOf(fact("fiction-1"), fact("fiction-2"))))
+        val date = LocalDate.of(2026, 11, 5)
+        val daily = requireNotNull(repository.dailyAnecdote(date))
+
+        repository.recordDailyAcquisition(daily.id, 100L)
+        repository.recordDailyAcquisition(daily.id, 200L)
+
+        val collected = dao.observeCollection().first().single()
+        assertEquals(daily.id, collected.anecdote.id)
+        assertEquals(100L, collected.savedAt)
+        assertFalse(dao.hasSuccessfulDelivery(daily.id))
+    }
+
     @Test fun fullCollectionHasNoCandidatesAndRepeatedRewardEventIsIdempotent() = runBlocking {
         importer().importJson(catalog(listOf(fact("fiction-1"), fact("fiction-2"))))
         dao.putCollection(CollectionEntity("fiction-1", 9L))

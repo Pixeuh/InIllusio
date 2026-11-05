@@ -74,6 +74,7 @@ import fr.inillusio.data.local.dao.AnecdoteWithCategory
 import fr.inillusio.data.local.dao.CollectionCard
 import fr.inillusio.debug.DeveloperTools
 import fr.inillusio.data.preferences.AppTheme
+import fr.inillusio.data.preferences.WallpaperDisplayMode
 import fr.inillusio.ui.AppViewModel
 import fr.inillusio.ui.illustration.CategoryIllustration
 import fr.inillusio.ui.illustration.DisciplinePalettes
@@ -156,6 +157,7 @@ class MainActivity : ComponentActivity() {
                             CollectionScreen(
                                 cards = collection,
                                 visibleCards = orderedCollection,
+                                pinnedWallpaperId = prefs.selectedWallpaperId.takeIf { prefs.wallpaperDisplayMode == WallpaperDisplayMode.PINNED },
                                 selectedCategoryIds = selectedCollectionCategories,
                                 sortOrder = collectionSortOrder,
                                 onCategorySelectionChanged = { categories ->
@@ -165,6 +167,7 @@ class MainActivity : ComponentActivity() {
                                 boosterProgress = boosterProgress,
                                 consent = adsConsent,
                                 onBack = { navController.popBackStack() },
+                                onResumeDailyWallpaper = model::resumeDailyWallpaper,
                                 onSelect = { fact -> selected = fact; navController.navigate("card") },
                                 onRedeemBooster = model::redeemBoosterAfterReward,
                                 onDebugReward = model::debugSimulateBoosterReward,
@@ -193,7 +196,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             } ?: LaunchedEffect(Unit) { navController.popBackStack() }
                         }
-                        composable("card") { CardScreen(orderedCollectionFacts, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { id -> model.cardCitation(id) }) }
+                        composable("card") { CardScreen(orderedCollectionFacts, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { fact, mode -> model.setCollectionWallpaper(fact, mode) }, { id -> model.cardCitation(id) }) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") {
                             SettingsScreen(
@@ -454,6 +457,7 @@ class MainActivity : ComponentActivity() {
 @Composable private fun CollectionScreen(
     cards: List<CollectionCard>,
     visibleCards: List<CollectionCard>,
+    pinnedWallpaperId: String?,
     selectedCategoryIds: Set<String>?,
     sortOrder: CollectionSortOrder,
     onCategorySelectionChanged: (Set<String>?) -> Unit,
@@ -461,6 +465,7 @@ class MainActivity : ComponentActivity() {
     boosterProgress: BoosterProgress,
     consent: AdsConsentState,
     onBack: () -> Unit,
+    onResumeDailyWallpaper: () -> Unit,
     onSelect: (AnecdoteWithCategory) -> Unit,
     onRedeemBooster: (String, (BoosterAwardResult) -> Unit) -> Unit,
     onDebugReward: ((BoosterAwardResult) -> Unit) -> Unit,
@@ -554,6 +559,20 @@ class MainActivity : ComponentActivity() {
             Text("${cards.size} carte${if (cards.size == 1) "" else "s"} collectée${if (cards.size == 1) "" else "s"}", style = MaterialTheme.typography.bodyMedium)
             if (selectedCategoryIds != null) {
                 Text("${visibleCards.size} carte${if (visibleCards.size == 1) "" else "s"} affichée${if (visibleCards.size == 1) "" else "s"} sur ${cards.size}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (pinnedWallpaperId != null) {
+            Card(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Text("Carte épinglée sur l’écran de verrouillage", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = onResumeDailyWallpaper, contentPadding = PaddingValues(0.dp)) {
+                        Text("Reprendre le renouvellement quotidien")
+                    }
+                }
             }
         }
         if (showCategoryDialog) {
@@ -701,11 +720,12 @@ class MainActivity : ComponentActivity() {
     )
 }
 
-@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, homeCardSize: IntSize, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit, onLoadReference: suspend (String) -> String?) {
+@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, homeCardSize: IntSize, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit, onSetWallpaper: (AnecdoteWithCategory, WallpaperDisplayMode) -> Unit, onLoadReference: suspend (String) -> String?) {
     val cardIds = remember(cards) { cards.map { it.id } }
     var currentCardId by rememberSaveable { mutableStateOf(selectedCardId) }
     val selectedIndex = cardIds.indexOf(currentCardId).coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = selectedIndex, pageCount = { cards.size })
+    var wallpaperDialogFact by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
     LaunchedEffect(pagerState.settledPage, cardIds) {
         cards.getOrNull(pagerState.settledPage)?.let { currentCardId = it.id }
     }
@@ -755,7 +775,27 @@ class MainActivity : ComponentActivity() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
+            cards.getOrNull(pagerState.settledPage)?.let { fact ->
+                TextButton(
+                    onClick = { wallpaperDialogFact = fact },
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp)
+                ) { Text("Définir comme fond d’écran") }
+            }
         }
+    }
+    wallpaperDialogFact?.let { fact ->
+        AlertDialog(
+            onDismissRequest = { wallpaperDialogFact = null },
+            title = { Text("Définir comme fond d’écran") },
+            text = { Text("Combien de temps souhaites-tu conserver cette carte sur l’écran de verrouillage ?") },
+            confirmButton = {
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(onClick = { onSetWallpaper(fact, WallpaperDisplayMode.UNTIL_NEXT_RENEWAL); wallpaperDialogFact = null }) { Text("Jusqu’à demain") }
+                    TextButton(onClick = { onSetWallpaper(fact, WallpaperDisplayMode.PINNED); wallpaperDialogFact = null }) { Text("Épingler cette carte") }
+                }
+            },
+            dismissButton = { TextButton(onClick = { wallpaperDialogFact = null }) { Text("Annuler") } }
+        )
     }
 }
 

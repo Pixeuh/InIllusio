@@ -3,14 +3,47 @@ package fr.inillusio.data
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import fr.inillusio.data.preferences.UserPreferences
+import fr.inillusio.data.preferences.WallpaperDisplayMode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.LocalDate
 
 @RunWith(AndroidJUnit4::class)
 class UserPreferencesTest {
+    @Test
+    fun manualWallpaperModeAndSelectedCardArePersistedAndCleared() = runBlocking {
+        val preferences = UserPreferences(InstrumentationRegistry.getInstrumentation().targetContext)
+        val initial = preferences.state.first()
+        try {
+            preferences.setManualWallpaper("fiction-pinned", WallpaperDisplayMode.PINNED, LocalDate.of(2026, 11, 5))
+            val pinned = preferences.state.first()
+            assertEquals(WallpaperDisplayMode.PINNED, pinned.wallpaperDisplayMode)
+            assertEquals("fiction-pinned", pinned.selectedWallpaperId)
+            assertNull(pinned.temporaryWallpaperDate)
+
+            preferences.setManualWallpaper("fiction-temporary", WallpaperDisplayMode.UNTIL_NEXT_RENEWAL, LocalDate.of(2026, 11, 5))
+            val temporary = preferences.state.first()
+            assertEquals(WallpaperDisplayMode.UNTIL_NEXT_RENEWAL, temporary.wallpaperDisplayMode)
+            assertEquals("fiction-temporary", temporary.selectedWallpaperId)
+            assertEquals(LocalDate.of(2026, 11, 5), temporary.temporaryWallpaperDate)
+
+            preferences.clearManualWallpaper()
+            val cleared = preferences.state.first()
+            assertEquals(WallpaperDisplayMode.AUTOMATIC, cleared.wallpaperDisplayMode)
+            assertNull(cleared.selectedWallpaperId)
+            assertNull(cleared.temporaryWallpaperDate)
+        } finally {
+            if (initial.selectedWallpaperId != null && initial.wallpaperDisplayMode != WallpaperDisplayMode.AUTOMATIC) {
+                preferences.setManualWallpaper(initial.selectedWallpaperId, initial.wallpaperDisplayMode, initial.temporaryWallpaperDate)
+            } else preferences.clearManualWallpaper()
+            preferences.setWallpaperRefresh(initial.wallpaperRefreshEnabled)
+        }
+    }
+
     @Test
     fun wallpaperTextAndSourceOffsetsArePersistedIndependentlyAndResettable() = runBlocking {
         val preferences = UserPreferences(InstrumentationRegistry.getInstrumentation().targetContext)

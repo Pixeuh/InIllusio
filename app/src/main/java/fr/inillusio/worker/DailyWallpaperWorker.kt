@@ -11,6 +11,7 @@ class DailyWallpaperWorker(context: Context, parameters: WorkerParameters) : Cor
         when (DailyWallpaperUpdater(applicationContext as InIllusioApplication).update()) {
             DailyUpdateResult.FAILED -> Result.retry()
             DailyUpdateResult.APPLIED,
+            DailyUpdateResult.ACQUIRED_ONLY,
             DailyUpdateResult.ALREADY_APPLIED,
             DailyUpdateResult.DISABLED,
             DailyUpdateResult.NO_ANECDOTE -> Result.success()

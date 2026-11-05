@@ -14,10 +14,10 @@ Le namespace et l’identifiant Android restent `fr.inillusio` ; BETA utilise so
 | `anecdote_sources` | Association plusieurs-à-plusieurs anecdote/source, clé composée. |
 | `illustrations` | Métadonnées de média, séparées du contenu d’anecdote. |
 | `delivery_history` | Anecdote, date de tentative, résultat et erreur facultative ; index par anecdote et date. Non visible dans l’UI. |
-| `collection` | Une ligne par anecdote ajoutée après application réussie au verrouillage ou récompense booster confirmée ; horodatage de première découverte et FK catalogue. |
+| `collection` | Une ligne par anecdote ajoutée après application réussie au verrouillage, récompense booster confirmée ou acquisition quotidienne pendant l’épinglage explicite ; horodatage de première découverte et FK catalogue. |
 | `booster_redemptions` | Clé unique par callback de récompense confirmé et horodatage ; empêche d’attribuer deux fois le même événement. |
 
-La table `collection` peut être alimentée soit par une application `FLAG_LOCK` réussie, soit par un booster confirmé. Chaque voie utilise une insertion sans remplacement qui conserve `savedAt` lors d’une nouvelle découverte. Un booster n’écrit jamais dans `delivery_history`.
+La table `collection` peut être alimentée par une application `FLAG_LOCK` réussie, un booster confirmé ou une acquisition quotidienne pendant qu’un fond manuel est épinglé. Chaque voie utilise une insertion sans remplacement qui conserve `savedAt` lors d’une nouvelle découverte. L’acquisition sous épinglage n’écrit jamais dans `delivery_history` ; elle ne prétend donc pas que le fond quotidien a été affiché. Un booster n’écrit jamais dans `delivery_history`.
 
 L’outil développeur DEBUG de réinitialisation supprime seulement les lignes de `collection`, dans une transaction. Il ne supprime ni les anecdotes, ni `delivery_history`, ni `booster_redemptions`, ni les préférences DataStore. Après effacement, les anecdotes validées sont à nouveau candidates aux nouveaux événements de récompense, tandis que les clés déjà utilisées continuent de protéger contre une attribution en double.
 

@@ -7,6 +7,7 @@
 - DataStore pour thème, consentement, préférence de renouvellement et carte du jour.
 - Premier accueil, explication, collection, carte consultée et paramètres.
 - Collection en grille à deux colonnes, filtrable par discipline et triable par date d’acquisition ou discipline, avec ouverture de la carte touchée dans une galerie agrandie à navigation horizontale bornée ; position de grille conservée au retour.
+- Application d’une carte déjà collectionnée jusqu’au prochain renouvellement ou épinglage persistant ; les acquisitions quotidiennes continuent sans remplacer le fond épinglé, puis l’action de reprise applique la sélection stable du jour.
 - Retournement 3D partagé de la carte quotidienne et de la galerie agrandie, avec extrait d’explication et accès à la lecture complète.
 - Ajout automatique et idempotent à la collection après diffusion `FLAG_LOCK` réussie ou callback de récompense booster confirmé ; aucune collection sur erreur, aperçu ou publicité interrompue.
 - Boosters et diffusion du fond alimentent la même table Room par transactions distinctes ; seuls les fonds réussis inscrivent un historique de livraison.

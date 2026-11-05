@@ -60,4 +60,9 @@ class CatalogRepository(private val db: InIllusioDatabase, private val preferenc
             db.catalogDao().putCollection(CollectionEntity(id, appliedAt))
         }
     }
+    /** Saves a daily discovery while a user-selected wallpaper is pinned; it is not a delivery. */
+    suspend fun recordDailyAcquisition(id: String, acquiredAt: Long = System.currentTimeMillis()) {
+        db.catalogDao().putCollection(CollectionEntity(id, acquiredAt))
+    }
+    suspend fun anecdote(id: String): AnecdoteWithCategory? = db.catalogDao().getAnecdote(id)
 }
