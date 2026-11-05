@@ -2,21 +2,37 @@ package fr.inillusio
 
 import android.os.Bundle
 import android.animation.ValueAnimator
+import androidx.activity.compose.LocalActivity
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,7 +40,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -32,9 +52,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import kotlin.math.PI
+import kotlin.math.sin
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,19 +71,33 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import fr.inillusio.data.local.dao.AnecdoteWithCategory
-import fr.inillusio.BuildConfig
+import fr.inillusio.data.local.dao.CollectionCard
 import fr.inillusio.debug.DeveloperTools
 import fr.inillusio.data.preferences.AppTheme
-import fr.inillusio.CatalogImportState
+import fr.inillusio.data.preferences.WallpaperDisplayMode
 import fr.inillusio.ui.AppViewModel
 import fr.inillusio.ui.illustration.CategoryIllustration
 import fr.inillusio.ui.illustration.DisciplinePalettes
 import fr.inillusio.ui.theme.InIllusioTheme
 import fr.inillusio.wallpaper.WallpaperArtwork
+import fr.inillusio.data.local.dao.BoosterProgress
+import fr.inillusio.data.repository.BoosterAwardResult
+import fr.inillusio.domain.BoosterPolicy
+import fr.inillusio.domain.CollectionOrderKey
+import fr.inillusio.domain.CollectionSortOrder
+import fr.inillusio.domain.CollectionSourceFilter
+import fr.inillusio.domain.filterAndSortCollection
+import kotlinx.coroutines.launch
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : ComponentActivity() {
     private val model by viewModels<AppViewModel> { object : ViewModelProvider.AndroidViewModelFactory(application) { @Suppress("UNCHECKED_CAST") override fun <T : ViewModel> create(modelClass: Class<T>): T = AppViewModel(application) as T } }
-    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { InIllusioRoot(model) } }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (BuildConfig.ADS_ENABLED) (application as InIllusioApplication).adsConsent.updateForLaunch(this)
+        setContent { InIllusioRoot(model) }
+    }
     override fun onResume() { super.onResume(); model.onAppForeground() }
 }
 
@@ -64,6 +107,11 @@ class MainActivity : ComponentActivity() {
     val daily by model.daily.collectAsStateWithLifecycle()
     val dailyLoaded by model.dailyLoaded.collectAsStateWithLifecycle()
     val collection by model.collection.collectAsStateWithLifecycle(initialValue = emptyList())
+    val categoryOptions by model.categories.collectAsStateWithLifecycle(initialValue = emptyList())
+    val boosterProgress by model.boosterProgress.collectAsStateWithLifecycle(initialValue = BoosterProgress(0, 0))
+    val activity = requireNotNull(LocalActivity.current)
+    val app = LocalContext.current.applicationContext as InIllusioApplication
+    val adsConsent by app.adsConsent.state.collectAsStateWithLifecycle()
     val sources by model.sources.collectAsStateWithLifecycle()
     val message by model.message.collectAsStateWithLifecycle()
     val reference by model.reference.collectAsStateWithLifecycle()
@@ -71,7 +119,27 @@ class MainActivity : ComponentActivity() {
     val developerPreview by model.developerPreview.collectAsStateWithLifecycle()
     val debugCanRestore by model.debugCanRestore.collectAsStateWithLifecycle()
     var selected by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
+    var selectedCollectionCategoryIds by rememberSaveable { mutableStateOf("*") }
+    var collectionSortOrderName by rememberSaveable { mutableStateOf(CollectionSortOrder.RECEIVED_NEWEST.name) }
+    var collectionSourceFilterName by rememberSaveable { mutableStateOf(CollectionSourceFilter.ALL.name) }
+    var editingPersonalFact by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
+    val selectedCollectionCategories = remember(selectedCollectionCategoryIds) {
+        when (selectedCollectionCategoryIds) {
+            "*" -> null
+            "" -> emptySet()
+            else -> selectedCollectionCategoryIds.split('|').toSet()
+        }
+    }
+    val collectionSortOrder = remember(collectionSortOrderName) { CollectionSortOrder.valueOf(collectionSortOrderName) }
+    val collectionSourceFilter = remember(collectionSourceFilterName) { CollectionSourceFilter.valueOf(collectionSourceFilterName) }
+    val orderedCollection = remember(collection, selectedCollectionCategories, collectionSortOrder, collectionSourceFilter) {
+        filterAndSortCollection(collection, selectedCollectionCategories, collectionSortOrder, collectionSourceFilter) { card ->
+            CollectionOrderKey(card.anecdote.id, card.anecdote.categoryId, card.anecdote.categoryName, card.savedAt, card.anecdote.isPersonal)
+        }
+    }
+    val orderedCollectionFacts = remember(orderedCollection) { orderedCollection.map { it.anecdote } }
     var homeCardSize by remember { mutableStateOf(IntSize.Zero) }
+    var pendingBoosterAward by remember { mutableStateOf<BoosterAwardResult?>(null) }
     val navController = rememberNavController()
     var acceptedConsent by remember { mutableStateOf(false) }
     val dark = when (prefs.theme) { AppTheme.DARK -> true; AppTheme.LIGHT -> false; AppTheme.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme() }
@@ -90,14 +158,72 @@ class MainActivity : ComponentActivity() {
                     else -> NavHost(navController, startDestination = "home", modifier = Modifier.fillMaxSize()) {
                         composable("home") { HomeScreen(daily, dailyLoaded, reference, { daily?.let { selected = it; model.showSources(it.id); navController.navigate("explanation") } }, { id -> model.cardCitation(id) }, { navController.navigate("collection") }, { navController.navigate("settings") }, { homeCardSize = it }) }
                         composable("explanation") { ExplanationScreen(selected, sources, { navController.popBackStack() }) }
-                        composable("collection") { CollectionScreen(collection, { navController.popBackStack() }, { fact -> selected = fact; navController.navigate("card") }, debugCanRestore, model::debugUnlockAll, { model.loadDeveloperPreview(); navController.navigate("developer-preview") }, { model.debugRegenerateAndApplyWallpaper(dark) }, model::debugRunDailyRenewal, model::debugRestoreCollection) }
-                        composable("card") { CardScreen(collection, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { id -> model.cardCitation(id) }) }
+                        composable("collection") {
+                            CollectionScreen(
+                                cards = collection,
+                                visibleCards = orderedCollection,
+                                pinnedWallpaperId = prefs.selectedWallpaperId.takeIf { prefs.wallpaperDisplayMode == WallpaperDisplayMode.PINNED },
+                                selectedCategoryIds = selectedCollectionCategories,
+                                sortOrder = collectionSortOrder,
+                                sourceFilter = collectionSourceFilter,
+                                onCategorySelectionChanged = { categories ->
+                                    selectedCollectionCategoryIds = categories?.sorted()?.joinToString("|") ?: "*"
+                                },
+                                onSortOrderChanged = { collectionSortOrderName = it.name },
+                                onSourceFilterChanged = { collectionSourceFilterName = it.name },
+                                onCreatePersonalCard = { editingPersonalFact = null; navController.navigate("personal-card") },
+                                onEditPersonalCard = { fact -> editingPersonalFact = fact; navController.navigate("personal-card") },
+                                onDeletePersonalCard = { fact -> model.deletePersonalCard(fact.id); navController.popBackStack() },
+                                boosterProgress = boosterProgress,
+                                consent = adsConsent,
+                                onBack = { navController.popBackStack() },
+                                onResumeDailyWallpaper = model::resumeDailyWallpaper,
+                                onSelect = { fact -> selected = fact; navController.navigate("card") },
+                                onRedeemBooster = model::redeemBoosterAfterReward,
+                                onDebugReward = model::debugSimulateBoosterReward,
+                                onAwarded = { result ->
+                                    pendingBoosterAward = result
+                                    navController.navigate("booster") { launchSingleTop = true }
+                                },
+                                debugCanRestore = debugCanRestore,
+                                onDebugUnlockAll = model::debugUnlockAll,
+                                onDebugPreviewAll = { model.loadDeveloperPreview(); navController.navigate("developer-preview") },
+                                onDebugRegenerateWallpaper = { model.debugRegenerateAndApplyWallpaper(dark) },
+                                onDebugRunDailyRenewal = model::debugRunDailyRenewal,
+                                onDebugRestore = model::debugRestoreCollection,
+                                onDebugClearCollection = model::debugClearCollection
+                            )
+                        }
+                        composable("booster") {
+                            pendingBoosterAward?.let { award ->
+                                BoosterScreen(
+                                    award = award,
+                                    collection = collection.map { it.anecdote },
+                                    homeCardSize = homeCardSize,
+                                    onBack = { navController.popBackStack() },
+                                    onLoadReference = { id -> model.cardCitation(id) },
+                                    onOpenExplanation = { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }
+                                )
+                            } ?: LaunchedEffect(Unit) { navController.popBackStack() }
+                        }
+                        composable("card") { CardScreen(orderedCollectionFacts, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { fact, mode -> model.setCollectionWallpaper(fact, mode) }, { id -> model.cardCitation(id) }, { fact -> editingPersonalFact = fact; navController.navigate("personal-card") }, { fact -> model.deletePersonalCard(fact.id); navController.popBackStack() }) }
+                        composable("personal-card") {
+                            PersonalCardEditorScreen(
+                                categories = categoryOptions,
+                                initialFact = editingPersonalFact,
+                                onBack = { editingPersonalFact = null; navController.popBackStack() },
+                                onSave = { existingId, categoryId, hook, explanation, source ->
+                                    model.savePersonalCard(existingId, categoryId, hook, explanation, source)
+                                },
+                                onSaved = { editingPersonalFact = null; navController.popBackStack() }
+                            )
+                        }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") {
                             SettingsScreen(
                                 prefs.theme, dark, prefs.wallpaperRefreshEnabled,
                                 prefs.wallpaperTextOffset, prefs.wallpaperSourceOffset,
-                                daily, reference, wallpaperPreview,
+                                daily, reference, wallpaperPreview, adsConsent.privacyOptionsRequired,
                                 { model.setTheme(it) }, { model.setRefreshEnabled(it) },
                                 { text, sources -> model.scheduleWallpaperOffsetSave(text, sources) },
                                 { text, sources -> model.persistWallpaperOffsets(text, sources) },
@@ -106,6 +232,7 @@ class MainActivity : ComponentActivity() {
                                 { model.resetWallpaperOffsets() },
                                 { fact, source, darkTheme, text, sources -> model.prepareWallpaperPreview(fact, source, darkTheme, text, sources) },
                                 { fact, source, darkTheme, text, sources -> model.applyWallpaper(fact, source, darkTheme, text, sources) },
+                                { app.adsConsent.showPrivacyOptions(activity) {} },
                                 { navController.popBackStack() }
                             )
                         }
@@ -132,7 +259,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun TopLine(actionLabel: String? = null, onBack: (() -> Unit)? = null, onSettings: (() -> Unit)? = null) {
+@Composable private fun TopLine(actionLabel: String? = null, onBack: (() -> Unit)? = null, onSettings: (() -> Unit)? = null, trailingText: String? = null) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) TextButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null); Spacer(Modifier.width(6.dp)); Text(actionLabel ?: "Retour") }
         else Column {
@@ -140,6 +267,7 @@ class MainActivity : ComponentActivity() {
             Text("Parce que la connaissance libère.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (onSettings != null) IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Paramètres") }
+        else if (trailingText != null) Text(trailingText, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -347,22 +475,248 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CollectionScreen(cards: List<AnecdoteWithCategory>, onBack: () -> Unit, onSelect: (AnecdoteWithCategory) -> Unit, debugCanRestore: Boolean, onDebugUnlockAll: () -> Unit, onDebugPreviewAll: () -> Unit, onDebugRegenerateWallpaper: () -> Unit, onDebugRunDailyRenewal: () -> Unit, onDebugRestore: () -> Unit) {
+@Composable private fun CollectionScreen(
+    cards: List<CollectionCard>,
+    visibleCards: List<CollectionCard>,
+    pinnedWallpaperId: String?,
+    selectedCategoryIds: Set<String>?,
+    sortOrder: CollectionSortOrder,
+    sourceFilter: CollectionSourceFilter,
+    onCategorySelectionChanged: (Set<String>?) -> Unit,
+    onSortOrderChanged: (CollectionSortOrder) -> Unit,
+    onSourceFilterChanged: (CollectionSourceFilter) -> Unit,
+    onCreatePersonalCard: () -> Unit,
+    onEditPersonalCard: (AnecdoteWithCategory) -> Unit,
+    onDeletePersonalCard: (AnecdoteWithCategory) -> Unit,
+    boosterProgress: BoosterProgress,
+    consent: AdsConsentState,
+    onBack: () -> Unit,
+    onResumeDailyWallpaper: () -> Unit,
+    onSelect: (AnecdoteWithCategory) -> Unit,
+    onRedeemBooster: (String, (BoosterAwardResult) -> Unit) -> Unit,
+    onDebugReward: ((BoosterAwardResult) -> Unit) -> Unit,
+    onAwarded: (BoosterAwardResult) -> Unit,
+    debugCanRestore: Boolean,
+    onDebugUnlockAll: () -> Unit,
+    onDebugPreviewAll: () -> Unit,
+    onDebugRegenerateWallpaper: () -> Unit,
+    onDebugRunDailyRenewal: () -> Unit,
+    onDebugRestore: () -> Unit,
+    onDebugClearCollection: () -> Unit
+) {
+    val activity = requireNotNull(LocalActivity.current)
+    val adController = remember(activity) { RewardedBoosterAd(activity) }
+    val screenActive = remember { AtomicBoolean(true) }
+    var isBusy by remember { mutableStateOf(false) }
+    var boosterError by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(adController) {
+        screenActive.set(true)
+        onDispose {
+            screenActive.set(false)
+            adController.cancelPendingLoad()
+        }
+    }
+    val handleAward: (BoosterAwardResult) -> Unit = { result ->
+        if (screenActive.get()) {
+            isBusy = false
+            when {
+                result.duplicateRedemption -> boosterError = "Cette récompense a déjà été enregistrée."
+                result.cards.isEmpty() -> boosterError = "Aucune nouvelle anecdote n’est disponible : ta collection est complète."
+                else -> onAwarded(result)
+            }
+        }
+    }
+    val requestBooster = {
+        if (!isBusy) {
+            boosterError = null
+            when {
+                !BuildConfig.ADS_ENABLED -> boosterError = "Les publicités ne sont pas configurées pour cette version."
+                !consent.canRequestAds && consent.updateFinished -> boosterError = "Aucune publicité ne peut être demandée selon les choix de confidentialité actuels."
+                !consent.canRequestAds -> boosterError = "Vérification des choix de confidentialité…"
+                else -> {
+                    isBusy = true
+                    val redemptionId = UUID.randomUUID().toString()
+                    adController.loadAndShow(
+                        BuildConfig.ADMOB_REWARDED_UNIT_ID,
+                        onReward = { onRedeemBooster(redemptionId, handleAward) },
+                        onFailure = { message ->
+                            if (screenActive.get()) {
+                                isBusy = false
+                                boosterError = message
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
     var showDebugMenu by remember { mutableStateOf(false) }
+    var showClearCollectionConfirmation by remember { mutableStateOf(false) }
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
+    val availableCategories = remember(cards) {
+        val collator = java.text.Collator.getInstance(java.util.Locale.forLanguageTag("fr-FR"))
+        cards.map { it.anecdote.categoryId to it.anecdote.categoryName }
+            .distinctBy { it.first }
+            .sortedWith { left, right -> collator.compare(left.second, right.second).takeIf { it != 0 } ?: left.first.compareTo(right.first) }
+    }
     Column(Modifier.fillMaxSize()) {
         TopLine("Accueil", onBack)
         DeveloperTools.CollectionTitle { showDebugMenu = true }
-        DeveloperTools.MenuDialog(showDebugMenu, debugCanRestore, { showDebugMenu = false }, { showDebugMenu = false; onDebugUnlockAll() }, { showDebugMenu = false; onDebugPreviewAll() }, { showDebugMenu = false; onDebugRegenerateWallpaper() }, { showDebugMenu = false; onDebugRunDailyRenewal() }, { showDebugMenu = false; onDebugRestore() })
+        DeveloperTools.MenuDialog(
+            showDebugMenu,
+            debugCanRestore,
+            { showDebugMenu = false },
+            { showDebugMenu = false; onDebugUnlockAll() },
+            { showDebugMenu = false; onDebugPreviewAll() },
+            { showDebugMenu = false; onDebugRegenerateWallpaper() },
+            { showDebugMenu = false; onDebugRunDailyRenewal() },
+            { showDebugMenu = false; onDebugRestore() },
+            { showDebugMenu = false; showClearCollectionConfirmation = true }
+        )
+        DeveloperTools.ClearCollectionDialog(
+            showClearCollectionConfirmation,
+            { showClearCollectionConfirmation = false },
+            { showClearCollectionConfirmation = false; onDebugClearCollection() }
+        )
         Text("Ma collection", Modifier.padding(horizontal = 24.dp, vertical = 6.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-        Text("${cards.size} carte${if (cards.size == 1) "" else "s"}", Modifier.padding(horizontal = 24.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyMedium)
-        if (cards.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center) }
-        else LazyVerticalGrid(state = gridState, columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(cards, key = { it.id }) { fact ->
+        Column(Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
+            Text("${cards.size} carte${if (cards.size == 1) "" else "s"} collectée${if (cards.size == 1) "" else "s"}", style = MaterialTheme.typography.bodyMedium)
+            if (selectedCategoryIds != null || sourceFilter != CollectionSourceFilter.ALL) {
+                Text("${visibleCards.size} carte${if (visibleCards.size == 1) "" else "s"} affichée${if (visibleCards.size == 1) "" else "s"} sur ${cards.size}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        TextButton(onClick = onCreatePersonalCard, modifier = Modifier.align(Alignment.End).padding(horizontal = 20.dp)) {
+            Text("+ Créer une carte")
+        }
+        if (pinnedWallpaperId != null) {
+            Card(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Text("Carte épinglée sur l’écran de verrouillage", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = onResumeDailyWallpaper, contentPadding = PaddingValues(0.dp)) {
+                        Text("Reprendre le renouvellement quotidien")
+                    }
+                }
+            }
+        }
+        if (showCategoryDialog) {
+            CategorySelectionDialog(
+                availableCategories = availableCategories,
+                selectedCategoryIds = selectedCategoryIds,
+                onDismiss = { showCategoryDialog = false },
+                onConfirm = { selection -> onCategorySelectionChanged(selection); showCategoryDialog = false }
+            )
+        }
+        LazyVerticalGrid(state = gridState, columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(start = 16.dp, top = 10.dp, end = 16.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Card(Modifier.fillMaxWidth().padding(bottom = 14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
+                    Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Découvrir 5 nouvelles cartes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Regardez une publicité pour agrandir votre collection.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val canOpenBooster = BoosterPolicy.canOfferRewardedAd(boosterProgress.total, boosterProgress.discovered)
+                        Button(onClick = requestBooster, enabled = canOpenBooster && !isBusy, modifier = Modifier.fillMaxWidth()) {
+                            if (isBusy) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                    Text("Ouvrir un booster")
+                                }
+                            } else {
+                                Text(if (canOpenBooster) "Ouvrir un booster" else "Collection complète")
+                            }
+                        }
+                        if (BuildConfig.DEBUG) {
+                            OutlinedButton(
+                                onClick = {
+                                    if (!isBusy) {
+                                        boosterError = null
+                                        isBusy = true
+                                        onDebugReward(handleAward)
+                                    }
+                                },
+                                enabled = !isBusy,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("DEBUG · Simuler une récompense") }
+                        }
+                        boosterError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                    }
+                }
+            }
+            if (cards.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CollectionSourceFilter.entries.forEach { option ->
+                            FilterChip(
+                                selected = sourceFilter == option,
+                                onClick = { onSourceFilterChanged(option) },
+                                label = { Text(option.label) }
+                            )
+                        }
+                    }
+                }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showCategoryDialog = true },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            val label = if (selectedCategoryIds == null) "Catégories" else "Catégories · ${selectedCategoryIds.size}"
+                            Text("$label  ▾", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Box(Modifier.weight(1f)) {
+                            OutlinedButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            ) {
+                                Text("${sortOrder.buttonLabel}  ▾", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                CollectionSortOrder.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option.label) },
+                                        trailingIcon = { if (sortOrder == option) Text("✓", color = MaterialTheme.colorScheme.primary) },
+                                        onClick = { onSortOrderChanged(option); showSortMenu = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (cards.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Box(Modifier.fillMaxWidth().height(200.dp).padding(24.dp), contentAlignment = Alignment.Center) {
+                        Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center)
+                    }
+                }
+            } else if (visibleCards.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Aucune carte dans cette sélection", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedButton(onClick = { onCategorySelectionChanged(null); onSourceFilterChanged(CollectionSourceFilter.ALL) }) { Text("Réinitialiser les filtres") }
+                    }
+                }
+            } else items(visibleCards, key = { it.anecdote.id }) { collectionCard ->
+                val fact = collectionCard.anecdote
                 Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     val context = androidx.compose.ui.platform.LocalContext.current
                     val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
-                    Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = Color(palette.secondary))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = Color(palette.secondary), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (fact.isPersonal) Text("PERSONNELLE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
                     CategoryIllustration(fact.categoryId, Modifier.fillMaxWidth().height(94.dp))
                     Text(fact.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 3)
                 }
@@ -371,11 +725,189 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, homeCardSize: IntSize, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit, onLoadReference: suspend (String) -> String?) {
+@Composable private fun CategorySelectionDialog(
+    availableCategories: List<Pair<String, String>>,
+    selectedCategoryIds: Set<String>?,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>?) -> Unit
+) {
+    val allIds = remember(availableCategories) { availableCategories.map { it.first }.toSet() }
+    var draftSelection by remember(selectedCategoryIds, allIds) {
+        mutableStateOf(selectedCategoryIds?.toSet() ?: allIds)
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Catégories") },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                items(availableCategories, key = { it.first }) { (id, name) ->
+                    val checked = id in draftSelection
+                    Row(
+                        Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Checkbox) {
+                            draftSelection = if (checked) draftSelection - id else draftSelection + id
+                        }.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = checked,
+                            onCheckedChange = null
+                        )
+                        Text(name, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { draftSelection = allIds }) { Text("Tout sélectionner") }
+                Button(onClick = { onConfirm(if (draftSelection == allIds) null else draftSelection) }) { Text("Valider") }
+            }
+        }
+    )
+}
+
+@Composable private fun PersonalCardEditorScreen(
+    categories: List<fr.inillusio.data.local.dao.CategoryOption>,
+    initialFact: AnecdoteWithCategory?,
+    onBack: () -> Unit,
+    onSave: suspend (String?, String, String, String, String?) -> String,
+    onSaved: () -> Unit
+) {
+    var categoryId by remember(initialFact?.id) { mutableStateOf(initialFact?.categoryId.orEmpty()) }
+    var hook by remember(initialFact?.id) { mutableStateOf(initialFact?.hook.orEmpty()) }
+    var explanation by remember(initialFact?.id) { mutableStateOf(initialFact?.explanation.orEmpty()) }
+    var source by remember(initialFact?.id) { mutableStateOf(initialFact?.personalSource.orEmpty()) }
+    var categoryMenuExpanded by remember { mutableStateOf(false) }
+    var showPreviewExplanation by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(categories, initialFact?.id) {
+        if (initialFact == null && categories.isNotEmpty() && categories.none { it.id == categoryId }) {
+            categoryId = categories.first().id
+        }
+    }
+    val selectedCategory = categories.firstOrNull { it.id == categoryId }
+    val previewFact = remember(initialFact?.id, categoryId, selectedCategory?.name, hook, explanation, source) {
+        AnecdoteWithCategory(
+            id = initialFact?.id ?: "personal-preview",
+            categoryId = categoryId,
+            categoryName = selectedCategory?.name ?: "Discipline",
+            title = hook.take(100),
+            hook = hook.ifBlank { "Ton accroche apparaîtra ici." },
+            explanation = explanation.ifBlank { "Ton explication apparaîtra ici." },
+            isPersonal = true,
+            personalSource = source.takeIf(String::isNotBlank)
+        )
+    }
+    Column(Modifier.fillMaxSize().imePadding()) {
+        TopLine("Ma collection", onBack)
+        Text(
+            if (initialFact == null) "Créer une carte" else "Modifier la carte",
+            Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("Catégorie", style = MaterialTheme.typography.labelLarge)
+            Box {
+                OutlinedButton(onClick = { categoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth(), enabled = categories.isNotEmpty()) {
+                    Text(selectedCategory?.name ?: "Aucune discipline disponible", modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+                    Text("▾")
+                }
+                DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+                    categories.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.name) },
+                            onClick = { categoryId = option.id; categoryMenuExpanded = false }
+                        )
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = hook,
+                onValueChange = { if (it.length <= 180) hook = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Accroche") },
+                supportingText = { Text("${hook.length}/180") },
+                minLines = 2,
+                maxLines = 4
+            )
+            OutlinedTextField(
+                value = explanation,
+                onValueChange = { explanation = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Explication") },
+                minLines = 4,
+                maxLines = 8
+            )
+            OutlinedTextField(
+                value = source,
+                onValueChange = { source = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Source (facultative)") },
+                minLines = 1,
+                maxLines = 3
+            )
+            Text("Aperçu", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            BoxWithConstraints(Modifier.fillMaxWidth().height(360.dp), contentAlignment = Alignment.Center) {
+                val cardWidth = minOf(maxWidth - 24.dp, maxHeight * .72f).coerceAtLeast(0.dp)
+                val cardHeight = minOf(maxHeight, cardWidth / .72f)
+                FlipCard(
+                    fact = previewFact,
+                    modifier = Modifier.size(cardWidth, cardHeight),
+                    reference = source.takeIf(String::isNotBlank),
+                    onLoadReference = { null },
+                    onOpenExplanation = { showPreviewExplanation = true }
+                )
+            }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        }
+        Button(
+            onClick = {
+                if (categoryId.isBlank()) { error = "Choisis une catégorie."; return@Button }
+                if (hook.isBlank()) { error = "Saisis une accroche."; return@Button }
+                if (explanation.isBlank()) { error = "Saisis une explication."; return@Button }
+                saving = true
+                error = null
+                scope.launch {
+                    runCatching {
+                        onSave(initialFact?.id, categoryId, hook, explanation, source.takeIf(String::isNotBlank))
+                    }.onSuccess {
+                        onSaved()
+                    }.onFailure { failure ->
+                        error = failure.message ?: "La carte n’a pas pu être enregistrée."
+                        saving = false
+                    }
+                }
+            },
+            enabled = !saving && categories.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)
+        ) {
+            if (saving) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            else Text("Enregistrer")
+        }
+    }
+    if (showPreviewExplanation) {
+        AlertDialog(
+            onDismissRequest = { showPreviewExplanation = false },
+            title = { Text("Explication") },
+            text = { Text(explanation.ifBlank { "Ton explication apparaîtra ici." }) },
+            confirmButton = { TextButton(onClick = { showPreviewExplanation = false }) { Text("Fermer") } }
+        )
+    }
+}
+
+@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, homeCardSize: IntSize, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit, onSetWallpaper: (AnecdoteWithCategory, WallpaperDisplayMode) -> Unit, onLoadReference: suspend (String) -> String?, onEditPersonalCard: (AnecdoteWithCategory) -> Unit, onDeletePersonalCard: (AnecdoteWithCategory) -> Unit) {
     val cardIds = remember(cards) { cards.map { it.id } }
     var currentCardId by rememberSaveable { mutableStateOf(selectedCardId) }
     val selectedIndex = cardIds.indexOf(currentCardId).coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = selectedIndex, pageCount = { cards.size })
+    var wallpaperDialogFact by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
+    var deleteConfirmationFact by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
     LaunchedEffect(pagerState.settledPage, cardIds) {
         cards.getOrNull(pagerState.settledPage)?.let { currentCardId = it.id }
     }
@@ -387,16 +919,35 @@ class MainActivity : ComponentActivity() {
             currentCardId = cards[target].id
         }
     }
+    val currentFact = cards.getOrNull(pagerState.settledPage)
     Column(Modifier.fillMaxSize()) {
-        TopLine("Retour", onBack)
+        if (currentFact?.isPersonal == true) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Retour")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { onEditPersonalCard(currentFact) }) { Text("Modifier") }
+                    Text(" - ", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { deleteConfirmationFact = currentFact }) { Text("Supprimer") }
+                }
+            }
+        } else {
+            TopLine("Retour", onBack)
+        }
         if (cards.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text("Cette carte n’est plus dans la collection.", textAlign = TextAlign.Center)
             }
         } else {
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                val density = LocalDensity.current
-                val measuredHomeSize = with(density) {
+                val measuredHomeSize = with(LocalDensity.current) {
                     if (homeCardSize.width > 0 && homeCardSize.height > 0) {
                         DpSize(homeCardSize.width.toDp(), homeCardSize.height.toDp())
                     } else null
@@ -404,14 +955,14 @@ class MainActivity : ComponentActivity() {
                 HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { cards[it].id }) { page ->
                     cards.getOrNull(page)?.let { fact ->
                         BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            val requestedWidth = measuredHomeSize?.width ?: (maxWidth - 44.dp).coerceAtLeast(0.dp)
-                            val requestedHeight = measuredHomeSize?.height ?: maxHeight
-                            val fitScale = if (requestedWidth > 0.dp && requestedHeight > 0.dp) {
-                                minOf(1f, maxWidth / requestedWidth, maxHeight / requestedHeight)
-                            } else 1f
+                            val cardMaxWidth = maxWidth
+                            val cardMaxHeight = maxHeight
+                            val requestedWidth = measuredHomeSize?.width ?: (cardMaxWidth - 44.dp).coerceAtLeast(0.dp)
+                            val requestedHeight = measuredHomeSize?.height ?: cardMaxHeight
+                            val fittedSize = fitCardSize(requestedWidth, requestedHeight, cardMaxWidth, cardMaxHeight)
                             FlipCard(
                                 fact = fact,
-                                modifier = Modifier.size(requestedWidth * fitScale, requestedHeight * fitScale),
+                                modifier = Modifier.size(fittedSize.width, fittedSize.height),
                                 resetKey = pagerState.currentPage,
                                 onLoadReference = onLoadReference,
                                 onOpenExplanation = { currentCardId = fact.id; onOpenExplanation(fact) }
@@ -427,11 +978,452 @@ class MainActivity : ComponentActivity() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
+            currentFact?.let { fact ->
+                TextButton(
+                    onClick = { wallpaperDialogFact = fact },
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp)
+                ) { Text("Définir comme fond d’écran") }
+            }
+        }
+    }
+    wallpaperDialogFact?.let { fact ->
+        AlertDialog(
+            onDismissRequest = { wallpaperDialogFact = null },
+            title = { Text("Définir comme fond d’écran") },
+            text = { Text("Combien de temps souhaites-tu conserver cette carte sur l’écran de verrouillage ?") },
+            confirmButton = {
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(onClick = { onSetWallpaper(fact, WallpaperDisplayMode.UNTIL_NEXT_RENEWAL); wallpaperDialogFact = null }) { Text("Jusqu’à demain") }
+                    TextButton(onClick = { onSetWallpaper(fact, WallpaperDisplayMode.PINNED); wallpaperDialogFact = null }) { Text("Épingler cette carte") }
+                }
+            },
+            dismissButton = { TextButton(onClick = { wallpaperDialogFact = null }) { Text("Annuler") } }
+        )
+    }
+    deleteConfirmationFact?.let { fact ->
+        AlertDialog(
+            onDismissRequest = { deleteConfirmationFact = null },
+            title = { Text("Supprimer cette carte ?") },
+            text = { Text("Cette création personnelle sera supprimée de ta collection.") },
+            confirmButton = {
+                TextButton(onClick = { deleteConfirmationFact = null; onDeletePersonalCard(fact) }) { Text("Supprimer") }
+            },
+            dismissButton = { TextButton(onClick = { deleteConfirmationFact = null }) { Text("Annuler") } }
+        )
+    }
+}
+
+private fun fitCardSize(requestedWidth: Dp, requestedHeight: Dp, maxWidth: Dp, maxHeight: Dp): DpSize {
+    val scale = if (requestedWidth > 0.dp && requestedHeight > 0.dp) {
+        minOf(1f, maxWidth / requestedWidth, maxHeight / requestedHeight)
+    } else 1f
+    return DpSize(requestedWidth * scale, requestedHeight * scale)
+}
+
+private fun fitBoosterDisplaySize(referenceSize: DpSize?, maxWidth: Dp, availableHeight: Dp): DpSize {
+    val referenceWidth = referenceSize?.width ?: (maxWidth - 44.dp).coerceAtLeast(0.dp)
+    val referenceHeight = referenceSize?.height ?: availableHeight
+    return fitCardSize(referenceWidth, referenceHeight, maxWidth, availableHeight)
+}
+
+@Composable private fun BoosterScreen(
+    award: BoosterAwardResult,
+    collection: List<AnecdoteWithCategory>,
+    homeCardSize: IntSize,
+    onBack: () -> Unit,
+    onLoadReference: suspend (String) -> String?,
+    onOpenExplanation: (AnecdoteWithCategory) -> Unit
+) {
+    var newCards by remember { mutableStateOf(award.cards) }
+    var awardIdsEncoded by rememberSaveable { mutableStateOf(award.cards.joinToString("|") { it.id }) }
+    val awardIds = remember(awardIdsEncoded) { awardIdsEncoded.split('|').filter(String::isNotBlank) }
+    val restoredAwardCards = remember(awardIds, collection) { awardIds.mapNotNull { id -> collection.firstOrNull { it.id == id } } }
+    val displayCards = if (restoredAwardCards.size == awardIds.size && awardIds.isNotEmpty()) restoredAwardCards else newCards
+    var revealedIdsEncoded by rememberSaveable { mutableStateOf("") }
+    val revealedIds = remember(revealedIdsEncoded) { revealedIdsEncoded.split('|').filter(String::isNotBlank).toSet() }
+    var packOpened by rememberSaveable { mutableStateOf(false) }
+    var packFullyOpened by rememberSaveable { mutableStateOf(false) }
+    var swipeHintDismissed by rememberSaveable(awardIdsEncoded) { mutableStateOf(false) }
+    val animationsEnabled = ValueAnimator.areAnimatorsEnabled()
+    val openingProgress by animateFloatAsState(
+        targetValue = if (packOpened) 1f else 0f,
+        animationSpec = if (animationsEnabled && !packFullyOpened) tween(620, easing = FastOutSlowInEasing) else snap(),
+        label = "booster-pack-opening"
+    )
+    val pagerState = rememberPagerState(pageCount = { displayCards.size })
+
+    LaunchedEffect(packOpened, openingProgress) {
+        if (packOpened && openingProgress >= 0.999f) packFullyOpened = true
+    }
+
+    LaunchedEffect(award, pagerState) {
+        newCards = award.cards
+        awardIdsEncoded = award.cards.joinToString("|") { it.id }
+        revealedIdsEncoded = ""
+        packOpened = false
+        packFullyOpened = false
+        swipeHintDismissed = false
+        pagerState.scrollToPage(0)
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        val pageCounter = if (packFullyOpened && displayCards.isNotEmpty()) "${pagerState.settledPage + 1} / ${displayCards.size}" else null
+        TopLine("Ma collection", onBack, trailingText = pageCounter)
+        if (displayCards.isEmpty()) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    val density = LocalDensity.current
+                    val referenceSize = with(density) {
+                        if (homeCardSize.width > 0 && homeCardSize.height > 0) {
+                            DpSize(homeCardSize.width.toDp(), homeCardSize.height.toDp())
+                        } else null
+                    }
+                    val previousCardAreaHeight = (maxHeight - 48.dp).coerceAtLeast(0.dp)
+                    val fittedSize = fitBoosterDisplaySize(referenceSize, maxWidth, previousCardAreaHeight)
+                    val preservedTopSpace = ((previousCardAreaHeight - fittedSize.height) / 2).coerceAtLeast(0.dp)
+                    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(Modifier.height(preservedTopSpace))
+                        Box(Modifier.fillMaxWidth().height(fittedSize.height), contentAlignment = Alignment.Center) {
+                            if (!packFullyOpened) {
+                                BoosterPack(
+                                    modifier = Modifier
+                                        .size(fittedSize.width, fittedSize.height)
+                                        .semantics {
+                                            customActions = listOf(
+                                                CustomAccessibilityAction("Ouvrir le paquet en faisant glisser") {
+                                                    if (!packOpened) {
+                                                        packOpened = true
+                                                        true
+                                                    } else false
+                                                }
+                                            )
+                                        },
+                                    openingProgress = openingProgress,
+                                    gestureEnabled = !packOpened,
+                                    onOpen = { packOpened = true }
+                                )
+                            } else {
+                                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { displayCards[it].id }) { page ->
+                                    val fact = displayCards[page]
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        RewardRevealCard(
+                                            fact = fact,
+                                            revealed = fact.id in revealedIds,
+                                            modifier = Modifier.size(fittedSize.width, fittedSize.height),
+                                            onReveal = { revealedIdsEncoded = (revealedIds + fact.id).joinToString("|") },
+                                            onLoadReference = onLoadReference,
+                                            onOpenExplanation = { onOpenExplanation(fact) }
+                                        )
+                                    }
+                                }
+                                LaunchedEffect(pagerState.settledPage, awardIdsEncoded) {
+                                    if (pagerState.settledPage > 0) swipeHintDismissed = true
+                                }
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
+                                    Column(
+                                        Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.Center,
+                                        horizontalAlignment = Alignment.End
+                                    ) {
+                                        AnimatedVisibility(
+                                            visible = displayCards.size > 1 && pagerState.settledPage == 0 && !swipeHintDismissed,
+                                            enter = if (animationsEnabled) fadeIn(tween(180)) else fadeIn(snap()),
+                                            exit = if (animationsEnabled) fadeOut(tween(180)) else fadeOut(snap()),
+                                            modifier = Modifier.padding(end = 8.dp)
+                                        ) {
+                                            val hintTransition = rememberInfiniteTransition(label = "booster-swipe-hint")
+                                            val hintAlpha by hintTransition.animateFloat(
+                                                initialValue = 0.55f,
+                                                targetValue = 1f,
+                                                animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
+                                                label = "booster-swipe-hint-alpha"
+                                            )
+                                            val hintTranslation by hintTransition.animateFloat(
+                                                initialValue = 0f,
+                                                targetValue = 6f,
+                                                animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
+                                                label = "booster-swipe-hint-position"
+                                            )
+                                            Box(
+                                                Modifier
+                                                    .graphicsLayer {
+                                                        alpha = if (animationsEnabled) hintAlpha else 1f
+                                                        translationX = if (animationsEnabled) hintTranslation.dp.toPx() else 0f
+                                                    }
+                                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.96f), CircleShape)
+                                                    .padding(8.dp)
+                                                    .clearAndSetSemantics {},
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp),
+                                                    tint = BoosterTurquoise
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
-@Composable private fun SettingsScreen(theme: AppTheme, darkTheme: Boolean, refresh: Boolean, savedTextOffset: Float, savedSourceOffset: Float, daily: AnecdoteWithCategory?, reference: String?, wallpaperPreview: WallpaperArtwork?, onTheme: (AppTheme) -> Unit, onRefresh: (Boolean) -> Unit, onScheduleOffsetSave: (Float, Float) -> Unit, onPersistOffsets: (Float, Float) -> Unit, onResetTextOffset: (Float) -> Unit, onResetSourceOffset: (Float) -> Unit, onResetOffsets: () -> Unit, onPreparePreview: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onApply: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onBack: () -> Unit) {
+internal const val BOOSTER_PACK_OPEN_THRESHOLD = 0.58f
+internal fun boosterPackSwipeOpens(progress: Float): Boolean = progress.coerceIn(0f, 1f) >= BOOSTER_PACK_OPEN_THRESHOLD
+private val BoosterIvory = Color(0xFFF7F3E8)
+private val BoosterCoral = Color(0xFFFF6347)
+private val BoosterTurquoise = Color(0xFF00A995)
+
+private fun tornEdgeOffset(xFraction: Float, amplitudePx: Float): Float {
+    val t = xFraction.coerceIn(0f, 1f)
+    val envelope = sin(t * PI).toFloat()
+    val waviness = sin(t * PI * 13.0).toFloat() * 0.58f + sin(t * PI * 27.0).toFloat() * 0.24f
+    return envelope * waviness * amplitudePx
+}
+
+private fun Path.appendTornEdge(endX: Float, width: Float, baseY: Float, stepPx: Float, amplitudePx: Float) {
+    if (endX <= 0f) return
+    var x = 0f
+    while (x < endX) {
+        lineTo(x, baseY + tornEdgeOffset(x / width, amplitudePx))
+        x += stepPx
+    }
+    lineTo(endX, baseY + tornEdgeOffset(endX / width, amplitudePx))
+}
+
+@Composable private fun BoosterPack(
+    modifier: Modifier = Modifier,
+    openingProgress: Float,
+    gestureEnabled: Boolean,
+    onOpen: () -> Unit
+) {
+    var tearProgress by remember { mutableFloatStateOf(0f) }
+    val animationScope = rememberCoroutineScope()
+    val animationsEnabled = ValueAnimator.areAnimatorsEnabled()
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val packWidth = maxWidth
+        val packHeight = maxHeight
+        val emblemSize = minOf(packWidth * 0.22f, packHeight * 0.12f)
+        val density = LocalDensity.current
+        val tearShapeProgress = maxOf(tearProgress, openingProgress).coerceIn(0f, 1f)
+        val tearBandHeight = with(density) { 42.dp.toPx() }
+        val tearAmplitude = with(density) { 2.8.dp.toPx() }
+        val tearStep = with(density) { 5.dp.toPx() }
+        val cornerRadius = with(density) { 24.dp.toPx() }
+        val pouchShape = remember(tearShapeProgress, tearBandHeight, tearAmplitude, tearStep) {
+            GenericShape { size, _ ->
+                val cutX = size.width * tearShapeProgress
+                if (cutX > 0f) {
+                    moveTo(0f, 0f)
+                    lineTo(0f, tearBandHeight + tornEdgeOffset(0f, tearAmplitude))
+                    appendTornEdge(cutX, size.width, tearBandHeight, tearStep, tearAmplitude)
+                    lineTo(cutX, 0f)
+                    lineTo(size.width - cornerRadius, 0f)
+                    quadraticTo(size.width, 0f, size.width, cornerRadius)
+                } else {
+                    moveTo(cornerRadius, 0f)
+                    lineTo(size.width - cornerRadius, 0f)
+                    quadraticTo(size.width, 0f, size.width, cornerRadius)
+                }
+                lineTo(size.width, size.height - cornerRadius)
+                quadraticTo(size.width, size.height, size.width - cornerRadius, size.height)
+                lineTo(cornerRadius, size.height)
+                quadraticTo(0f, size.height, 0f, size.height - cornerRadius)
+                if (cutX == 0f) {
+                    lineTo(0f, cornerRadius)
+                    quadraticTo(0f, 0f, cornerRadius, 0f)
+                }
+                close()
+            }
+        }
+        val detachedStripShape = remember(tearShapeProgress, tearBandHeight, tearAmplitude, tearStep) {
+            GenericShape { size, _ ->
+                val cutX = size.width * tearShapeProgress
+                moveTo(0f, 0f)
+                lineTo(cutX, 0f)
+                lineTo(cutX, tearBandHeight + tornEdgeOffset(tearShapeProgress, tearAmplitude))
+                var x = cutX
+                while (x > 0f) {
+                    lineTo(x, tearBandHeight + tornEdgeOffset(x / size.width, tearAmplitude))
+                    x -= tearStep
+                }
+                lineTo(0f, tearBandHeight + tornEdgeOffset(0f, tearAmplitude))
+                close()
+            }
+        }
+        Box(Modifier.width(packWidth).height(packHeight), contentAlignment = Alignment.TopCenter) {
+            // Cards peek out from behind the pouch as its front panel opens.
+            listOf(-7f, 0f, 7f).forEachIndexed { index, rotation ->
+                BoosterCardSleeve(
+                    Modifier
+                        .size(packWidth, packHeight)
+                        .align(Alignment.TopCenter)
+                        .offset(y = packHeight * (0.13f - openingProgress * 0.47f))
+                        .rotate(rotation)
+                        .graphicsLayer { alpha = (openingProgress * (0.65f + index * 0.1f)).coerceIn(0f, 1f) }
+                )
+            }
+
+            // The turquoise inner lining is only visible where the front face has torn away.
+            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).background(BoosterTurquoise))
+
+            Box(Modifier.fillMaxSize().clip(pouchShape).background(BoosterCoral).border(1.dp, Color(0xFFCF513E), pouchShape)) {
+                Canvas(Modifier.fillMaxSize()) {
+                    drawCircle(BoosterTurquoise.copy(alpha = 0.25f), radius = size.width * 0.3f, center = Offset(size.width * 0.78f, size.height * 0.63f))
+                    drawCircle(BoosterIvory.copy(alpha = 0.18f), radius = size.width * 0.43f, center = Offset(size.width * 0.12f, size.height * 0.84f))
+                    drawLine(BoosterIvory.copy(alpha = 0.36f), Offset(size.width * 0.08f, size.height * 0.84f), Offset(size.width * 0.92f, size.height * 0.84f), strokeWidth = 1.dp.toPx())
+                }
+                Box(Modifier.fillMaxWidth().height(42.dp).align(Alignment.TopCenter).background(BoosterIvory)) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val y = size.height - 1.5.dp.toPx()
+                        drawLine(BoosterCoral.copy(alpha = 0.7f), Offset(8.dp.toPx(), y), Offset(size.width - 8.dp.toPx(), y), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())))
+                        val grip = Path().apply {
+                            moveTo(17.dp.toPx(), 13.dp.toPx())
+                            lineTo(23.dp.toPx(), size.height / 2f)
+                            lineTo(17.dp.toPx(), size.height - 13.dp.toPx())
+                        }
+                        drawPath(grip, BoosterTurquoise, style = Stroke(width = 2.dp.toPx()))
+                    }
+                }
+                Column(Modifier.fillMaxSize().padding(horizontal = 18.dp).padding(top = 54.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("IN ILLUSIO", style = MaterialTheme.typography.labelMedium, letterSpacing = 2.2.sp, color = BoosterIvory, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    Box(Modifier.size(emblemSize).clip(RoundedCornerShape(20.dp)).background(BoosterIvory), contentAlignment = Alignment.Center) {
+                        Image(painterResource(R.drawable.illusio_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("CARTES À DÉCOUVRIR", style = MaterialTheme.typography.labelSmall, letterSpacing = 1.2.sp, color = BoosterIvory, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            if (tearShapeProgress > 0f) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(detachedStripShape)
+                        .graphicsLayer {
+                            translationX = tearShapeProgress * 5.dp.toPx()
+                            translationY = -tearProgress * 4.dp.toPx() - openingProgress * 34.dp.toPx()
+                            rotationZ = tearProgress * 2f + openingProgress * 10f
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                        }
+                        .shadow((1f + tearProgress * 2f + openingProgress * 2f).dp, detachedStripShape)
+                        .clip(detachedStripShape)
+                        .background(BoosterIvory)
+                        .border(1.dp, BoosterCoral.copy(alpha = 0.72f), detachedStripShape)
+                ) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val y = size.height - 1.5.dp.toPx()
+                        drawLine(BoosterCoral.copy(alpha = 0.7f), Offset(8.dp.toPx(), y), Offset(size.width - 8.dp.toPx(), y), strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())))
+                    }
+                }
+            }
+            if (gestureEnabled) {
+                // Keep the touch target fixed to the package's tear strip even as the torn piece lifts away.
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                        .align(Alignment.TopCenter)
+                        .pointerInput(gestureEnabled) {
+                            var dragFraction = 0f
+                            detectDragGestures(
+                                onDragStart = { dragFraction = 0f; tearProgress = 0f },
+                                onDragEnd = {
+                                    if (boosterPackSwipeOpens(dragFraction)) {
+                                        onOpen()
+                                    } else {
+                                        val start = dragFraction
+                                        animationScope.launch {
+                                            if (animationsEnabled) {
+                                                androidx.compose.animation.core.animate(
+                                                    initialValue = start,
+                                                    targetValue = 0f,
+                                                    animationSpec = tween(260, easing = FastOutSlowInEasing)
+                                                ) { value, _ -> tearProgress = value }
+                                            } else tearProgress = 0f
+                                        }
+                                    }
+                                },
+                                onDragCancel = { tearProgress = 0f }
+                            ) { change, dragAmount ->
+                                change.consume()
+                                dragFraction = (dragFraction + dragAmount.x / size.width.coerceAtLeast(1)).coerceIn(0f, 1f)
+                                tearProgress = dragFraction
+                            }
+                        }
+                )
+            }
+        }
+    }
+}
+
+@Composable private fun RewardRevealCard(
+    fact: AnecdoteWithCategory,
+    revealed: Boolean,
+    modifier: Modifier,
+    onReveal: () -> Unit,
+    onLoadReference: suspend (String) -> String?,
+    onOpenExplanation: () -> Unit
+) {
+    val rotation by animateFloatAsState(if (revealed) 180f else 0f, animationSpec = tween(420, easing = FastOutSlowInEasing), label = "booster-reveal")
+    val density = LocalDensity.current.density
+    Box(modifier) {
+        if (rotation <= 90f) {
+            BoosterCardSleeve(
+                Modifier.fillMaxSize().graphicsLayer {
+                    rotationY = rotation
+                    cameraDistance = 16f * density
+                    alpha = (1f - rotation / 90f).coerceIn(0f, 1f)
+                }.clickable(onClickLabel = "Révéler cette carte", onClick = onReveal)
+            )
+        } else {
+            FlipCard(
+                fact = fact,
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    alpha = ((rotation - 90f) / 90f).coerceIn(0f, 1f)
+                },
+                onLoadReference = onLoadReference,
+                onOpenExplanation = onOpenExplanation
+            )
+        }
+    }
+}
+
+@Composable private fun BoosterCardSleeve(modifier: Modifier = Modifier) {
+    Box(modifier.clip(RoundedCornerShape(26.dp)).background(BoosterIvory).border(1.dp, Color(0xFFCEC9BE), RoundedCornerShape(26.dp))) {
+        Canvas(Modifier.fillMaxSize()) {
+            val inset = 12.dp.toPx()
+            drawRoundRect(BoosterCoral.copy(alpha = 0.7f), topLeft = Offset(inset, inset), size = androidx.compose.ui.geometry.Size(size.width - inset * 2f, size.height - inset * 2f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.dp.toPx()), style = Stroke(1.dp.toPx()))
+            drawCircle(BoosterTurquoise.copy(alpha = 0.16f), radius = size.width * 0.19f, center = Offset(size.width * 0.82f, size.height * 0.24f))
+            drawCircle(BoosterCoral.copy(alpha = 0.12f), radius = size.width * 0.15f, center = Offset(size.width * 0.18f, size.height * 0.76f))
+        }
+        Column(Modifier.fillMaxSize().padding(22.dp), verticalArrangement = Arrangement.SpaceBetween, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("IN ILLUSIO", style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp, color = Color(0xFF24323A), fontWeight = FontWeight.Bold)
+            Box(Modifier.fillMaxWidth().weight(1f).padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxHeight(0.72f).aspectRatio(1f).clip(RoundedCornerShape(24.dp)).background(BoosterTurquoise.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                    Image(painterResource(R.drawable.illusio_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxSize().padding(8.dp), contentScale = ContentScale.Fit)
+                }
+            }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                HorizontalDivider(color = BoosterCoral.copy(alpha = 0.62f), thickness = 1.dp)
+                Text("TOUCHE POUR RÉVÉLER", Modifier.background(BoosterIvory).padding(horizontal = 8.dp), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.1.sp, color = Color(0xFF24323A), fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable private fun SettingsScreen(theme: AppTheme, darkTheme: Boolean, refresh: Boolean, savedTextOffset: Float, savedSourceOffset: Float, daily: AnecdoteWithCategory?, reference: String?, wallpaperPreview: WallpaperArtwork?, privacyOptionsRequired: Boolean, onTheme: (AppTheme) -> Unit, onRefresh: (Boolean) -> Unit, onScheduleOffsetSave: (Float, Float) -> Unit, onPersistOffsets: (Float, Float) -> Unit, onResetTextOffset: (Float) -> Unit, onResetSourceOffset: (Float) -> Unit, onResetOffsets: () -> Unit, onPreparePreview: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onApply: (AnecdoteWithCategory, String?, Boolean, Float, Float) -> Unit, onPrivacyOptions: () -> Unit, onBack: () -> Unit) {
     var textOffset by remember(daily?.id) { mutableFloatStateOf(savedTextOffset) }
     var sourceOffset by remember(daily?.id) { mutableFloatStateOf(savedSourceOffset) }
     LaunchedEffect(savedTextOffset, savedSourceOffset) {
@@ -535,5 +1527,10 @@ class MainActivity : ComponentActivity() {
             ) { Text("Appliquer le fond d’écran") }
         }
         Text("In Illusio · Version 0.1.0", Modifier.align(Alignment.CenterHorizontally).padding(top = 20.dp), style = MaterialTheme.typography.labelSmall)
+        if (privacyOptionsRequired) {
+            TextButton(onClick = onPrivacyOptions, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text("Options de confidentialité")
+            }
+        }
     }
 }

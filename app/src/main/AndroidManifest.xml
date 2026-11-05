@@ -1,6 +1,9 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <application android:name=".InIllusioApplication" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:supportsRtl="true">
+        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${ADMOB_APP_ID}" />
+        <!-- Initialize the ads SDK only after UMP consent and an explicit booster request. -->
+        <provider android:name="com.google.android.gms.ads.MobileAdsInitProvider" tools:node="remove" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

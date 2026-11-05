@@ -8,8 +8,9 @@ import kotlinx.coroutines.flow.onStart
 import fr.inillusio.domain.DailySelectionPolicy
 import java.time.LocalDate
 
-private val Context.preferences by preferencesDataStore("hors_cadre_preferences")
+private val Context.preferences by preferencesDataStore(name = "inillusio_preferences")
 enum class AppTheme { SYSTEM, LIGHT, DARK }
+enum class WallpaperDisplayMode { AUTOMATIC, UNTIL_NEXT_RENEWAL, PINNED }
 const val MIN_WALLPAPER_TEXT_OFFSET = -0.15f
 const val MAX_WALLPAPER_TEXT_OFFSET = 0.15f
 const val MIN_WALLPAPER_SOURCE_OFFSET = -0.15f
@@ -17,6 +18,9 @@ const val MAX_WALLPAPER_SOURCE_OFFSET = 0.15f
 data class PreferencesState(
     val theme: AppTheme = AppTheme.SYSTEM,
     val wallpaperRefreshEnabled: Boolean = false,
+    val wallpaperDisplayMode: WallpaperDisplayMode = WallpaperDisplayMode.AUTOMATIC,
+    val selectedWallpaperId: String? = null,
+    val temporaryWallpaperDate: LocalDate? = null,
     val onboardingComplete: Boolean = false,
     val wallpaperTextOffset: Float = 0f,
     val wallpaperSourceOffset: Float = 0f
@@ -32,6 +36,9 @@ class UserPreferences(private val context: Context) {
         val legacyCollectionDisplayMode = stringPreferencesKey("collection_display_mode")
         val dailyDate = stringPreferencesKey("daily_date")
         val dailyId = stringPreferencesKey("daily_id")
+        val wallpaperDisplayMode = stringPreferencesKey("wallpaper_display_mode")
+        val selectedWallpaperId = stringPreferencesKey("selected_wallpaper_id")
+        val temporaryWallpaperDate = stringPreferencesKey("temporary_wallpaper_date")
     }
     val state = context.preferences.data
         .onStart {
@@ -47,12 +54,30 @@ class UserPreferences(private val context: Context) {
         .map { p -> PreferencesState(
         theme = runCatching { AppTheme.valueOf(p[Keys.theme] ?: "SYSTEM") }.getOrDefault(AppTheme.SYSTEM),
         wallpaperRefreshEnabled = p[Keys.wallpaper] ?: false,
+        wallpaperDisplayMode = runCatching { WallpaperDisplayMode.valueOf(p[Keys.wallpaperDisplayMode] ?: "AUTOMATIC") }.getOrDefault(WallpaperDisplayMode.AUTOMATIC),
+        selectedWallpaperId = p[Keys.selectedWallpaperId],
+        temporaryWallpaperDate = p[Keys.temporaryWallpaperDate]?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
         onboardingComplete = p[Keys.onboarding] ?: false,
         wallpaperTextOffset = (p[Keys.wallpaperTextOffset] ?: 0f).coerceIn(MIN_WALLPAPER_TEXT_OFFSET, MAX_WALLPAPER_TEXT_OFFSET),
         wallpaperSourceOffset = (p[Keys.wallpaperSourceOffset] ?: 0f).coerceIn(MIN_WALLPAPER_SOURCE_OFFSET, MAX_WALLPAPER_SOURCE_OFFSET)
     ) }
     suspend fun setTheme(theme: AppTheme) { context.preferences.edit { it[Keys.theme] = theme.name } }
     suspend fun setWallpaperRefresh(enabled: Boolean) { context.preferences.edit { it[Keys.wallpaper] = enabled } }
+    suspend fun setManualWallpaper(id: String, mode: WallpaperDisplayMode, date: LocalDate? = null) {
+        context.preferences.edit {
+            it[Keys.wallpaperDisplayMode] = mode.name
+            it[Keys.selectedWallpaperId] = id
+            if (mode == WallpaperDisplayMode.UNTIL_NEXT_RENEWAL && date != null) it[Keys.temporaryWallpaperDate] = date.toString()
+            else it.remove(Keys.temporaryWallpaperDate)
+        }
+    }
+    suspend fun clearManualWallpaper() {
+        context.preferences.edit {
+            it[Keys.wallpaperDisplayMode] = WallpaperDisplayMode.AUTOMATIC.name
+            it.remove(Keys.selectedWallpaperId)
+            it.remove(Keys.temporaryWallpaperDate)
+        }
+    }
     suspend fun setWallpaperTextOffset(offset: Float) {
         context.preferences.edit { it[Keys.wallpaperTextOffset] = offset.coerceIn(MIN_WALLPAPER_TEXT_OFFSET, MAX_WALLPAPER_TEXT_OFFSET) }
     }

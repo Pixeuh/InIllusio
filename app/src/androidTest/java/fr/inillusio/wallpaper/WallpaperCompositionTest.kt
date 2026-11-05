@@ -38,7 +38,7 @@ class WallpaperCompositionTest {
         val service = WallpaperService(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext)
         val categories = listOf(
             "Sociologie", "Anthropologie", "Psychologie sociale", "Histoire",
-            "Linguistique", "Économie", "Philosophie", "Géographie humaine"
+            "Linguistique", "Économie", "Philosophie", "Géographie"
         )
         listOf(1080 to 2400, 1080 to 2340, 1440 to 3200, 1080 to 1920).forEach { (width, height) ->
             val background = Color.rgb(11, 20, 27)

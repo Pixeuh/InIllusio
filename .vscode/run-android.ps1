@@ -1,3 +1,8 @@
+﻿param(
+    [ValidateRange(1, 3600)]
+    [int]$EmulatorTimeoutSeconds = 240
+)
+
 $ErrorActionPreference = 'Stop'
 
 try {
@@ -73,124 +78,107 @@ try {
     $avdName = 'Medium_Phone_API_37.0'
     $emulatorExe = Join-Path $sdk 'emulator\emulator.exe'
     $startupTimer = [System.Diagnostics.Stopwatch]::StartNew()
-    $savedPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        $deviceLines = & $adb devices
-        $adbDevicesExitCode = $LASTEXITCODE
-    }
-    finally {
-        $ErrorActionPreference = $savedPreference
-    }
-    if ($adbDevicesExitCode -ne 0) {
-        throw "ADB n'a pas pu lister les appareils connectés (code $adbDevicesExitCode)."
-    }
+    $emulatorSerial = $null
+    $lastAdbState = 'inconnu'
+    $lastBootState = 'non vérifié'
+    $lastMessage = ''
+    $lastStatusSeconds = -15
+    $launchAttempted = $false
 
-    $emulatorRows = @($deviceLines | Where-Object { $_ -match '^emulator-\S+\s+\S+' })
-    $readySerial = $emulatorRows |
-        Where-Object { $_ -match '^emulator-\S+\s+device(?:\s|$)' } |
-        ForEach-Object { ([regex]::Match($_, '^(emulator-\S+)')).Groups[1].Value } |
-        Select-Object -First 1
-
-    if ($readySerial) {
-        $emulatorSerial = $readySerial
-        Write-Host "Émulateur déjà connecté, réutilisation : $emulatorSerial"
-    }
-    else {
-        # An emulator can be starting before ADB exposes its serial. In that case,
-        # wait for it instead of opening a second emulator window.
-        $runningEmulator = @(Get-Process -Name 'emulator', 'qemu-system-*' -ErrorAction SilentlyContinue | Select-Object -First 1)
-        if ($emulatorRows.Count -gt 0) {
-            Write-Host 'Un émulateur apparaît déjà dans ADB; attente de sa connexion...'
+    while ($startupTimer.Elapsed.TotalSeconds -lt $EmulatorTimeoutSeconds) {
+        $savedPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $deviceLines = & $adb devices 2>&1
+            $adbDevicesExitCode = $LASTEXITCODE
         }
-        elseif ($runningEmulator.Count -gt 0) {
-            Write-Host 'Un processus émulateur est déjà actif; attente de sa connexion sans en démarrer un autre...'
+        finally {
+            $ErrorActionPreference = $savedPreference
         }
-        else {
-            if (-not (Test-Path -LiteralPath $emulatorExe -PathType Leaf)) {
-                throw "Émulateur Android introuvable : $emulatorExe"
-            }
-            Write-Host "Démarrage de l’AVD $avdName dans une fenêtre indépendante..."
-            try {
-                Start-Process -FilePath $emulatorExe -ArgumentList @('-avd', $avdName) -WindowStyle Normal | Out-Null
-            }
-            catch {
-                throw "Impossible de démarrer l’AVD $avdName : $($_.Exception.Message)"
-            }
+        if ($adbDevicesExitCode -ne 0) {
+            $lastAdbState = "erreur adb devices (code $adbDevicesExitCode)"
+            $deviceLines = @()
         }
 
-        Write-Host 'Attente de la connexion ADB et du démarrage complet d Android (maximum 120 secondes)...'
-        $emulatorSerial = $null
-        while ($startupTimer.Elapsed.TotalSeconds -lt 120) {
-            $savedPreference = $ErrorActionPreference
-            $ErrorActionPreference = 'Continue'
-            try {
-                $deviceLines = & $adb devices
-                $adbDevicesExitCode = $LASTEXITCODE
-            }
-            finally {
-                $ErrorActionPreference = $savedPreference
-            }
-            if ($adbDevicesExitCode -eq 0) {
-                $emulatorSerial = $deviceLines |
-                    Where-Object { $_ -match '^emulator-\S+\s+device(?:\s|$)' } |
-                    ForEach-Object { ([regex]::Match($_, '^(emulator-\S+)')).Groups[1].Value } |
-                    Select-Object -First 1
-            }
-
-            if ($emulatorSerial) {
-                $savedPreference = $ErrorActionPreference
-                $ErrorActionPreference = 'Continue'
-                try {
-                    $bootCompleted = & $adb -s $emulatorSerial shell getprop sys.boot_completed 2>$null
-                }
-                finally {
-                    $ErrorActionPreference = $savedPreference
-                }
-                if (($bootCompleted | Out-String).Trim() -eq '1') { break }
-            }
-
-            Start-Sleep -Seconds 3
-        }
-        if (-not $emulatorSerial -or ($bootCompleted | Out-String).Trim() -ne '1') {
-            throw "L’émulateur $avdName n’a pas terminé son démarrage dans le délai de 120 secondes. Vérifiez la fenêtre de l’émulateur et ADB."
-        }
-        Write-Host "Android est prêt sur $emulatorSerial."
-    }
-
-    # ADB can report a connected emulator before Android has completed booting.
-    if ($readySerial) {
-        Write-Host 'Vérification que le démarrage Android est terminé...'
-        $bootCompleted = $null
-        while ($startupTimer.Elapsed.TotalSeconds -lt 120) {
+        $emulatorRows = @($deviceLines | Where-Object { $_ -match '^emulator-\S+\s+\S+' })
+        $deviceRow = $emulatorRows | Where-Object { $_ -match '^emulator-\S+\s+device(?:\s|$)' } | Select-Object -First 1
+        $offlineRows = @($emulatorRows | Where-Object { $_ -match '^emulator-\S+\s+offline(?:\s|$)' })
+        if ($deviceRow) {
+            $emulatorSerial = ([regex]::Match($deviceRow, '^(emulator-\S+)')).Groups[1].Value
+            $lastAdbState = "$emulatorSerial device"
             $savedPreference = $ErrorActionPreference
             $ErrorActionPreference = 'Continue'
             try {
                 $bootCompleted = & $adb -s $emulatorSerial shell getprop sys.boot_completed 2>$null
+                $bootExitCode = $LASTEXITCODE
             }
             finally {
                 $ErrorActionPreference = $savedPreference
             }
-            if (($bootCompleted | Out-String).Trim() -eq '1') { break }
-            Start-Sleep -Seconds 3
+            $lastBootState = if ($bootExitCode -eq 0) { ($bootCompleted | Out-String).Trim() } else { "erreur adb shell (code $bootExitCode)" }
+            if ($lastBootState -eq '1') { break }
+            $statusMessage = "ADB: $lastAdbState; sys.boot_completed=$lastBootState"
         }
-        if (($bootCompleted | Out-String).Trim() -ne '1') {
-            throw "Android sur $emulatorSerial n’a pas terminé son démarrage dans le délai de 120 secondes."
+        elseif ($offlineRows.Count -gt 0) {
+            $lastAdbState = (($offlineRows | ForEach-Object { $_.Trim() }) -join ', ')
+            $lastBootState = 'indisponible tant que ADB est offline'
+            $statusMessage = "Émulateur détecté mais offline dans ADB ($lastAdbState)."
         }
-        Write-Host "Android est prêt sur $emulatorSerial."
+        elseif ($adbDevicesExitCode -ne 0) {
+            $lastBootState = 'non vérifié'
+            $statusMessage = "ADB n'a pas pu lister les appareils (code $adbDevicesExitCode)."
+        }
+        else {
+            $lastAdbState = if ($emulatorRows.Count -eq 0) { 'aucun émulateur dans ADB' } else { (($emulatorRows | ForEach-Object { $_.Trim() }) -join ', ') }
+            $lastBootState = 'non vérifié'
+            $statusMessage = "Attente de la connexion ADB (état: $lastAdbState)."
+        }
+
+        $runningEmulator = @(Get-Process -Name 'emulator', 'qemu-system-*' -ErrorAction SilentlyContinue | Select-Object -First 1)
+        if (-not $launchAttempted -and $adbDevicesExitCode -eq 0 -and $emulatorRows.Count -eq 0 -and $runningEmulator.Count -eq 0) {
+            if (-not (Test-Path -LiteralPath $emulatorExe -PathType Leaf)) {
+                throw "Émulateur Android introuvable : $emulatorExe"
+            }
+            Write-Host "Démarrage de l'AVD $avdName avec -no-snapshot-load -gpu software -noaudio..."
+            try {
+                Start-Process -FilePath $emulatorExe -ArgumentList @('-avd', $avdName, '-no-snapshot-load', '-gpu', 'software', '-noaudio') -WindowStyle Normal | Out-Null
+                $launchAttempted = $true
+            }
+            catch {
+                throw "Impossible de démarrer l'AVD $avdName : $($_.Exception.Message)"
+            }
+        }
+
+        if ($statusMessage -ne $lastMessage -or $startupTimer.Elapsed.TotalSeconds - $lastStatusSeconds -ge 15) {
+            Write-Host $statusMessage
+            $lastMessage = $statusMessage
+            $lastStatusSeconds = [int]$startupTimer.Elapsed.TotalSeconds
+        }
+        Start-Sleep -Seconds 3
     }
 
+    if (-not $emulatorSerial -or $lastBootState -ne '1') {
+        $runningEmulator = @(Get-Process -Name 'emulator', 'qemu-system-*' -ErrorAction SilentlyContinue | Select-Object -First 1)
+        $processState = if ($runningEmulator.Count -gt 0) { 'présent' } else { 'absent' }
+        $reason = if ($lastAdbState -match 'offline') { "ADB voit un émulateur offline; il peut être bloqué ou ADB n’a pas fini de s’y connecter." } elseif ($lastAdbState -eq 'aucun émulateur dans ADB' -and $processState -eq 'présent') { "Le processus existe, mais aucun appareil émulateur ne s’est connecté à ADB." } elseif ($lastBootState -ne '1') { "ADB est connecté, mais Android n’a pas confirmé la fin de son démarrage." } else { "ADB n’a pas pu fournir un état exploitable." }
+        throw "Délai dépassé après $EmulatorTimeoutSeconds secondes pour l’AVD $avdName. État ADB: $lastAdbState; processus émulateur: $processState; sys.boot_completed: $lastBootState. $reason Aucun second émulateur n’a été lancé. Vérifiez la fenêtre de l’émulateur et la sortie de 'adb devices'; arrêtez-le manuellement après confirmation si nécessaire."
+    }
+    Write-Host "Android est prêt sur $emulatorSerial (ADB: device, sys.boot_completed=1)."
     Write-Host 'Compilation et installation hors ligne de In Illusio...'
     $savedPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        & $gradle --offline :app:installDebug
+        $gradleOutput = & $gradle --offline :app:installDebug 2>&1
         $gradleExitCode = $LASTEXITCODE
     }
     finally {
         $ErrorActionPreference = $savedPreference
     }
+    $gradleOutput | ForEach-Object { Write-Host $_ }
     if ($gradleExitCode -ne 0) {
+        if (($gradleOutput | Out-String) -match 'INSTALL_FAILED_UPDATE_INCOMPATIBLE') {
+            throw "Installation refusée : INSTALL_FAILED_UPDATE_INCOMPATIBLE indique que la version déjà installée a une signature différente. Ses données sont préservées. Désinstallez-la manuellement uniquement si vous acceptez de perdre ses données, puis relancez cette tâche."
+        }
         throw "Échec de Gradle (code $gradleExitCode). L'application ne sera pas lancée."
     }
 
