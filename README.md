@@ -7,6 +7,7 @@ In Illusio est une application Android qui propose une anecdote quotidienne de s
 - Catalogue éditorial local de 35 anecdotes réparties entre quatorze disciplines, avec références bibliographiques sans liens Internet ; les nouvelles anecdotes attendent leur validation éditoriale.
 - Affiche de verrouillage illustrée et adaptée à l’écran, avec thèmes clair et sombre et palettes dédiées aux quatorze disciplines.
 - Collection automatique après application réussie au fond verrouillé, consultable en grille avec filtres par discipline, tri par date d’acquisition ou discipline, et navigation horizontale dans les cartes agrandies. Une carte déjà collectée peut être appliquée temporairement ou épinglée, tout en continuant les acquisitions quotidiennes.
+- Création locale de cartes personnelles avec discipline, accroche, explication et source facultative ; elles sont modifiables, supprimables et disponibles dans la collection et comme fonds d’écran, sans participer aux tirages quotidiens ni aux boosters.
 - Carte du jour et cartes de collection recto-verso avec retournement 3D et accès à l’explication complète.
 - Renouvellement quotidien facultatif, activé uniquement avec le consentement de l’utilisateur.
 - Éditeur graphique local pour consulter et modifier le catalogue JSON.

@@ -3,10 +3,11 @@
 ## Implémenté dans la fondation
 
 - Projet Android Kotlin, Compose, Material 3 et configuration Gradle Kotlin DSL.
-- Schéma Room relationnel version 3 avec migrations non destructives, import transactionnel/idempotent du catalogue, fusion des auteurs en doublon et archivage des anecdotes retirées ; l’état d’erreur d’import est présenté avec une action de nouvelle tentative.
+- Schéma Room relationnel version 4 avec migrations non destructives, import transactionnel/idempotent du catalogue, fusion des auteurs en doublon, archivage des anecdotes retirées et stockage indépendant des cartes personnelles ; l’état d’erreur d’import est présenté avec une action de nouvelle tentative.
 - DataStore pour thème, consentement, préférence de renouvellement et carte du jour.
 - Premier accueil, explication, collection, carte consultée et paramètres.
 - Collection en grille à deux colonnes, filtrable par discipline et triable par date d’acquisition ou discipline, avec ouverture de la carte touchée dans une galerie agrandie à navigation horizontale bornée ; position de grille conservée au retour.
+- Création locale de cartes personnelles à partir des quatorze disciplines, prévisualisation recto-verso, édition et suppression confirmée ; elles partagent les rendus et la galerie, disposent de filtres officiel/personnel et ne sont jamais proposées par le catalogue quotidien ou les boosters.
 - Application d’une carte déjà collectionnée jusqu’au prochain renouvellement ou épinglage persistant ; les acquisitions quotidiennes continuent sans remplacer le fond épinglé, puis l’action de reprise applique la sélection stable du jour.
 - Retournement 3D partagé de la carte quotidienne et de la galerie agrandie, avec extrait d’explication et accès à la lecture complète.
 - Ajout automatique et idempotent à la collection après diffusion `FLAG_LOCK` réussie ou callback de récompense booster confirmé ; aucune collection sur erreur, aperçu ou publicité interrompue.
@@ -20,6 +21,7 @@
 - Tests unitaires et Android couvrant sélection/consentement/collection, imports et archivage, rendu vectoriel et composition sur plusieurs résolutions ; consulter les rapports de tests pour le dernier résultat exécuté.
 - Documentation produit, architecture, données et consignes agent.
 - Boosters facultatifs avec UMP/AdMob Rewarded, lancement direct depuis le bouton de collection, bloc Booster intégré au défilement de la grille, paquet de révélation affiché uniquement après confirmation et sauvegarde Room transactionnelle/idempotente, IDs de démonstration en DEBUG et BETA, migration non destructive 2→3.
+- Les cartes personnelles conservent leur date de création lors d’une modification. Si une carte personnelle est épinglée, sa modification actualise le rendu ; sa suppression libère la préférence de fond manuel avant le prochain renouvellement.
 - Une flèche turquoise discrète indique le balayage horizontal des cartes du booster jusqu’au premier changement de page, puis disparaît.
 - Catalogue élargi de 24 à 35 anecdotes et de 8 à 14 disciplines. Onze nouvelles anecdotes restent en attente de validation ; la carte sur les thermopolia conserve son ID et sa collection lors de son reclassement en archéologie.
 - Tests instrumentés du repository booster : lot normal, dernières cartes disponibles, collection complète, statuts individuels, archivage préservé, callback répété et stabilité de la sélection quotidienne.
@@ -35,7 +37,7 @@
 - Valider visuellement la composition plein écran sur d’autres ratios et résolutions ; la compilation et l’installation sur l’AVD 1080 × 2400 sont vérifiées.
 - Validation éditoriale et bibliographique du corpus, explicitement fourni comme proposition de travail.
 - Vérification de la migration Room 1→2 sur une base réelle avant le premier déploiement physique.
-- Tester UMP et l’annonce test AdMob sur appareil connecté, puis vérifier la migration 2→3 sur un appareil conservant déjà une base v2.
+- Tester UMP et l’annonce test AdMob sur appareil connecté, puis vérifier les migrations 2→3 et 3→4 sur un appareil conservant une base plus ancienne.
 
 ## Prévu
 

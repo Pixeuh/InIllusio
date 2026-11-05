@@ -57,3 +57,14 @@ data class CollectionEntity(@PrimaryKey val anecdoteId: String, val savedAt: Lon
 /** Idempotency key for a single rewarded-ad callback. */
 @Entity(tableName = "booster_redemptions")
 data class BoosterRedemptionEntity(@PrimaryKey val redemptionId: String, val rewardedAt: Long)
+
+@Entity(tableName = "personal_cards", foreignKeys = [ForeignKey(entity = CategoryEntity::class, parentColumns = ["id"], childColumns = ["categoryId"])], indices = [Index("categoryId")])
+data class PersonalCardEntity(
+    @PrimaryKey val id: String,
+    val categoryId: String,
+    val hook: String,
+    val explanation: String,
+    val source: String?,
+    val createdAt: Long,
+    val updatedAt: Long
+)

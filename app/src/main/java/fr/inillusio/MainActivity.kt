@@ -85,6 +85,7 @@ import fr.inillusio.data.repository.BoosterAwardResult
 import fr.inillusio.domain.BoosterPolicy
 import fr.inillusio.domain.CollectionOrderKey
 import fr.inillusio.domain.CollectionSortOrder
+import fr.inillusio.domain.CollectionSourceFilter
 import fr.inillusio.domain.filterAndSortCollection
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -106,6 +107,7 @@ class MainActivity : ComponentActivity() {
     val daily by model.daily.collectAsStateWithLifecycle()
     val dailyLoaded by model.dailyLoaded.collectAsStateWithLifecycle()
     val collection by model.collection.collectAsStateWithLifecycle(initialValue = emptyList())
+    val categoryOptions by model.categories.collectAsStateWithLifecycle(initialValue = emptyList())
     val boosterProgress by model.boosterProgress.collectAsStateWithLifecycle(initialValue = BoosterProgress(0, 0))
     val activity = requireNotNull(LocalActivity.current)
     val app = LocalContext.current.applicationContext as InIllusioApplication
@@ -119,6 +121,8 @@ class MainActivity : ComponentActivity() {
     var selected by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
     var selectedCollectionCategoryIds by rememberSaveable { mutableStateOf("*") }
     var collectionSortOrderName by rememberSaveable { mutableStateOf(CollectionSortOrder.RECEIVED_NEWEST.name) }
+    var collectionSourceFilterName by rememberSaveable { mutableStateOf(CollectionSourceFilter.ALL.name) }
+    var editingPersonalFact by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
     val selectedCollectionCategories = remember(selectedCollectionCategoryIds) {
         when (selectedCollectionCategoryIds) {
             "*" -> null
@@ -127,9 +131,10 @@ class MainActivity : ComponentActivity() {
         }
     }
     val collectionSortOrder = remember(collectionSortOrderName) { CollectionSortOrder.valueOf(collectionSortOrderName) }
-    val orderedCollection = remember(collection, selectedCollectionCategories, collectionSortOrder) {
-        filterAndSortCollection(collection, selectedCollectionCategories, collectionSortOrder) { card ->
-            CollectionOrderKey(card.anecdote.id, card.anecdote.categoryId, card.anecdote.categoryName, card.savedAt)
+    val collectionSourceFilter = remember(collectionSourceFilterName) { CollectionSourceFilter.valueOf(collectionSourceFilterName) }
+    val orderedCollection = remember(collection, selectedCollectionCategories, collectionSortOrder, collectionSourceFilter) {
+        filterAndSortCollection(collection, selectedCollectionCategories, collectionSortOrder, collectionSourceFilter) { card ->
+            CollectionOrderKey(card.anecdote.id, card.anecdote.categoryId, card.anecdote.categoryName, card.savedAt, card.anecdote.isPersonal)
         }
     }
     val orderedCollectionFacts = remember(orderedCollection) { orderedCollection.map { it.anecdote } }
@@ -160,10 +165,15 @@ class MainActivity : ComponentActivity() {
                                 pinnedWallpaperId = prefs.selectedWallpaperId.takeIf { prefs.wallpaperDisplayMode == WallpaperDisplayMode.PINNED },
                                 selectedCategoryIds = selectedCollectionCategories,
                                 sortOrder = collectionSortOrder,
+                                sourceFilter = collectionSourceFilter,
                                 onCategorySelectionChanged = { categories ->
                                     selectedCollectionCategoryIds = categories?.sorted()?.joinToString("|") ?: "*"
                                 },
                                 onSortOrderChanged = { collectionSortOrderName = it.name },
+                                onSourceFilterChanged = { collectionSourceFilterName = it.name },
+                                onCreatePersonalCard = { editingPersonalFact = null; navController.navigate("personal-card") },
+                                onEditPersonalCard = { fact -> editingPersonalFact = fact; navController.navigate("personal-card") },
+                                onDeletePersonalCard = { fact -> model.deletePersonalCard(fact.id); navController.popBackStack() },
                                 boosterProgress = boosterProgress,
                                 consent = adsConsent,
                                 onBack = { navController.popBackStack() },
@@ -196,7 +206,18 @@ class MainActivity : ComponentActivity() {
                                 )
                             } ?: LaunchedEffect(Unit) { navController.popBackStack() }
                         }
-                        composable("card") { CardScreen(orderedCollectionFacts, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { fact, mode -> model.setCollectionWallpaper(fact, mode) }, { id -> model.cardCitation(id) }) }
+                        composable("card") { CardScreen(orderedCollectionFacts, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { fact, mode -> model.setCollectionWallpaper(fact, mode) }, { id -> model.cardCitation(id) }, { fact -> editingPersonalFact = fact; navController.navigate("personal-card") }, { fact -> model.deletePersonalCard(fact.id); navController.popBackStack() }) }
+                        composable("personal-card") {
+                            PersonalCardEditorScreen(
+                                categories = categoryOptions,
+                                initialFact = editingPersonalFact,
+                                onBack = { editingPersonalFact = null; navController.popBackStack() },
+                                onSave = { existingId, categoryId, hook, explanation, source ->
+                                    model.savePersonalCard(existingId, categoryId, hook, explanation, source)
+                                },
+                                onSaved = { editingPersonalFact = null; navController.popBackStack() }
+                            )
+                        }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") {
                             SettingsScreen(
@@ -460,8 +481,13 @@ class MainActivity : ComponentActivity() {
     pinnedWallpaperId: String?,
     selectedCategoryIds: Set<String>?,
     sortOrder: CollectionSortOrder,
+    sourceFilter: CollectionSourceFilter,
     onCategorySelectionChanged: (Set<String>?) -> Unit,
     onSortOrderChanged: (CollectionSortOrder) -> Unit,
+    onSourceFilterChanged: (CollectionSourceFilter) -> Unit,
+    onCreatePersonalCard: () -> Unit,
+    onEditPersonalCard: (AnecdoteWithCategory) -> Unit,
+    onDeletePersonalCard: (AnecdoteWithCategory) -> Unit,
     boosterProgress: BoosterProgress,
     consent: AdsConsentState,
     onBack: () -> Unit,
@@ -557,9 +583,12 @@ class MainActivity : ComponentActivity() {
         Text("Ma collection", Modifier.padding(horizontal = 24.dp, vertical = 6.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         Column(Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
             Text("${cards.size} carte${if (cards.size == 1) "" else "s"} collectée${if (cards.size == 1) "" else "s"}", style = MaterialTheme.typography.bodyMedium)
-            if (selectedCategoryIds != null) {
+            if (selectedCategoryIds != null || sourceFilter != CollectionSourceFilter.ALL) {
                 Text("${visibleCards.size} carte${if (visibleCards.size == 1) "" else "s"} affichée${if (visibleCards.size == 1) "" else "s"} sur ${cards.size}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+        TextButton(onClick = onCreatePersonalCard, modifier = Modifier.align(Alignment.End).padding(horizontal = 20.dp)) {
+            Text("+ Créer une carte")
         }
         if (pinnedWallpaperId != null) {
             Card(
@@ -620,6 +649,20 @@ class MainActivity : ComponentActivity() {
             if (cards.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CollectionSourceFilter.entries.forEach { option ->
+                            FilterChip(
+                                selected = sourceFilter == option,
+                                onClick = { onSourceFilterChanged(option) },
+                                label = { Text(option.label) }
+                            )
+                        }
+                    }
+                }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
                         Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -662,7 +705,7 @@ class MainActivity : ComponentActivity() {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Aucune carte dans cette sélection", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        OutlinedButton(onClick = { onCategorySelectionChanged(null) }) { Text("Réinitialiser les filtres") }
+                        OutlinedButton(onClick = { onCategorySelectionChanged(null); onSourceFilterChanged(CollectionSourceFilter.ALL) }) { Text("Réinitialiser les filtres") }
                     }
                 }
             } else items(visibleCards, key = { it.anecdote.id }) { collectionCard ->
@@ -670,7 +713,10 @@ class MainActivity : ComponentActivity() {
                 Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     val context = androidx.compose.ui.platform.LocalContext.current
                     val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
-                    Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = Color(palette.secondary))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(fact.categoryName.uppercase(), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, color = Color(palette.secondary), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (fact.isPersonal) Text("PERSONNELLE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
                     CategoryIllustration(fact.categoryId, Modifier.fillMaxWidth().height(94.dp))
                     Text(fact.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 3)
                 }
@@ -720,12 +766,148 @@ class MainActivity : ComponentActivity() {
     )
 }
 
-@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, homeCardSize: IntSize, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit, onSetWallpaper: (AnecdoteWithCategory, WallpaperDisplayMode) -> Unit, onLoadReference: suspend (String) -> String?) {
+@Composable private fun PersonalCardEditorScreen(
+    categories: List<fr.inillusio.data.local.dao.CategoryOption>,
+    initialFact: AnecdoteWithCategory?,
+    onBack: () -> Unit,
+    onSave: suspend (String?, String, String, String, String?) -> String,
+    onSaved: () -> Unit
+) {
+    var categoryId by remember(initialFact?.id) { mutableStateOf(initialFact?.categoryId.orEmpty()) }
+    var hook by remember(initialFact?.id) { mutableStateOf(initialFact?.hook.orEmpty()) }
+    var explanation by remember(initialFact?.id) { mutableStateOf(initialFact?.explanation.orEmpty()) }
+    var source by remember(initialFact?.id) { mutableStateOf(initialFact?.personalSource.orEmpty()) }
+    var categoryMenuExpanded by remember { mutableStateOf(false) }
+    var showPreviewExplanation by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(categories, initialFact?.id) {
+        if (initialFact == null && categories.isNotEmpty() && categories.none { it.id == categoryId }) {
+            categoryId = categories.first().id
+        }
+    }
+    val selectedCategory = categories.firstOrNull { it.id == categoryId }
+    val previewFact = remember(initialFact?.id, categoryId, selectedCategory?.name, hook, explanation, source) {
+        AnecdoteWithCategory(
+            id = initialFact?.id ?: "personal-preview",
+            categoryId = categoryId,
+            categoryName = selectedCategory?.name ?: "Discipline",
+            title = hook.take(100),
+            hook = hook.ifBlank { "Ton accroche apparaîtra ici." },
+            explanation = explanation.ifBlank { "Ton explication apparaîtra ici." },
+            isPersonal = true,
+            personalSource = source.takeIf(String::isNotBlank)
+        )
+    }
+    Column(Modifier.fillMaxSize().imePadding()) {
+        TopLine("Ma collection", onBack)
+        Text(
+            if (initialFact == null) "Créer une carte" else "Modifier la carte",
+            Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("Catégorie", style = MaterialTheme.typography.labelLarge)
+            Box {
+                OutlinedButton(onClick = { categoryMenuExpanded = true }, modifier = Modifier.fillMaxWidth(), enabled = categories.isNotEmpty()) {
+                    Text(selectedCategory?.name ?: "Aucune discipline disponible", modifier = Modifier.weight(1f), textAlign = TextAlign.Start)
+                    Text("▾")
+                }
+                DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+                    categories.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.name) },
+                            onClick = { categoryId = option.id; categoryMenuExpanded = false }
+                        )
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = hook,
+                onValueChange = { if (it.length <= 180) hook = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Accroche") },
+                supportingText = { Text("${hook.length}/180") },
+                minLines = 2,
+                maxLines = 4
+            )
+            OutlinedTextField(
+                value = explanation,
+                onValueChange = { explanation = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Explication") },
+                minLines = 4,
+                maxLines = 8
+            )
+            OutlinedTextField(
+                value = source,
+                onValueChange = { source = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Source (facultative)") },
+                minLines = 1,
+                maxLines = 3
+            )
+            Text("Aperçu", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            BoxWithConstraints(Modifier.fillMaxWidth().height(360.dp), contentAlignment = Alignment.Center) {
+                val cardWidth = minOf(maxWidth - 24.dp, maxHeight * .72f).coerceAtLeast(0.dp)
+                val cardHeight = minOf(maxHeight, cardWidth / .72f)
+                FlipCard(
+                    fact = previewFact,
+                    modifier = Modifier.size(cardWidth, cardHeight),
+                    reference = source.takeIf(String::isNotBlank),
+                    onLoadReference = { null },
+                    onOpenExplanation = { showPreviewExplanation = true }
+                )
+            }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        }
+        Button(
+            onClick = {
+                if (categoryId.isBlank()) { error = "Choisis une catégorie."; return@Button }
+                if (hook.isBlank()) { error = "Saisis une accroche."; return@Button }
+                if (explanation.isBlank()) { error = "Saisis une explication."; return@Button }
+                saving = true
+                error = null
+                scope.launch {
+                    runCatching {
+                        onSave(initialFact?.id, categoryId, hook, explanation, source.takeIf(String::isNotBlank))
+                    }.onSuccess {
+                        onSaved()
+                    }.onFailure { failure ->
+                        error = failure.message ?: "La carte n’a pas pu être enregistrée."
+                        saving = false
+                    }
+                }
+            },
+            enabled = !saving && categories.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)
+        ) {
+            if (saving) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            else Text("Enregistrer")
+        }
+    }
+    if (showPreviewExplanation) {
+        AlertDialog(
+            onDismissRequest = { showPreviewExplanation = false },
+            title = { Text("Explication") },
+            text = { Text(explanation.ifBlank { "Ton explication apparaîtra ici." }) },
+            confirmButton = { TextButton(onClick = { showPreviewExplanation = false }) { Text("Fermer") } }
+        )
+    }
+}
+
+@Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, homeCardSize: IntSize, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit, onSetWallpaper: (AnecdoteWithCategory, WallpaperDisplayMode) -> Unit, onLoadReference: suspend (String) -> String?, onEditPersonalCard: (AnecdoteWithCategory) -> Unit, onDeletePersonalCard: (AnecdoteWithCategory) -> Unit) {
     val cardIds = remember(cards) { cards.map { it.id } }
     var currentCardId by rememberSaveable { mutableStateOf(selectedCardId) }
     val selectedIndex = cardIds.indexOf(currentCardId).coerceAtLeast(0)
     val pagerState = rememberPagerState(initialPage = selectedIndex, pageCount = { cards.size })
     var wallpaperDialogFact by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
+    var deleteConfirmationFact by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
     LaunchedEffect(pagerState.settledPage, cardIds) {
         cards.getOrNull(pagerState.settledPage)?.let { currentCardId = it.id }
     }
@@ -737,16 +919,35 @@ class MainActivity : ComponentActivity() {
             currentCardId = cards[target].id
         }
     }
+    val currentFact = cards.getOrNull(pagerState.settledPage)
     Column(Modifier.fillMaxSize()) {
-        TopLine("Retour", onBack)
+        if (currentFact?.isPersonal == true) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Retour")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { onEditPersonalCard(currentFact) }) { Text("Modifier") }
+                    Text(" - ", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { deleteConfirmationFact = currentFact }) { Text("Supprimer") }
+                }
+            }
+        } else {
+            TopLine("Retour", onBack)
+        }
         if (cards.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text("Cette carte n’est plus dans la collection.", textAlign = TextAlign.Center)
             }
         } else {
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                val density = LocalDensity.current
-                val measuredHomeSize = with(density) {
+                val measuredHomeSize = with(LocalDensity.current) {
                     if (homeCardSize.width > 0 && homeCardSize.height > 0) {
                         DpSize(homeCardSize.width.toDp(), homeCardSize.height.toDp())
                     } else null
@@ -754,9 +955,11 @@ class MainActivity : ComponentActivity() {
                 HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { cards[it].id }) { page ->
                     cards.getOrNull(page)?.let { fact ->
                         BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            val requestedWidth = measuredHomeSize?.width ?: (maxWidth - 44.dp).coerceAtLeast(0.dp)
-                            val requestedHeight = measuredHomeSize?.height ?: maxHeight
-                            val fittedSize = fitCardSize(requestedWidth, requestedHeight, maxWidth, maxHeight)
+                            val cardMaxWidth = maxWidth
+                            val cardMaxHeight = maxHeight
+                            val requestedWidth = measuredHomeSize?.width ?: (cardMaxWidth - 44.dp).coerceAtLeast(0.dp)
+                            val requestedHeight = measuredHomeSize?.height ?: cardMaxHeight
+                            val fittedSize = fitCardSize(requestedWidth, requestedHeight, cardMaxWidth, cardMaxHeight)
                             FlipCard(
                                 fact = fact,
                                 modifier = Modifier.size(fittedSize.width, fittedSize.height),
@@ -775,7 +978,7 @@ class MainActivity : ComponentActivity() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            cards.getOrNull(pagerState.settledPage)?.let { fact ->
+            currentFact?.let { fact ->
                 TextButton(
                     onClick = { wallpaperDialogFact = fact },
                     modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp)
@@ -795,6 +998,17 @@ class MainActivity : ComponentActivity() {
                 }
             },
             dismissButton = { TextButton(onClick = { wallpaperDialogFact = null }) { Text("Annuler") } }
+        )
+    }
+    deleteConfirmationFact?.let { fact ->
+        AlertDialog(
+            onDismissRequest = { deleteConfirmationFact = null },
+            title = { Text("Supprimer cette carte ?") },
+            text = { Text("Cette création personnelle sera supprimée de ta collection.") },
+            confirmButton = {
+                TextButton(onClick = { deleteConfirmationFact = null; onDeletePersonalCard(fact) }) { Text("Supprimer") }
+            },
+            dismissButton = { TextButton(onClick = { deleteConfirmationFact = null }) { Text("Annuler") } }
         )
     }
 }

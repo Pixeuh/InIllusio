@@ -10,11 +10,16 @@ enum class CollectionSortOrder(val label: String, val buttonLabel: String) {
     CATEGORY_Z_TO_A("Discipline : Z → A", "Discipline Z → A")
 }
 
+enum class CollectionSourceFilter(val label: String) {
+    ALL("Toutes les cartes"), OFFICIAL("Officielles"), PERSONAL("Personnelles")
+}
+
 data class CollectionOrderKey(
     val id: String,
     val categoryId: String,
     val categoryName: String,
-    val savedAt: Long
+    val savedAt: Long,
+    val isPersonal: Boolean = false
 )
 
 /** Filters and orders collection items without changing their stored acquisition timestamps. */
@@ -22,6 +27,7 @@ fun <T> filterAndSortCollection(
     items: List<T>,
     selectedCategoryIds: Set<String>?,
     order: CollectionSortOrder,
+    sourceFilter: CollectionSourceFilter = CollectionSourceFilter.ALL,
     keyOf: (T) -> CollectionOrderKey
 ): List<T> {
     val collator = Collator.getInstance(Locale.forLanguageTag("fr-FR")).apply {
@@ -47,6 +53,11 @@ fun <T> filterAndSortCollection(
     return items.asSequence()
         .map { it to keyOf(it) }
         .filter { (_, key) -> selectedCategoryIds == null || key.categoryId in selectedCategoryIds }
+        .filter { (_, key) -> when (sourceFilter) {
+            CollectionSourceFilter.ALL -> true
+            CollectionSourceFilter.OFFICIAL -> !key.isPersonal
+            CollectionSourceFilter.PERSONAL -> key.isPersonal
+        } }
         .sortedWith { left, right -> comparator.compare(left.second, right.second) }
         .map { it.first }
         .toList()

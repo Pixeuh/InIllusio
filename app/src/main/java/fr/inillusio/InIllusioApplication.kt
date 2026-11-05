@@ -46,6 +46,7 @@ class InIllusioApplication : Application() {
         database = Room.databaseBuilder(this, InIllusioDatabase::class.java, "inillusio.db")
             .addMigrations(InIllusioDatabase.MIGRATION_1_2)
             .addMigrations(InIllusioDatabase.MIGRATION_2_3)
+            .addMigrations(InIllusioDatabase.MIGRATION_3_4)
             .build()
         preferences = UserPreferences(this)
         repository = CatalogRepository(database, preferences)

@@ -35,12 +35,12 @@ class DatabaseSchemaMigrationTest {
     }
 
     private fun room(file: File) = Room.databaseBuilder(context, InIllusioDatabase::class.java, file.path)
-        .addMigrations(InIllusioDatabase.MIGRATION_1_2, InIllusioDatabase.MIGRATION_2_3)
+        .addMigrations(InIllusioDatabase.MIGRATION_1_2, InIllusioDatabase.MIGRATION_2_3, InIllusioDatabase.MIGRATION_3_4)
         .build()
 
     @Test
     fun supportedRoomSchemasUpgradeWithoutLosingCollectionEntries() = runBlocking {
-        for (version in listOf(1, 2)) {
+        for (version in listOf(1, 2, 3)) {
             val file = File(directory, "schema-$version.db")
             val schema = InstrumentationRegistry.getInstrumentation().context.assets
                 .open("fr.inillusio.data.local.InIllusioDatabase/$version.json")

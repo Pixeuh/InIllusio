@@ -44,7 +44,7 @@ class DailyWallpaperUpdater(private val app: InIllusioApplication) {
             try {
                 val settings = app.preferences.state.first()
                 apply(fact, settings)
-                repository.recordSuccessfulLockScreenApplication(fact.id)
+                if (!fact.isPersonal) repository.recordSuccessfulLockScreenApplication(fact.id)
                 app.preferences.setManualWallpaper(fact.id, mode, LocalDate.now())
                 app.preferences.setWallpaperRefresh(true)
                 runCatching { DailyWallpaperScheduler.setEnabled(app, true) }
@@ -52,7 +52,7 @@ class DailyWallpaperUpdater(private val app: InIllusioApplication) {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                runCatching { repository.recordDelivery(fact.id, false, error.message) }
+                if (!fact.isPersonal) runCatching { repository.recordDelivery(fact.id, false, error.message) }
                 DailyUpdateResult.FAILED
             }
         }

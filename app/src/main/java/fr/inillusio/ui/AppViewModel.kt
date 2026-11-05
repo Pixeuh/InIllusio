@@ -8,6 +8,7 @@ import fr.inillusio.CatalogImportState
 import fr.inillusio.BuildConfig
 import fr.inillusio.data.local.dao.AnecdoteWithCategory
 import fr.inillusio.data.local.dao.SourceDetails
+import fr.inillusio.data.local.dao.CategoryOption
 import fr.inillusio.data.preferences.AppTheme
 import fr.inillusio.data.preferences.PreferencesState
 import fr.inillusio.data.preferences.WallpaperDisplayMode
@@ -38,6 +39,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _dailyLoaded = MutableStateFlow(false)
     val dailyLoaded = _dailyLoaded.asStateFlow()
     val collection = repository.collection
+    val categories: Flow<List<CategoryOption>> = repository.categories
     val boosterProgress = repository.boosterProgress
     val preferences = app.preferences.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PreferencesState())
     val catalogImportState = app.catalogImportState
@@ -110,6 +112,40 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             DailyUpdateResult.FAILED -> _message.value = "Échec de l’application du fond d’écran. Le réglage précédent est conservé."
             else -> _message.value = "Impossible de définir cette carte comme fond d’écran."
         }
+    }
+
+    suspend fun savePersonalCard(
+        existingId: String?, categoryId: String, hook: String, explanation: String, source: String?
+    ): String {
+        app.catalogImport.join()
+        check(app.catalogImportState.value == CatalogImportState.Ready) { "Le catalogue n’est pas encore prêt." }
+        val id = repository.savePersonalCard(existingId, categoryId, hook, explanation, source)
+        val settings = app.preferences.state.first()
+        if (settings.selectedWallpaperId == id && settings.wallpaperDisplayMode != WallpaperDisplayMode.AUTOMATIC) {
+            repository.anecdote(id)?.let { updated ->
+                if (DailyWallpaperUpdater(app).applyManual(updated, settings.wallpaperDisplayMode) == DailyUpdateResult.FAILED) {
+                    _message.value = "Carte enregistrée, mais le fond verrouillé n’a pas pu être actualisé."
+                }
+            }
+        }
+        return id
+    }
+
+    fun deletePersonalCard(id: String) = viewModelScope.launch {
+        runCatching {
+            val settings = app.preferences.state.first()
+            repository.deletePersonalCard(id)
+            if (settings.selectedWallpaperId == id) {
+                app.preferences.clearManualWallpaper()
+                DailyWallpaperScheduler.setEnabled(app, settings.wallpaperRefreshEnabled)
+                if (settings.wallpaperRefreshEnabled) {
+                    val result = DailyWallpaperUpdater(app).update(requireConsent = false, forceApply = true)
+                    if (result == DailyUpdateResult.FAILED) {
+                        _message.value = "Carte supprimée. Le fond verrouillé sera actualisé lors du prochain renouvellement."
+                    }
+                }
+            }
+        }.onFailure { error -> _message.value = error.message ?: "Impossible de supprimer cette carte personnelle." }
     }
     fun resumeDailyWallpaper() = viewModelScope.launch {
         when (DailyWallpaperUpdater(app).resumeAutomatic()) {
