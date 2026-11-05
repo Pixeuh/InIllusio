@@ -8,9 +8,12 @@ import fr.inillusio.CatalogImportState
 import fr.inillusio.BuildConfig
 import fr.inillusio.data.local.dao.AnecdoteWithCategory
 import fr.inillusio.data.local.dao.SourceDetails
+import fr.inillusio.data.local.dao.CategoryOption
 import fr.inillusio.data.preferences.AppTheme
 import fr.inillusio.data.preferences.PreferencesState
+import fr.inillusio.data.preferences.WallpaperDisplayMode
 import fr.inillusio.data.repository.CatalogRepository
+import fr.inillusio.data.repository.BoosterAwardResult
 import fr.inillusio.domain.shortCitation
 import fr.inillusio.debug.DeveloperTools
 import fr.inillusio.wallpaper.WallpaperArtwork
@@ -36,6 +39,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _dailyLoaded = MutableStateFlow(false)
     val dailyLoaded = _dailyLoaded.asStateFlow()
     val collection = repository.collection
+    val categories: Flow<List<CategoryOption>> = repository.categories
+    val boosterProgress = repository.boosterProgress
     val preferences = app.preferences.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PreferencesState())
     val catalogImportState = app.catalogImportState
     private val _sources = MutableStateFlow<List<SourceDetails>>(emptyList())
@@ -66,10 +71,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    fun refreshDaily() = viewModelScope.launch {
-        if (app.catalogImportState.value != CatalogImportState.Ready) return@launch
-        loadDaily()
-    }
     fun retryCatalogImport() {
         app.retryCatalogImport()
         viewModelScope.launch {
@@ -89,7 +90,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             if (app.catalogImportState.value != CatalogImportState.Ready) return@withLock
             loadDaily()
             val settings = app.preferences.state.first()
-            if (settings.wallpaperRefreshEnabled) {
+            if (settings.wallpaperRefreshEnabled || settings.wallpaperDisplayMode == WallpaperDisplayMode.PINNED) {
                 val result = DailyWallpaperUpdater(app).update()
                 if (result == DailyUpdateResult.FAILED) _message.value = "Le renouvellement du fond verrouillé a échoué. Il sera réessayé plus tard."
             }
@@ -101,14 +102,64 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun setTheme(theme: AppTheme) = viewModelScope.launch { app.preferences.setTheme(theme) }
     fun setRefreshEnabled(enabled: Boolean) = viewModelScope.launch {
         app.preferences.setWallpaperRefresh(enabled)
-        DailyWallpaperScheduler.setEnabled(app, enabled)
-        if (enabled) onAppForeground().join()
+        val settings = app.preferences.state.first()
+        DailyWallpaperScheduler.setEnabled(app, enabled || settings.wallpaperDisplayMode == WallpaperDisplayMode.PINNED)
+        if (enabled || settings.wallpaperDisplayMode == WallpaperDisplayMode.PINNED) onAppForeground().join()
+    }
+    fun setCollectionWallpaper(fact: AnecdoteWithCategory, mode: WallpaperDisplayMode) = viewModelScope.launch {
+        when (DailyWallpaperUpdater(app).applyManual(fact, mode)) {
+            DailyUpdateResult.APPLIED -> _message.value = if (mode == WallpaperDisplayMode.PINNED) "Carte épinglée sur l’écran de verrouillage." else "Carte affichée jusqu’au prochain renouvellement."
+            DailyUpdateResult.FAILED -> _message.value = "Échec de l’application du fond d’écran. Le réglage précédent est conservé."
+            else -> _message.value = "Impossible de définir cette carte comme fond d’écran."
+        }
+    }
+
+    suspend fun savePersonalCard(
+        existingId: String?, categoryId: String, hook: String, explanation: String, source: String?
+    ): String {
+        app.catalogImport.join()
+        check(app.catalogImportState.value == CatalogImportState.Ready) { "Le catalogue n’est pas encore prêt." }
+        val id = repository.savePersonalCard(existingId, categoryId, hook, explanation, source)
+        val settings = app.preferences.state.first()
+        if (settings.selectedWallpaperId == id && settings.wallpaperDisplayMode != WallpaperDisplayMode.AUTOMATIC) {
+            repository.anecdote(id)?.let { updated ->
+                if (DailyWallpaperUpdater(app).applyManual(updated, settings.wallpaperDisplayMode) == DailyUpdateResult.FAILED) {
+                    _message.value = "Carte enregistrée, mais le fond verrouillé n’a pas pu être actualisé."
+                }
+            }
+        }
+        return id
+    }
+
+    fun deletePersonalCard(id: String) = viewModelScope.launch {
+        runCatching {
+            val settings = app.preferences.state.first()
+            repository.deletePersonalCard(id)
+            if (settings.selectedWallpaperId == id) {
+                app.preferences.clearManualWallpaper()
+                DailyWallpaperScheduler.setEnabled(app, settings.wallpaperRefreshEnabled)
+                if (settings.wallpaperRefreshEnabled) {
+                    val result = DailyWallpaperUpdater(app).update(requireConsent = false, forceApply = true)
+                    if (result == DailyUpdateResult.FAILED) {
+                        _message.value = "Carte supprimée. Le fond verrouillé sera actualisé lors du prochain renouvellement."
+                    }
+                }
+            }
+        }.onFailure { error -> _message.value = error.message ?: "Impossible de supprimer cette carte personnelle." }
+    }
+    fun resumeDailyWallpaper() = viewModelScope.launch {
+        when (DailyWallpaperUpdater(app).resumeAutomatic()) {
+            DailyUpdateResult.APPLIED -> _message.value = "Renouvellement quotidien repris."
+            DailyUpdateResult.NO_ANECDOTE -> _message.value = "Aucune anecdote quotidienne n’est disponible. La carte épinglée reste active."
+            else -> _message.value = "Impossible de reprendre le renouvellement. La carte épinglée reste active."
+        }
     }
     fun debugRunDailyRenewal() {
         if (!BuildConfig.DEBUG) return
         viewModelScope.launch {
             when (DailyWallpaperUpdater(app).update(forceApply = true)) {
                 DailyUpdateResult.APPLIED -> _message.value = "Test du renouvellement appliqué au fond verrouillé et carte ajoutée à la collection."
+                DailyUpdateResult.ACQUIRED_ONLY -> _message.value = "Anecdote quotidienne débloquée ; la carte épinglée est conservée."
                 DailyUpdateResult.DISABLED -> _message.value = "Activez d’abord le renouvellement quotidien pour tester le Worker."
                 DailyUpdateResult.ALREADY_APPLIED -> _message.value = "L’affiche du jour est déjà à jour."
                 DailyUpdateResult.NO_ANECDOTE -> _message.value = "Aucune anecdote disponible pour le test."
@@ -163,6 +214,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun clearMessage() { _message.value = null }
 
+    fun redeemBoosterAfterReward(redemptionId: String, onComplete: (BoosterAwardResult) -> Unit) {
+        app.redeemBoosterAfterReward(redemptionId, onComplete)
+    }
+
+    fun debugSimulateBoosterReward(onComplete: (BoosterAwardResult) -> Unit) {
+        if (!BuildConfig.DEBUG) return
+        app.redeemBoosterAfterReward("debug-${java.util.UUID.randomUUID()}") { result ->
+            _message.value = if (result.cards.isEmpty()) "Aucune nouvelle carte disponible pour le test."
+                else "Récompense de test enregistrée : ${result.cards.size} carte${if (result.cards.size == 1) "" else "s"}."
+            onComplete(result)
+        }
+    }
+
     fun loadDeveloperPreview() {
         if (!BuildConfig.DEBUG) return
         viewModelScope.launch {
@@ -187,6 +251,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             runCatching { DeveloperTools.restoreCollection(app) }
                 .onSuccess { count -> _message.value = "Collection initiale restaurée ($count carte${if (count == 1) "" else "s"})." }
                 .onFailure { _message.value = it.message ?: "Échec de la restauration développeur." }
+        }
+    }
+
+    fun debugClearCollection() {
+        if (!BuildConfig.DEBUG) return
+        viewModelScope.launch {
+            runCatching { DeveloperTools.clearCollection(app) }
+                .onSuccess { _message.value = "Collection vidée." }
+                .onFailure { error -> _message.value = error.message ?: "Échec de la réinitialisation de la collection." }
         }
     }
 

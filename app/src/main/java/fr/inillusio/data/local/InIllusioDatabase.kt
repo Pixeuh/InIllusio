@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import fr.inillusio.data.local.dao.CatalogDao
 import fr.inillusio.data.local.entities.*
 
-@Database(entities = [CategoryEntity::class, AnecdoteEntity::class, AuthorEntity::class, SourceEntity::class, SourceAuthorEntity::class, AnecdoteSourceEntity::class, IllustrationEntity::class, DeliveryEntity::class, CollectionEntity::class], version = 2, exportSchema = true)
+@Database(entities = [CategoryEntity::class, AnecdoteEntity::class, AuthorEntity::class, SourceEntity::class, SourceAuthorEntity::class, AnecdoteSourceEntity::class, IllustrationEntity::class, DeliveryEntity::class, CollectionEntity::class, BoosterRedemptionEntity::class, PersonalCardEntity::class], version = 4, exportSchema = true)
 abstract class InIllusioDatabase : RoomDatabase() {
     abstract fun catalogDao(): CatalogDao
 
@@ -28,6 +28,19 @@ abstract class InIllusioDatabase : RoomDatabase() {
                 db.execSQL("INSERT OR IGNORE INTO source_authors(sourceId, authorId) SELECT sourceId, authorId FROM merged_source_authors")
                 db.execSQL("DROP TABLE merged_source_authors")
                 db.execSQL("DELETE FROM authors WHERE id NOT IN (SELECT MIN(id) FROM authors GROUP BY name)")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS booster_redemptions (redemptionId TEXT NOT NULL, rewardedAt INTEGER NOT NULL, PRIMARY KEY(redemptionId))")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS personal_cards (id TEXT NOT NULL, categoryId TEXT NOT NULL, hook TEXT NOT NULL, explanation TEXT NOT NULL, source TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(categoryId) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE NO ACTION)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_personal_cards_categoryId ON personal_cards(categoryId)")
             }
         }
     }

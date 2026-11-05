@@ -1,6 +1,7 @@
 package fr.inillusio.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.Upsert
 import androidx.room.OnConflictStrategy
@@ -9,23 +10,51 @@ import androidx.room.Transaction
 import fr.inillusio.data.local.entities.*
 import kotlinx.coroutines.flow.Flow
 
-data class AnecdoteWithCategory(val id: String, val categoryId: String, val categoryName: String, val title: String, val hook: String, val explanation: String)
+data class AnecdoteWithCategory(
+    val id: String,
+    val categoryId: String,
+    val categoryName: String,
+    val title: String,
+    val hook: String,
+    val explanation: String,
+    val isPersonal: Boolean = false,
+    val personalSource: String? = null
+)
+data class CollectionCard(@Embedded val anecdote: AnecdoteWithCategory, val savedAt: Long)
 data class SourceDetails(val type: String, val title: String, val year: Int?, val author: String?)
+data class BoosterProgress(val discovered: Int, val total: Int)
+data class CategoryOption(val id: String, val name: String)
 
 @Dao
 interface CatalogDao {
-    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.id = :id")
+    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation, 0 AS isPersonal, NULL AS personalSource FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.id = :id")
     suspend fun getAnecdote(id: String): AnecdoteWithCategory?
-    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.id = :id")
+    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation, 0 AS isPersonal, NULL AS personalSource FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.id = :id")
     fun observeAnecdote(id: String): Flow<AnecdoteWithCategory?>
-    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.archived = 0 ORDER BY a.id")
+    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation, 0 AS isPersonal, NULL AS personalSource FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.archived = 0 ORDER BY a.id")
     suspend fun allAnecdotes(): List<AnecdoteWithCategory>
-    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.archived = 0 AND a.editorialStatus = 'validee' ORDER BY a.id")
+    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation, 0 AS isPersonal, NULL AS personalSource FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.archived = 0 AND a.editorialStatus = 'validee' ORDER BY a.id")
     suspend fun validatedAnecdotes(): List<AnecdoteWithCategory>
-    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.id = :id AND a.archived = 0 AND a.editorialStatus = 'validee'")
+    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation, 0 AS isPersonal, NULL AS personalSource FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.archived = 0 AND a.editorialStatus = 'validee' AND NOT EXISTS (SELECT 1 FROM collection x WHERE x.anecdoteId = a.id) ORDER BY RANDOM()")
+    suspend fun uncollectedValidatedAnecdotes(): List<AnecdoteWithCategory>
+    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation, 0 AS isPersonal, NULL AS personalSource FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.id = :id AND a.archived = 0 AND a.editorialStatus = 'validee'")
     suspend fun getValidatedAnecdote(id: String): AnecdoteWithCategory?
-    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM collection x JOIN anecdotes a ON a.id = x.anecdoteId JOIN categories c ON c.id = a.categoryId ORDER BY x.savedAt DESC")
-    fun observeCollection(): Flow<List<AnecdoteWithCategory>>
+    @Query("SELECT x.savedAt, a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation, 0 AS isPersonal, NULL AS personalSource FROM collection x JOIN anecdotes a ON a.id = x.anecdoteId JOIN categories c ON c.id = a.categoryId ORDER BY x.savedAt DESC, a.id ASC")
+    fun observeCollection(): Flow<List<CollectionCard>>
+    @Query("SELECT pc.createdAt AS savedAt, pc.id, pc.categoryId, c.name AS categoryName, substr(pc.hook, 1, 100) AS title, pc.hook, pc.explanation, 1 AS isPersonal, pc.source AS personalSource FROM personal_cards pc JOIN categories c ON c.id = pc.categoryId ORDER BY pc.createdAt DESC, pc.id ASC")
+    fun observePersonalCards(): Flow<List<CollectionCard>>
+    @Query("SELECT id, name FROM categories ORDER BY name COLLATE NOCASE, id")
+    fun observeCategoryOptions(): Flow<List<CategoryOption>>
+    @Query("SELECT pc.id, pc.categoryId, c.name AS categoryName, substr(pc.hook, 1, 100) AS title, pc.hook, pc.explanation, 1 AS isPersonal, pc.source AS personalSource FROM personal_cards pc JOIN categories c ON c.id = pc.categoryId WHERE pc.id = :id")
+    suspend fun getPersonalCard(id: String): AnecdoteWithCategory?
+    @Query("SELECT * FROM personal_cards WHERE id = :id")
+    suspend fun getPersonalCardRecord(id: String): PersonalCardEntity?
+    @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insertPersonalCard(value: PersonalCardEntity)
+    @Query("UPDATE personal_cards SET categoryId = :categoryId, hook = :hook, explanation = :explanation, source = :source, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updatePersonalCard(id: String, categoryId: String, hook: String, explanation: String, source: String?, updatedAt: Long): Int
+    @Query("DELETE FROM personal_cards WHERE id = :id") suspend fun deletePersonalCard(id: String): Int
+    @Query("SELECT (SELECT COUNT(*) FROM collection x JOIN anecdotes a ON a.id = x.anecdoteId WHERE a.archived = 0 AND a.editorialStatus = 'validee') AS discovered, (SELECT COUNT(*) FROM anecdotes WHERE archived = 0 AND editorialStatus = 'validee') AS total")
+    fun observeBoosterProgress(): Flow<BoosterProgress>
     @Query("SELECT * FROM collection ORDER BY savedAt") suspend fun allCollectionEntries(): List<CollectionEntity>
     @Query("DELETE FROM collection") suspend fun clearCollection()
     @Query("SELECT EXISTS(SELECT 1 FROM delivery_history WHERE anecdoteId = :id AND succeeded = 1)")
@@ -38,8 +67,6 @@ interface CatalogDao {
     @Query("SELECT COUNT(*) FROM sources") suspend fun sourceCount(): Int
     @Query("SELECT COUNT(*) FROM authors") suspend fun authorCount(): Int
     @Query("SELECT COUNT(*) FROM source_authors") suspend fun sourceAuthorCount(): Int
-    @Query("SELECT EXISTS(SELECT 1 FROM collection WHERE anecdoteId = :id)")
-    suspend fun isCollected(id: String): Boolean
     @Upsert suspend fun putCategory(value: CategoryEntity)
     @Upsert suspend fun putAnecdote(value: AnecdoteEntity)
     @Upsert suspend fun putSource(value: SourceEntity)
@@ -49,6 +76,7 @@ interface CatalogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putAnecdoteSource(value: AnecdoteSourceEntity)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putDelivery(value: DeliveryEntity)
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun putCollection(value: CollectionEntity)
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun putBoosterRedemption(value: BoosterRedemptionEntity): Long
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun putCollection(values: List<CollectionEntity>)
     @Query("DELETE FROM source_authors WHERE sourceId = :sourceId") suspend fun clearSourceAuthors(sourceId: String)
     @Query("DELETE FROM anecdote_sources WHERE anecdoteId = :anecdoteId") suspend fun clearAnecdoteSources(anecdoteId: String)

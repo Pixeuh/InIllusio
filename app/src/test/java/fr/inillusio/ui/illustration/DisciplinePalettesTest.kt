@@ -16,7 +16,13 @@ class DisciplinePalettesTest {
             "linguistique" to (0xFF426FC7.toInt() to 0xFFFFE000.toInt()),
             "economie" to (0xFFB2DC25.toInt() to 0xFFDB4939.toInt()),
             "philosophie" to (0xFF583D65.toInt() to 0xFFD8BE91.toInt()),
-            "geographie_humaine" to (0xFF3E7859.toInt() to 0xFFF29AB1.toInt())
+            "geographie_humaine" to (0xFF3E7859.toInt() to 0xFFF29AB1.toInt()),
+            "ethologie" to (0xFF79513E.toInt() to 0xFF76A46C.toInt()),
+            "archeologie" to (0xFFE58A3C.toInt() to 0xFF654433.toInt()),
+            "science_politique" to (0xFF193F60.toInt() to 0xFFD36A53.toInt()),
+            "psychologie_cognitive" to (0xFFC43F78.toInt() to 0xFF275844.toInt()),
+            "demographie" to (0xFF2583BA.toInt() to 0xFF79B77A.toInt()),
+            "histoire_art" to (0xFF953F53.toInt() to 0xFFD2A65A.toInt())
         )
 
         assertEquals(expected.keys, palettes.keys)

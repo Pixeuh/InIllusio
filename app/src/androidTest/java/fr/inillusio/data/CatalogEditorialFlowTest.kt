@@ -77,7 +77,9 @@ class CatalogEditorialFlowTest {
         importer.importJson(catalog(fact("fiction-01", status = "a_valider")))
 
         assertNull(dao.getValidatedAnecdote("fiction-01"))
-        assertEquals("fiction-01", dao.observeCollection().first().single().id)
+        val collectedCard = dao.observeCollection().first().single()
+        assertEquals("fiction-01", collectedCard.anecdote.id)
+        assertEquals(123L, collectedCard.savedAt)
     }
 
     @Test fun removedFactIsArchivedAndOnlyCollectedCopyRemainsConsultable() = runBlocking {
@@ -89,7 +91,7 @@ class CatalogEditorialFlowTest {
 
         assertEquals(listOf("fiction-03"), dao.allAnecdotes().map { it.id })
         assertNull(dao.collectionEntry("fiction-02"))
-        assertEquals("fiction-01", dao.observeCollection().first().single().id)
+        assertEquals("fiction-01", dao.observeCollection().first().single().anecdote.id)
         assertEquals("Camille Étoile", dao.sourcesFor("fiction-01").single().author)
         assertEquals(emptyList<Any>(), dao.sourcesFor("fiction-02"))
     }

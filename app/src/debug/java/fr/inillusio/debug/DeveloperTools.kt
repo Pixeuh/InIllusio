@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 
-private val android.content.Context.developerPreferences by preferencesDataStore("hors_cadre_developer")
+private val android.content.Context.developerPreferences by preferencesDataStore(name = "inillusio_developer")
 
 object DeveloperTools {
     private val snapshotKey = stringPreferencesKey("collection_snapshot_v1")
@@ -78,6 +78,11 @@ object DeveloperTools {
         return saved.size
     }
 
+    suspend fun clearCollection(application: InIllusioApplication) {
+        require(BuildConfig.DEBUG) { "Les outils développeur ne sont disponibles qu'en debug." }
+        application.clearCollectionForDeveloper()
+    }
+
     @Composable
     fun CollectionTitle(onOpenMenu: () -> Unit) {
         val taps = remember { RapidTapSequence() }
@@ -102,7 +107,8 @@ object DeveloperTools {
         onPreviewAll: () -> Unit,
         onRegenerateWallpaper: () -> Unit,
         onRunDailyRenewal: () -> Unit,
-        onRestore: () -> Unit
+        onRestore: () -> Unit,
+        onClearCollection: () -> Unit
     ) {
         if (!open) return
         AlertDialog(
@@ -116,9 +122,30 @@ object DeveloperTools {
                     OutlinedButton(onClick = onRegenerateWallpaper, modifier = Modifier.fillMaxWidth()) { Text("Régénérer et appliquer le fond d'écran") }
                     OutlinedButton(onClick = onRunDailyRenewal, modifier = Modifier.fillMaxWidth()) { Text("Tester le renouvellement maintenant") }
                     OutlinedButton(onClick = onRestore, enabled = canRestore, modifier = Modifier.fillMaxWidth()) { Text("Restaurer ma collection initiale") }
+                    OutlinedButton(onClick = onClearCollection, modifier = Modifier.fillMaxWidth()) { Text("Vider la collection") }
                 }
             },
             confirmButton = { TextButton(onClick = onDismiss) { Text("Fermer") } }
+        )
+    }
+
+    @Composable
+    fun ClearCollectionDialog(
+        open: Boolean,
+        onDismiss: () -> Unit,
+        onConfirm: () -> Unit
+    ) {
+        if (!open) return
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Vider la collection ?") },
+            text = { Text("Toutes les cartes collectionnées seront retirées de votre collection. Cette action est irréversible.") },
+            confirmButton = {
+                TextButton(onClick = onConfirm) { Text("Vider la collection") }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Annuler") }
+            }
         )
     }
 

@@ -71,18 +71,21 @@
     });
   }
 
-  function renderList() {
+  function renderList({ preserveScroll = false } = {}) {
     if (!state.catalog) return;
+    const factList = $('fact-list');
+    const scrollTop = preserveScroll ? factList.scrollTop : 0;
     const matches = visibleFactIndices();
     updateCounts(matches.length);
     const shown = matches.slice(0, state.pageSize);
-    $('fact-list').innerHTML = shown.map(({ fact, index }) => {
+    factList.innerHTML = shown.map(({ fact, index }) => {
       const category = categoryFor(fact);
       const color = window.InIllusioPalettes.forCategory(category?.id).primary;
       const selected = index === state.selectedIndex;
       const validated = fact.statut_editorial === 'validee';
       return `<button class="fact-row${selected ? ' selected' : ''}" type="button" role="option" aria-selected="${selected}" data-index="${index}"><span class="fact-row-top"><i class="category-dot" style="background:${color}"></i><span class="fact-category">${escapeHtml(category?.nom || 'Catégorie inconnue')}</span></span><span class="fact-row-title">${escapeHtml(fact.titre || 'Sans titre')}</span><span class="fact-row-status ${validated ? 'status-validated' : 'status-pending'}">${validated ? 'Validée' : 'À valider'}</span></button>`;
     }).join('');
+    if (preserveScroll) factList.scrollTop = scrollTop;
     $('load-more').hidden = matches.length <= state.pageSize;
     $('load-more').textContent = `Afficher les ${Math.min(100, matches.length - state.pageSize)} suivantes`;
   }
@@ -268,7 +271,7 @@
     $('hook-counter').textContent = `${(fact.accroche || '').length} caractères`;
     $('hook-warning').hidden = (fact.accroche || '').length < 150;
     updatePreview();
-    if (target.id === 'fact-title' || target.id === 'fact-category' || target.id === 'fact-validated' || target.dataset.extraSource) renderList();
+    if (target.id === 'fact-title' || target.id === 'fact-category' || target.id === 'fact-validated' || target.dataset.extraSource) renderList({ preserveScroll: true });
     updateSaveState();
   }
 
@@ -308,7 +311,7 @@
     $('search-input').addEventListener('input', () => { state.pageSize = 100; renderList(); });
     $('category-filter').addEventListener('change', () => { state.pageSize = 100; renderList(); });
     $('status-filter').addEventListener('change', () => { state.pageSize = 100; renderList(); });
-    $('load-more').addEventListener('click', () => { state.pageSize += 100; renderList(); });
+    $('load-more').addEventListener('click', () => { state.pageSize += 100; renderList({ preserveScroll: true }); });
     $('theme-light').addEventListener('click', () => setTheme('light'));
     $('theme-dark').addEventListener('click', () => setTheme('dark'));
     document.addEventListener('keydown', (event) => {
