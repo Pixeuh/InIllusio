@@ -6,7 +6,7 @@
 - Schéma Room relationnel version 3 avec migrations non destructives, import transactionnel/idempotent du catalogue, fusion des auteurs en doublon et archivage des anecdotes retirées ; l’état d’erreur d’import est présenté avec une action de nouvelle tentative.
 - DataStore pour thème, consentement, préférence de renouvellement et carte du jour.
 - Premier accueil, explication, collection, carte consultée et paramètres.
-- Collection en grille à deux colonnes, avec ouverture de la carte touchée dans une galerie agrandie à navigation horizontale bornée ; position de grille conservée au retour.
+- Collection en grille à deux colonnes, filtrable par discipline et triable par date d’acquisition ou discipline, avec ouverture de la carte touchée dans une galerie agrandie à navigation horizontale bornée ; position de grille conservée au retour.
 - Retournement 3D partagé de la carte quotidienne et de la galerie agrandie, avec extrait d’explication et accès à la lecture complète.
 - Ajout automatique et idempotent à la collection après diffusion `FLAG_LOCK` réussie ou callback de récompense booster confirmé ; aucune collection sur erreur, aperçu ou publicité interrompue.
 - Boosters et diffusion du fond alimentent la même table Room par transactions distinctes ; seuls les fonds réussis inscrivent un historique de livraison.

@@ -49,7 +49,9 @@ class BoosterRepositoryTest {
 
         assertEquals(5, result.cards.size)
         assertEquals(5, result.cards.map { it.id }.toSet().size)
-        assertEquals(5, dao.observeCollection().first().size)
+        val collection = dao.observeCollection().first()
+        assertEquals(5, collection.size)
+        assertTrue(collection.all { it.savedAt == 100L })
         assertEquals(0, dao.successfullyDeliveredIds().size)
         assertEquals(BoosterProgress(5, 7), repository.boosterProgress.first())
     }
@@ -90,7 +92,9 @@ class BoosterRepositoryTest {
         val result = repository.redeemBooster("reward-eligible-only", 400L)
 
         assertEquals(listOf("fiction-kept"), result.cards.map { it.id })
-        assertEquals(setOf("fiction-archived", "fiction-kept"), dao.observeCollection().first().map { it.id }.toSet())
+        val collectedCards = dao.observeCollection().first()
+        assertEquals(setOf("fiction-archived", "fiction-kept"), collectedCards.map { it.anecdote.id }.toSet())
+        assertEquals(20L, collectedCards.single { it.anecdote.id == "fiction-archived" }.savedAt)
         assertNull(dao.getValidatedAnecdote("fiction-pending"))
     }
 

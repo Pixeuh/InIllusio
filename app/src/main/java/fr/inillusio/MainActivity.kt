@@ -21,9 +21,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
@@ -52,6 +55,7 @@ import androidx.compose.ui.unit.*
 import kotlin.math.PI
 import kotlin.math.sin
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.customActions
@@ -67,6 +71,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import fr.inillusio.data.local.dao.AnecdoteWithCategory
+import fr.inillusio.data.local.dao.CollectionCard
 import fr.inillusio.debug.DeveloperTools
 import fr.inillusio.data.preferences.AppTheme
 import fr.inillusio.ui.AppViewModel
@@ -77,6 +82,9 @@ import fr.inillusio.wallpaper.WallpaperArtwork
 import fr.inillusio.data.local.dao.BoosterProgress
 import fr.inillusio.data.repository.BoosterAwardResult
 import fr.inillusio.domain.BoosterPolicy
+import fr.inillusio.domain.CollectionOrderKey
+import fr.inillusio.domain.CollectionSortOrder
+import fr.inillusio.domain.filterAndSortCollection
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -108,6 +116,22 @@ class MainActivity : ComponentActivity() {
     val developerPreview by model.developerPreview.collectAsStateWithLifecycle()
     val debugCanRestore by model.debugCanRestore.collectAsStateWithLifecycle()
     var selected by remember { mutableStateOf<AnecdoteWithCategory?>(null) }
+    var selectedCollectionCategoryIds by rememberSaveable { mutableStateOf("*") }
+    var collectionSortOrderName by rememberSaveable { mutableStateOf(CollectionSortOrder.RECEIVED_NEWEST.name) }
+    val selectedCollectionCategories = remember(selectedCollectionCategoryIds) {
+        when (selectedCollectionCategoryIds) {
+            "*" -> null
+            "" -> emptySet()
+            else -> selectedCollectionCategoryIds.split('|').toSet()
+        }
+    }
+    val collectionSortOrder = remember(collectionSortOrderName) { CollectionSortOrder.valueOf(collectionSortOrderName) }
+    val orderedCollection = remember(collection, selectedCollectionCategories, collectionSortOrder) {
+        filterAndSortCollection(collection, selectedCollectionCategories, collectionSortOrder) { card ->
+            CollectionOrderKey(card.anecdote.id, card.anecdote.categoryId, card.anecdote.categoryName, card.savedAt)
+        }
+    }
+    val orderedCollectionFacts = remember(orderedCollection) { orderedCollection.map { it.anecdote } }
     var homeCardSize by remember { mutableStateOf(IntSize.Zero) }
     var pendingBoosterAward by remember { mutableStateOf<BoosterAwardResult?>(null) }
     val navController = rememberNavController()
@@ -131,6 +155,13 @@ class MainActivity : ComponentActivity() {
                         composable("collection") {
                             CollectionScreen(
                                 cards = collection,
+                                visibleCards = orderedCollection,
+                                selectedCategoryIds = selectedCollectionCategories,
+                                sortOrder = collectionSortOrder,
+                                onCategorySelectionChanged = { categories ->
+                                    selectedCollectionCategoryIds = categories?.sorted()?.joinToString("|") ?: "*"
+                                },
+                                onSortOrderChanged = { collectionSortOrderName = it.name },
                                 boosterProgress = boosterProgress,
                                 consent = adsConsent,
                                 onBack = { navController.popBackStack() },
@@ -154,7 +185,7 @@ class MainActivity : ComponentActivity() {
                             pendingBoosterAward?.let { award ->
                                 BoosterScreen(
                                     award = award,
-                                    collection = collection,
+                                    collection = collection.map { it.anecdote },
                                     homeCardSize = homeCardSize,
                                     onBack = { navController.popBackStack() },
                                     onLoadReference = { id -> model.cardCitation(id) },
@@ -162,7 +193,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             } ?: LaunchedEffect(Unit) { navController.popBackStack() }
                         }
-                        composable("card") { CardScreen(collection, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { id -> model.cardCitation(id) }) }
+                        composable("card") { CardScreen(orderedCollectionFacts, selected?.id, homeCardSize, { navController.popBackStack() }, { fact -> selected = fact; model.showSources(fact.id); navController.navigate("explanation") }, { id -> model.cardCitation(id) }) }
                         if (BuildConfig.DEBUG) composable("developer-preview") { DeveloperTools.PreviewScreen(developerPreview) { navController.popBackStack() } }
                         composable("settings") {
                             SettingsScreen(
@@ -421,7 +452,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable private fun CollectionScreen(
-    cards: List<AnecdoteWithCategory>,
+    cards: List<CollectionCard>,
+    visibleCards: List<CollectionCard>,
+    selectedCategoryIds: Set<String>?,
+    sortOrder: CollectionSortOrder,
+    onCategorySelectionChanged: (Set<String>?) -> Unit,
+    onSortOrderChanged: (CollectionSortOrder) -> Unit,
     boosterProgress: BoosterProgress,
     consent: AdsConsentState,
     onBack: () -> Unit,
@@ -485,7 +521,15 @@ class MainActivity : ComponentActivity() {
     }
     var showDebugMenu by remember { mutableStateOf(false) }
     var showClearCollectionConfirmation by remember { mutableStateOf(false) }
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
+    val availableCategories = remember(cards) {
+        val collator = java.text.Collator.getInstance(java.util.Locale.forLanguageTag("fr-FR"))
+        cards.map { it.anecdote.categoryId to it.anecdote.categoryName }
+            .distinctBy { it.first }
+            .sortedWith { left, right -> collator.compare(left.second, right.second).takeIf { it != 0 } ?: left.first.compareTo(right.first) }
+    }
     Column(Modifier.fillMaxSize()) {
         TopLine("Accueil", onBack)
         DeveloperTools.CollectionTitle { showDebugMenu = true }
@@ -506,7 +550,20 @@ class MainActivity : ComponentActivity() {
             { showClearCollectionConfirmation = false; onDebugClearCollection() }
         )
         Text("Ma collection", Modifier.padding(horizontal = 24.dp, vertical = 6.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-        Text("${cards.size} carte${if (cards.size == 1) "" else "s"}", Modifier.padding(horizontal = 24.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyMedium)
+        Column(Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
+            Text("${cards.size} carte${if (cards.size == 1) "" else "s"} collectée${if (cards.size == 1) "" else "s"}", style = MaterialTheme.typography.bodyMedium)
+            if (selectedCategoryIds != null) {
+                Text("${visibleCards.size} carte${if (visibleCards.size == 1) "" else "s"} affichée${if (visibleCards.size == 1) "" else "s"} sur ${cards.size}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (showCategoryDialog) {
+            CategorySelectionDialog(
+                availableCategories = availableCategories,
+                selectedCategoryIds = selectedCategoryIds,
+                onDismiss = { showCategoryDialog = false },
+                onConfirm = { selection -> onCategorySelectionChanged(selection); showCategoryDialog = false }
+            )
+        }
         LazyVerticalGrid(state = gridState, columns = GridCells.Fixed(2), modifier = Modifier.weight(1f), contentPadding = PaddingValues(start = 16.dp, top = 10.dp, end = 16.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Card(Modifier.fillMaxWidth().padding(bottom = 14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
@@ -541,13 +598,56 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+            if (cards.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showCategoryDialog = true },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            val label = if (selectedCategoryIds == null) "Catégories" else "Catégories · ${selectedCategoryIds.size}"
+                            Text("$label  ▾", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Box(Modifier.weight(1f)) {
+                            OutlinedButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            ) {
+                                Text("${sortOrder.buttonLabel}  ▾", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                CollectionSortOrder.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option.label) },
+                                        trailingIcon = { if (sortOrder == option) Text("✓", color = MaterialTheme.colorScheme.primary) },
+                                        onClick = { onSortOrderChanged(option); showSortMenu = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             if (cards.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(Modifier.fillMaxWidth().height(200.dp).padding(24.dp), contentAlignment = Alignment.Center) {
                         Text("Les cartes que tu choisis garder apparaîtront ici.", textAlign = TextAlign.Center)
                     }
                 }
-            } else items(cards, key = { it.id }) { fact ->
+            } else if (visibleCards.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Aucune carte dans cette sélection", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedButton(onClick = { onCategorySelectionChanged(null) }) { Text("Réinitialiser les filtres") }
+                    }
+                }
+            } else items(visibleCards, key = { it.anecdote.id }) { collectionCard ->
+                val fact = collectionCard.anecdote
                 Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable { onSelect(fact) }.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     val context = androidx.compose.ui.platform.LocalContext.current
                     val palette = remember(context, fact.categoryId) { DisciplinePalettes.forCategory(context, fact.categoryId) }
@@ -558,6 +658,47 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+@Composable private fun CategorySelectionDialog(
+    availableCategories: List<Pair<String, String>>,
+    selectedCategoryIds: Set<String>?,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>?) -> Unit
+) {
+    val allIds = remember(availableCategories) { availableCategories.map { it.first }.toSet() }
+    var draftSelection by remember(selectedCategoryIds, allIds) {
+        mutableStateOf(selectedCategoryIds?.toSet() ?: allIds)
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Catégories") },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                items(availableCategories, key = { it.first }) { (id, name) ->
+                    val checked = id in draftSelection
+                    Row(
+                        Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Checkbox) {
+                            draftSelection = if (checked) draftSelection - id else draftSelection + id
+                        }.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = checked,
+                            onCheckedChange = null
+                        )
+                        Text(name, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { draftSelection = allIds }) { Text("Tout sélectionner") }
+                Button(onClick = { onConfirm(if (draftSelection == allIds) null else draftSelection) }) { Text("Valider") }
+            }
+        }
+    )
 }
 
 @Composable private fun CardScreen(cards: List<AnecdoteWithCategory>, selectedCardId: String?, homeCardSize: IntSize, onBack: () -> Unit, onOpenExplanation: (AnecdoteWithCategory) -> Unit, onLoadReference: suspend (String) -> String?) {

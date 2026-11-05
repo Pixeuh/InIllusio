@@ -66,7 +66,7 @@ class CatalogImporterTest {
 
         assertEquals(validatedIds(catalog).sorted(), dao.validatedAnecdotes().map { it.id }.sorted())
         assertNotNull(dao.getAnecdote("sociologie-01"))
-        assertEquals("sociologie-01", dao.observeCollection().first().single().id)
+        assertEquals("sociologie-01", dao.observeCollection().first().single().anecdote.id)
     }
 
     @Test fun successfulLockScreenApplicationCollectsIdempotentlyAndFailuresDoNot() = runBlocking {
@@ -194,7 +194,7 @@ class CatalogImporterTest {
 
         assertEquals(33, dao.allAnecdotes().size)
         assertNotNull(dao.getAnecdote("sociologie-01"))
-        assertEquals("sociologie-01", dao.observeCollection().first().single().id)
+        assertEquals("sociologie-01", dao.observeCollection().first().single().anecdote.id)
         assertEquals(0, dao.sourcesFor("anthropologie-01").size)
         assertEquals(0, dao.sourcesFor("histoire-01").size)
     }

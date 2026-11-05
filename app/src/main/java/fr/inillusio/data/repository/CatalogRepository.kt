@@ -2,6 +2,7 @@ package fr.inillusio.data.repository
 
 import fr.inillusio.data.local.InIllusioDatabase
 import fr.inillusio.data.local.dao.AnecdoteWithCategory
+import fr.inillusio.data.local.dao.CollectionCard
 import fr.inillusio.data.local.dao.SourceDetails
 import fr.inillusio.data.local.dao.BoosterProgress
 import fr.inillusio.data.local.entities.CollectionEntity
@@ -16,7 +17,7 @@ import java.time.LocalDate
 data class BoosterAwardResult(val duplicateRedemption: Boolean, val cards: List<AnecdoteWithCategory>)
 
 class CatalogRepository(private val db: InIllusioDatabase, private val preferences: UserPreferences) {
-    val collection: Flow<List<AnecdoteWithCategory>> = db.catalogDao().observeCollection()
+    val collection: Flow<List<CollectionCard>> = db.catalogDao().observeCollection()
     val boosterProgress: Flow<BoosterProgress> = db.catalogDao().observeBoosterProgress()
     suspend fun dailyAnecdote(today: LocalDate = LocalDate.now()): AnecdoteWithCategory? {
         val dao = db.catalogDao()

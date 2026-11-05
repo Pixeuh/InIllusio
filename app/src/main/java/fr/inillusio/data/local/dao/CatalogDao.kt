@@ -1,6 +1,7 @@
 package fr.inillusio.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.Upsert
 import androidx.room.OnConflictStrategy
@@ -10,6 +11,7 @@ import fr.inillusio.data.local.entities.*
 import kotlinx.coroutines.flow.Flow
 
 data class AnecdoteWithCategory(val id: String, val categoryId: String, val categoryName: String, val title: String, val hook: String, val explanation: String)
+data class CollectionCard(@Embedded val anecdote: AnecdoteWithCategory, val savedAt: Long)
 data class SourceDetails(val type: String, val title: String, val year: Int?, val author: String?)
 data class BoosterProgress(val discovered: Int, val total: Int)
 
@@ -27,8 +29,8 @@ interface CatalogDao {
     suspend fun uncollectedValidatedAnecdotes(): List<AnecdoteWithCategory>
     @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM anecdotes a JOIN categories c ON c.id = a.categoryId WHERE a.id = :id AND a.archived = 0 AND a.editorialStatus = 'validee'")
     suspend fun getValidatedAnecdote(id: String): AnecdoteWithCategory?
-    @Query("SELECT a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM collection x JOIN anecdotes a ON a.id = x.anecdoteId JOIN categories c ON c.id = a.categoryId ORDER BY x.savedAt DESC")
-    fun observeCollection(): Flow<List<AnecdoteWithCategory>>
+    @Query("SELECT x.savedAt, a.id, a.categoryId, c.name AS categoryName, a.title, a.hook, a.explanation FROM collection x JOIN anecdotes a ON a.id = x.anecdoteId JOIN categories c ON c.id = a.categoryId ORDER BY x.savedAt DESC, a.id ASC")
+    fun observeCollection(): Flow<List<CollectionCard>>
     @Query("SELECT (SELECT COUNT(*) FROM collection x JOIN anecdotes a ON a.id = x.anecdoteId WHERE a.archived = 0 AND a.editorialStatus = 'validee') AS discovered, (SELECT COUNT(*) FROM anecdotes WHERE archived = 0 AND editorialStatus = 'validee') AS total")
     fun observeBoosterProgress(): Flow<BoosterProgress>
     @Query("SELECT * FROM collection ORDER BY savedAt") suspend fun allCollectionEntries(): List<CollectionEntity>
